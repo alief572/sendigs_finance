@@ -10,9 +10,8 @@
 <div style="overflow-x:auto;border:1px solid #ddd;">
     <table id="table_record_items" class="table table-bordered table-striped" style="width:100%;">
         <thead><tr>
-            <th>NO. DOKUMEN / KATEGORI</th><th>NO. PENGAJUAN</th><th>COMPANY</th><th>REQUEST BY</th>
-            <th>TANGGAL PENGAJUAN</th><th>TANGGAL APPROVAL</th><th>APPROVER</th><th>KEPERLUAN</th>
-            <th>DPP (RP)</th><th>PPN</th><th>PPH 23</th><th>PPH 21</th><th>ADMIN</th><th>DIBAYARKAN</th><th>ACTION</th>
+            <th>NO. PENGAJUAN</th><th>NO. DOKUMEN / KATEGORI</th><th>REQUEST BY</th><th>KEPERLUAN</th>
+            <th>DPP (RP)</th><th>PPN</th><th>PPH 23</th><th>PPH 21</th><th>ADMIN</th><th>DIBAYARKAN</th><th>DISETUJUI</th><th>ACTION</th>
         </tr></thead><tbody></tbody>
     </table>
 </div>
@@ -29,28 +28,37 @@
 		function loadTable() {
 			if (table) { table.columns.adjust(); table.ajax.reload(null, false); return; }
 			var columns = [
+				{data:'no_pengajuan', render:function(value, type, row) {
+					if (type !== 'display') return value;
+					return escapeText(value) + '<div class="text-muted"><small>Diajukan ' + escapeText(row.submitted_at) + '</small></div>';
+				}},
 				{data:'no_dokumen', render:function(value, type, row) {
 					if (type !== 'display') return value;
 					return '<span class="rec-kategori-badge">' + escapeText(row.kategori) + '</span><br><span class="rec-docnum">' + escapeText(value) + '</span>';
 				}},
-				{data:'no_pengajuan', render:$.fn.dataTable.render.text()},
-				{data:'company_nama', defaultContent:'', render:$.fn.dataTable.render.text()},
-				{data:'request_by', defaultContent:'', render:$.fn.dataTable.render.text()},
-				{data:'submitted_at', render:$.fn.dataTable.render.text()}
+				{data:'request_by', defaultContent:'', render:function(value, type, row) {
+					if (type !== 'display') return value;
+					return escapeText(value) + (row.company_nama ? ' <span class="text-muted">- ' + escapeText(row.company_nama) + '</span>' : '');
+				}}
 			];
 
-			columns.push({data:'decided_at', render:$.fn.dataTable.render.text()}, {data:'approver', defaultContent:'', render:$.fn.dataTable.render.text()});
-
 			columns.push(
-				{data:'keperluan', defaultContent:'', render:$.fn.dataTable.render.text()}, moneyColumn('dpp'), moneyColumn('nilai_ppn'),
+				{data:'keperluan', defaultContent:'', render:function(value, type, row) {
+					return type === 'display' ? escapeText(row.keterangan_finance || value) +
+						(row.keterangan_finance ? '<div class="text-muted">Keterangan asli: ' + escapeText(value) + '</div>' : '') : row.keterangan_finance || value;
+				}}, moneyColumn('dpp'), moneyColumn('nilai_ppn'),
 				{data:'nilai_pph', className:'text-right', render:function(value, type, row) { var n = row.flag_pph23 ? value : 0; return type === 'display' ? amount(n) : n; }},
 				{data:'nilai_pph', className:'text-right', render:function(value, type, row) { var n = row.flag_pph21 ? value : 0; return type === 'display' ? amount(n) : n; }},
-				moneyColumn('admin'), moneyColumn('dibayarkan'),
+				{data:'admin', className:'text-right', render:function(value, type, row) { return row.transfer_number ? 'Transfer ' + Number(row.transfer_number) : amount(value); }},
+				moneyColumn('dibayarkan'), {data:'decided_at', render:$.fn.dataTable.render.text()},
 				{data:'id_pengajuan', orderable:false, className:'text-center', render:function(id, type, row) {
 					if (type !== 'display') return id;
 
 					var html = '<a class="mini-btn view" href="<?= site_url('record_request_payment/detail'); ?>/' + Number(id) + '?from=items">View</a>';
-					if (row.print_url && /^https?:\/\//i.test(row.print_url)) {
+					if (row.has_transfer_file && row.transfer_detail_id) {
+						html += ' <a class="mini-btn print" target="_blank" rel="noopener" href="<?= site_url('record_request_payment/print_transfer_document'); ?>/' +
+							Number(row.transfer_detail_id) + '"><i class="fa fa-paperclip"></i> Cetak Dokumen</a>';
+					} else if (row.print_url && /^https?:\/\//i.test(row.print_url)) {
 						html += ' <a class="mini-btn print" target="_blank" rel="noopener" href="' + escapeText(row.print_url).replace(/"/g, '&quot;').replace(/'/g, '&#39;') + '"><i class="fa fa-print"></i> Cetak Dokumen</a>';
 					}
 					return '<span class="rec-item-actions">' + html + '</span>';

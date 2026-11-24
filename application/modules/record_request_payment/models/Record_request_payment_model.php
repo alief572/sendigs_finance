@@ -1,4 +1,5 @@
 <?php if (!defined('BASEPATH')) exit('No direct script access allowed');
+require_once dirname(__DIR__, 2).'/request_payment/libraries/Rp_transfer.php';
 
 /*
  * Model: Record Request Payment (histori final snapshot - FSD 2026-09)
@@ -41,6 +42,11 @@ class Record_request_payment_model extends BF_Model
 
 		$this->db->from('tr_rp_record r');
 		$this->db->join('tr_rp_pengajuan_h h', 'h.id = r.id_pengajuan');
+		$transfers = Rp_transfer::installed($this->db);
+		if ($transfers) {
+			$this->db->join('tr_rp_pengajuan_d rd', "rd.id_pengajuan=r.id_pengajuan AND rd.no_dokumen=r.no_dokumen AND rd.decision='approved' AND rd.id_transfer IS NOT NULL", 'left');
+			$this->db->join('tr_rp_transfer rt', 'rt.id=rd.id_transfer', 'left');
+		}
 		$this->db->where('h.deleted', 0);
 		$this->db->where('h.status', 'done');
 		$total = (int) $this->db->count_all_results('', false);
@@ -51,11 +57,18 @@ class Record_request_payment_model extends BF_Model
 			foreach (['h.no_pengajuan', 'r.request_by', 'r.keperluan', 'r.kategori', 'r.company_nama'] as $field) {
 				$this->db->or_like($field, $search);
 			}
+			if ($transfers) {
+				$this->db->or_like('rd.keterangan_finance', $search);
+			}
 			$this->db->group_end();
 		}
 		$filtered = (int) $this->db->count_all_results('', false);
 		$this->trackAuditDbError();
 		$this->db->select('r.*, h.submitted_at, h.decided_at, h.approver, (SELECT d.id_dokumen FROM tr_rp_pengajuan_d d WHERE d.id_pengajuan = r.id_pengajuan AND d.no_dokumen = r.no_dokumen ORDER BY d.id ASC LIMIT 1) AS id_dokumen', false);
+		if ($transfers) {
+			$this->db->select('rd.id AS transfer_detail_id, rt.urutan AS transfer_number, rd.keterangan_finance,
+				EXISTS(SELECT 1 FROM tr_rp_transfer_file rf WHERE rf.id_detail=rd.id) AS has_transfer_file', false);
+		}
 		$this->db->order_by('h.decided_at', 'desc');
 		$this->db->order_by('r.id', 'desc');
 		if ($length !== -1) {
@@ -126,6 +139,10 @@ class Record_request_payment_model extends BF_Model
 		$this->trackAuditDbError($this->db);
 
 		$this->db->select('h.*, (SELECT COUNT(*) FROM tr_rp_record r WHERE r.id_pengajuan = h.id) as jumlah_approved');
+		if (Rp_transfer::installed($this->db)) {
+			$this->db->select("(SELECT COUNT(*) FROM tr_rp_transfer t WHERE t.id_pengajuan=h.id AND t.status IN ('approved','paid')) AS transfer_count,
+				(SELECT COUNT(*) FROM tr_rp_transfer t WHERE t.id_pengajuan=h.id AND t.status='paid') AS transfer_paid", false);
+		}
 		$this->db->order_by('h.decided_at', 'desc');
 		$this->db->limit($length, $start);
 		$rows = $this->queryResult($this->db, $this->db->get());
@@ -143,6 +160,8 @@ class Record_request_payment_model extends BF_Model
 				'decided_at'       => !empty($r->decided_at) ? date('d-M-Y H:i', strtotime($r->decided_at)) : '',
 				'total_dibayarkan' => number_format($total, 0, ',', '.'),
 				'jumlah_approved'  => (int) $r->jumlah_approved,
+				'transfer_count'   => (int) ($r->transfer_count ?? 0),
+				'transfer_paid'    => (int) ($r->transfer_paid ?? 0),
 				'aksi'             => $r->id,
 			];
 		}
@@ -222,9 +241,10 @@ class Record_request_payment_model extends BF_Model
 					'pr stok'       => 'material_planning_base_on_produksi',
 					'pr asset'      => 'tran_pr_header',
 				];
-				if (!empty($cash) && !empty($cash->no_pr) && isset($tables[$cash->jenis_pr])) {
+				$jenis = $cash->jenis_pr ?? '';
+				if (!empty($cash) && !empty($cash->no_pr) && isset($tables[$jenis])) {
 					$maker = $this->queryRow($this->db, $this->db->select('u.nm_lengkap')
-						->from($tables[$cash->jenis_pr] . ' h')
+						->from($tables[$jenis] . ' h')
 						->join('users u', 'u.id_user = h.created_by', 'left')
 						->where('h.no_pr', $cash->no_pr)
 						->limit(1)->get());

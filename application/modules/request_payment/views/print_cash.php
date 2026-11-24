@@ -448,9 +448,11 @@ if (!function_exists('formatDate')) {
             }
 
             // Beri jeda sedikit agar browser render gambar sebelum dialog print muncul
-            setTimeout(function() {
-                window.print();
-            }, 600);
+            if (!new URLSearchParams(window.location.search).has('rp_preview')) {
+                setTimeout(function() {
+                    window.print();
+                }, 600);
+            }
         }
 
         if (document.readyState === 'loading') {

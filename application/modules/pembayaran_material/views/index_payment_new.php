@@ -1,9 +1,13 @@
+<?php if (!empty($rp_transfer_available)) { $rp_tutorial_page = 'payment'; include dirname(__DIR__, 2) . '/request_payment/views/transfer_tutorial.php'; } ?>
 <link rel="stylesheet" href="https://cdn.datatables.net/2.1.7/css/dataTables.dataTables.min.css">
 <div id='alert_edit' class="alert alert-success alert-dismissable" style="padding: 15px; display: none;"></div>
 <div class="box">
 	<div class="box-header">
 		<h3 class="box-title"><?php echo $title; ?></h3>
 		<button type="button" class="btn btn-sm btn-success choose_payment" style="float: right;">Payment</button>
+		<?php if (!empty($rp_transfer_available)): ?>
+			<a href="<?= site_url('record_request_payment/record_payment') ?>" class="btn btn-default btn-sm pull-right" style="margin-right:8px">Record Payment</a>
+		<?php endif; ?>
 	</div>
 	<div class="box-body">
 

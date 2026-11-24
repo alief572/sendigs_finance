@@ -9,6 +9,8 @@ const render = tab => execFileSync(php, [path.join(__dirname, 'Tabs_view_test.ph
 let checks = 0;
 for (const active of ['batch', 'items', 'legacy']) {
     const html = render(active);
+    const itemHead = html.match(/<table id="table_record_items"[\s\S]*?<thead>([\s\S]*?)<\/thead>/)[1];
+    assert.strictEqual((itemHead.match(/<th>/g) || []).length, 12, 'twelve rendered headers'); checks++;
     const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(match => match[1]).filter(Boolean);
     for (const script of scripts) { new vm.Script(script); checks++; }
     const handlers = new Map();
@@ -65,10 +67,14 @@ for (const active of ['batch', 'items', 'legacy']) {
         assert(tables.has('#table_record_' + kind), 'table loaded when opened'); checks++;
         assert(reloads.some(item => item[0] === '#table_record_' + kind && item[1] === false), 'refresh preserves page'); checks++;
         const options = tables.get('#table_record_' + kind);
-        assert.strictEqual(options.columns.length, 15, 'column/header alignment'); checks++;
+        assert.strictEqual(options.columns.length, 12, 'column/header alignment'); checks++;
+        assert.strictEqual(options.columns.map(column => column.data).join(','), 'no_pengajuan,no_dokumen,request_by,keperluan,dpp,nilai_ppn,nilai_pph,nilai_pph,admin,dibayarkan,decided_at,id_pengajuan', 'HTML reference column order plus existing Action'); checks++;
         const malicious = '<img src=x onerror=alert(1)>';
         const columns = options.columns;
-        assert(!columns[0].render(malicious, 'display', {kategori: malicious}).includes('<img'), 'document output escaped'); checks++;
+        assert(!columns[1].render(malicious, 'display', {kategori: malicious}).includes('<img'), 'document output escaped'); checks++;
+        assert(!columns[0].render(malicious, 'display', {submitted_at:malicious}).includes('<img'), 'PGJ/submission escaped'); checks++;
+        assert(!columns[2].render(malicious, 'display', {company_nama:malicious}).includes('<img'), 'request/company escaped'); checks++;
+        assert(columns[2].render('Finance', 'display', {company_nama:'STM'}).includes('- STM'), 'company retained within Request By'); checks++;
         const action = columns[columns.length - 1].render(10, 'display', {print_url: 'http://localhost/print/" onclick="evil'});
         assert(action.includes('?from=items'), 'detail origin stays in Record items'); checks++;
         assert.strictEqual((action.match(/<a /g) || []).length, 2, 'View and document Print actions'); checks++;

@@ -514,7 +514,11 @@ $ENABLE_MANAGE = has_permission('Request_Payment.Manage');
 				<button type="button" class="btn btn-default btn-sm" onclick="rpClearSelection();">Batal</button>
 				<?php if ($ENABLE_MANAGE): ?>
 					<button type="button" class="btn btn-primary btn-sm" onclick="rpSubmitForApproval();">
-						<i class="fa fa-paper-plane"></i> Ajukan untuk Approval
+						<?php if (!empty($rp_transfer_enabled)): ?>
+							<i class="fa fa-cog"></i> Atur Pembayaran &amp; Ajukan
+						<?php else: ?>
+							<i class="fa fa-paper-plane"></i> Ajukan untuk Approval
+						<?php endif; ?>
 					</button>
 				<?php endif; ?>
 			</div>
@@ -836,7 +840,8 @@ $ENABLE_MANAGE = has_permission('Request_Payment.Manage');
 							'<option value="2500" ' + (st.admin == 2500 ? 'selected' : '') + '>2.500</option>' +
 							'<option value="6500" ' + (st.admin == 6500 ? 'selected' : '') + '>6.500</option>' +
 							'</select>';
-					}
+					},
+					visible: <?= !empty($rp_transfer_enabled) ? 'false' : 'true' ?>
 				},
 				{
 					data: 'no_dokumen',
@@ -1061,6 +1066,15 @@ $ENABLE_MANAGE = has_permission('Request_Payment.Manage');
 			return;
 		}
 
+		<?php if (!empty($rp_transfer_enabled)): ?>
+		rpArrangePayment(sel, rpState, rpGetLockedCompany(), function () {
+			rpState = {};
+			rpTable.draw(false);
+			rpLoadSummary();
+		});
+		return;
+		<?php endif; ?>
+
 		if (!confirm(sel.length + ' dokumen akan diajukan untuk approval. Lanjutkan?')) return;
 
 		var items = sel.map(function(no) {
@@ -1097,3 +1111,8 @@ $ENABLE_MANAGE = has_permission('Request_Payment.Manage');
 		});
 	};
 </script>
+
+<?php if (!empty($rp_transfer_enabled)): ?>
+	<?php include __DIR__ . '/atur_pembayaran.php'; ?>
+	<?php $rp_tutorial_page = 'request'; include __DIR__ . '/transfer_tutorial.php'; ?>
+<?php endif; ?>

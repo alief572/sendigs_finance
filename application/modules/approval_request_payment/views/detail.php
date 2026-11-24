@@ -1,5 +1,10 @@
 <?php
 $ENABLE_MANAGE = has_permission('Approval_Request_Payment.Manage');
+$transfers = $transfers ?? [];
+if ($transfers) {
+	$rp_tutorial_page = 'decision';
+	include dirname(__DIR__, 2) . '/request_payment/views/transfer_tutorial.php';
+}
 
 // build items JSON for JS
 $items_js = [];
@@ -10,6 +15,8 @@ foreach ($items as $it) {
 		'kategori'   => $it->kategori,
 		'request_by' => $it->request_by,
 		'keperluan'  => $it->keperluan,
+		'keterangan_finance' => $it->keterangan_finance ?? '',
+		'id_transfer' => $it->id_transfer ?? null,
 		'dpp'        => (float) $it->dpp,
 		'nilai_ppn'  => (float) $it->nilai_ppn,
 		'nilai_pph'  => (float) $it->nilai_pph,
@@ -156,6 +163,31 @@ foreach ($items as $it) {
 			</div>
 		</div>
 
+		<?php if ($transfers): ?>
+			<div class="subtable-label">Rincian Transfer</div>
+			<div class="table-responsive"><table class="table table-bordered rp-appr-table">
+				<thead><tr><th>TRANSFER</th><th>REKENING TUJUAN</th><th>ADMIN DITANGGUNG</th><th>JUMLAH TRANSFER</th><th>TOTAL KELUAR BANK</th></tr></thead>
+				<tbody>
+				<?php foreach ($transfers as $transfer): ?>
+					<tr data-transfer="<?= (int) $transfer['id'] ?>">
+						<td><b>Transfer <?= (int) $transfer['urutan'] ?></b><br><span data-transfer-count class="text-muted"></span></td>
+						<td><?php foreach (['bank' => 'Bank', 'no_rek' => 'No. Rekening', 'nama' => 'Nama Penerima'] as $key => $label): ?>
+							<?php if ($ENABLE_MANAGE): ?>
+								<label class="text-muted"><?= $label ?>
+									<input class="form-control input-sm" data-account="<?= $key ?>" value="<?= html_escape($transfer[$key]) ?>">
+								</label>
+							<?php else: ?>
+								<div><?= html_escape($transfer[$key]) ?></div>
+							<?php endif; ?>
+						<?php endforeach; ?></td>
+						<td><?= (float) $transfer['admin'] ? html_escape(($transfer['bearer'] === 'recipient' ? 'Penerima' : 'Perusahaan') . ' (Rp ' . number_format($transfer['admin'], 2, ',', '.') . ')') : 'Tanpa admin' ?></td>
+						<td data-transfer-net></td><td data-transfer-bank></td>
+					</tr>
+				<?php endforeach; ?>
+				</tbody>
+			</table></div>
+		<?php endif; ?>
+
 		<!-- Akan Disetujui -->
 		<div class="subtable-label">
 			Akan Disetujui <span class="count" id="cnt_approve">0</span>
@@ -172,7 +204,7 @@ foreach ($items as $it) {
 						<th class="text-center">PPN</th>
 						<th class="text-center">PPH23</th>
 						<th class="text-center">PPH21</th>
-						<th class="text-center">ADMIN</th>
+						<th class="text-center"><?= $transfers ? 'TRANSFER' : 'ADMIN' ?></th>
 						<th class="text-right-imp">DIBAYARKAN</th>
 						<th style="width:90px;">AKSI</th>
 					</tr>
@@ -197,7 +229,7 @@ foreach ($items as $it) {
 						<th class="text-center">PPN</th>
 						<th class="text-center">PPH23</th>
 						<th class="text-center">PPH21</th>
-						<th class="text-center">ADMIN</th>
+						<th class="text-center"><?= $transfers ? 'TRANSFER' : 'ADMIN' ?></th>
 						<th class="text-right-imp">DIBAYARKAN</th>
 						<th style="width:90px;">AKSI</th>
 					</tr>
@@ -219,7 +251,10 @@ foreach ($items as $it) {
 </div>
 
 <script>
-	var apprItems = <?= json_encode($items_js); ?>;
+	var apprItems = <?= json_encode($items_js, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+	var apprTransfers = <?= json_encode(array_column(array_map(static function ($row) {
+		return array_intersect_key($row, array_flip(['id', 'urutan', 'admin', 'bearer']));
+	}, $transfers), null, 'id'), JSON_HEX_TAG); ?>;
 	var idPengajuan = <?= (int) $header->id; ?>;
 
 	// decision state: no_dokumen -> { decision: 'approved'|'rejected', alasan: '' }
@@ -244,12 +279,12 @@ foreach ($items as $it) {
 		var html = '<tr>' +
 			'<td><span class="rp-kategori-badge">' + esc(it.kategori) + '</span><br><b>' + esc(it.no_dokumen) + '</b></td>' +
 			'<td>' + esc(it.request_by) + '</td>' +
-			'<td>' + esc(it.keperluan) + '</td>' +
+			'<td>' + esc(it.keterangan_finance || it.keperluan) + (it.keterangan_finance ? '<div class="text-muted">Keterangan asli: ' + esc(it.keperluan) + '</div>' : '') + '</td>' +
 			'<td class="text-right-imp">' + apprFmt(it.dpp) + '</td>' +
 			'<td class="text-center">' + (it.flag_ppn ? apprFmt(it.nilai_ppn) : '-') + '</td>' +
 			'<td class="text-center">' + (it.flag_pph23 ? apprFmt(it.nilai_pph) : '-') + '</td>' +
 			'<td class="text-center">' + (it.flag_pph21 ? apprFmt(it.nilai_pph) : '-') + '</td>' +
-			'<td class="text-center">' + (it.admin ? apprFmt(it.admin) : '-') + '</td>' +
+			'<td class="text-center">' + (Object.keys(apprTransfers).length ? (apprTransfers[it.id_transfer] ? 'Transfer ' + apprTransfers[it.id_transfer].urutan : '-') : (it.admin ? apprFmt(it.admin) : '-')) + '</td>' +
 			'<td class="text-right-imp">' + apprFmt(it.dibayarkan) + '</td>' +
 			'<td>';
 		if (it.print_url && it.print_url !== '') {
@@ -298,6 +333,15 @@ foreach ($items as $it) {
 
 		$('#reject_label').toggle(cntR > 0);
 		$('#reject_section').toggle(cntR > 0);
+		$('[data-transfer]').each(function () {
+			var row = $(this), transfer = apprTransfers[row.data('transfer')];
+			var active = apprItems.filter(function (it) { return String(it.id_transfer) === String(transfer.id) && decState[it.no_dokumen].decision !== 'rejected'; });
+			var net = active.reduce(function (sum, it) { return sum + Number(it.dibayarkan); }, 0);
+			var admin = active.length ? Number(transfer.admin) : 0;
+			row.find('[data-transfer-count]').text(active.length ? active.length + ' dokumen' : 'Transfer batal');
+			row.find('[data-transfer-net]').text(active.length ? 'Rp ' + apprFmt(net - (transfer.bearer === 'recipient' ? admin : 0)) : '-');
+			row.find('[data-transfer-bank]').text(active.length ? 'Rp ' + apprFmt(net + (transfer.bearer === 'company' ? admin : 0)) : '-');
+		});
 	}
 
 	window.apprToggleReject = function(no) {
@@ -330,12 +374,19 @@ foreach ($items as $it) {
 			};
 		});
 
+		var accounts = {};
+		$('[data-transfer] [data-account]').each(function () {
+			var id = $(this).closest('[data-transfer]').data('transfer');
+			accounts[id] = accounts[id] || {};
+			accounts[id][this.dataset.account] = this.value;
+		});
 		$.ajax({
 			url: '<?= site_url("approval_request_payment/save_decision"); ?>',
 			type: 'POST',
 			data: {
 				id_pengajuan: idPengajuan,
-				decisions: decisions
+				decisions: decisions,
+				transfer_accounts: accounts
 			},
 			dataType: 'json',
 			success: function(res) {

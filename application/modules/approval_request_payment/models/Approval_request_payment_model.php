@@ -1,4 +1,5 @@
 <?php if (!defined('BASEPATH')) exit('No direct script access allowed');
+require_once dirname(__DIR__, 2).'/request_payment/libraries/Rp_transfer.php';
 
 if (!defined('DBCNL')) define('DBCNL', 'db_consultant_new');
 
@@ -84,6 +85,9 @@ class Approval_request_payment_model extends BF_Model
 		$this->trackAuditDbError();
 
 		$this->db->select('h.*');
+		if (Rp_transfer::installed($this->db)) {
+			$this->db->select('(SELECT COUNT(*) FROM tr_rp_transfer t WHERE t.id_pengajuan=h.id) AS transfer_count', false);
+		}
 		$this->db->order_by('h.submitted_at', 'desc');
 		$this->db->limit($length, $start);
 		$query = $this->db->get();
@@ -97,6 +101,7 @@ class Approval_request_payment_model extends BF_Model
 				'company_nama'     => $r->company_nama ? $r->company_nama : '-',
 				'submitted_at'     => !empty($r->submitted_at) ? date('d-M-Y H:i', strtotime($r->submitted_at)) : '',
 				'jumlah_dokumen'   => (int) $r->jumlah_dokumen,
+				'transfer_count'   => (int) ($r->transfer_count ?? 0),
 				'total_dibayarkan' => number_format($r->total_dibayarkan, 0, ',', '.'),
 				'aksi'             => $r->id,
 			];
@@ -148,7 +153,7 @@ class Approval_request_payment_model extends BF_Model
 						'pr departemen' => 'rutin_non_planning_header',
 						'pr asset'      => 'tran_pr_header',
 					];
-					$jp = strtolower(trim((string) $cashRow->jenis_pr));
+					$jp = strtolower(trim((string) ($cashRow->jenis_pr ?? '')));
 					if (isset($prTable[$jp]) && !empty($cashRow->no_pr)) {
 						$prQ = $this->db->select('created_by')->limit(1)->get_where($prTable[$jp], ['no_pr' => $cashRow->no_pr]);
 						$this->trackAuditDbError();

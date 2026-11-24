@@ -1,4 +1,8 @@
 <?php
+if (!empty($rp_transfer_available)) {
+	$rp_tutorial_page = 'record';
+	include dirname(__DIR__, 2) . '/request_payment/views/transfer_tutorial.php';
+}
 $ENABLE_VIEW = has_permission('Record_Request_Payment.View');
 $record_tab = $this->input->get_post('tab');
 if (!is_string($record_tab) || !in_array($record_tab, ['batch', 'items', 'legacy'], true)) {
@@ -151,6 +155,9 @@ if (!is_string($record_tab) || !in_array($record_tab, ['batch', 'items', 'legacy
 				<div class="tab-pane<?= $record_tab === 'batch' ? ' active' : ''; ?>" id="tab_baru">
 					<div class="rec-toolbar">
 						<div class="text-muted">Riwayat seluruh batch pengajuan yang sudah diputuskan (final).</div>
+						<?php if (!empty($rp_transfer_available)): ?>
+							<a class="btn btn-success btn-sm" href="<?= site_url('record_request_payment/export_transfer_batches') ?>"><i class="fa fa-file-excel-o"></i> Export Excel Beberapa PGJ</a>
+						<?php endif; ?>
 						<input type="text" id="rec_search" placeholder="Cari company atau no. pengajuan...">
 					</div>
 
@@ -164,6 +171,7 @@ if (!is_string($record_tab) || !in_array($record_tab, ['batch', 'items', 'legacy
 									<th>TANGGAL DIPUTUSKAN</th>
 									<th style="width:150px;">TOTAL DIBAYARKAN</th>
 									<th style="width:140px;">STATUS</th>
+									<?php if (!empty($rp_transfer_available)): ?><th>STATUS PEMBAYARAN</th><?php endif; ?>
 									<th style="width:120px;">ACTION</th>
 								</tr>
 							</thead>
@@ -256,6 +264,18 @@ if (!is_string($record_tab) || !in_array($record_tab, ['batch', 'items', 'legacy
 					}
 				},
 				{
+					<?php if (!empty($rp_transfer_available)): ?>
+					data: null,
+					orderable: false,
+					render: function(row) {
+						if (!row.transfer_count) return '-';
+						if (!row.transfer_paid) return 'Belum dibayar';
+						if (row.transfer_paid === row.transfer_count) return 'Sudah dibayar';
+						return 'Sebagian<br><small>' + row.transfer_paid + ' dari ' + row.transfer_count + ' transfer dibayar</small>';
+					}
+				},
+				{
+					<?php endif; ?>
 					data: 'aksi',
 					orderable: false,
 					className: 'text-center',

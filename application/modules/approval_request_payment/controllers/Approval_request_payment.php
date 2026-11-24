@@ -1,4 +1,5 @@
 <?php if (!defined('BASEPATH')) exit('No direct script access allowed');
+require_once dirname(__DIR__, 2).'/request_payment/libraries/Rp_transfer.php';
 
 /*
  * Controller: Approval Request Payment (alur batch baru - FSD 2026-09)
@@ -19,6 +20,7 @@ class Approval_request_payment extends Admin_Controller
 		parent::__construct();
 		$this->load->model(array('Approval_request_payment/Approval_request_payment_model', 'All/All_model'));
 		$this->template->title('Approval Request Payment');
+		$this->template->set('rp_transfer_available', Rp_transfer::installed($this->db));
 		$this->template->page_icon('fa fa-check-square-o');
 		date_default_timezone_set("Asia/Bangkok");
 	}
@@ -103,6 +105,7 @@ class Approval_request_payment extends Admin_Controller
 
 		$this->template->set('header', $header);
 		$this->template->set('items', $items);
+		$this->template->set('transfers', Rp_transfer::rows($this->db, $id_pengajuan));
 		$this->template->title('Detail Approval - ' . $header->no_pengajuan);
 		try {
 			$this->template->render('detail');
@@ -153,6 +156,35 @@ class Approval_request_payment extends Admin_Controller
 			return;
 		}
 
+		$transfers = Rp_transfer::rows($this->db, $id_pengajuan);
+		if (!$transfers) {
+			$this->decide_batch($id_pengajuan, []);
+			return;
+		}
+		require_once dirname(__DIR__, 2).'/jurnal_all/libraries/Payment_reference.php';
+		$locked = false;
+		$debug = $this->db->db_debug;
+		$this->db->db_debug = false;
+		try {
+			Rp_transfer::requireAjaxPost($this->input);
+			Payment_reference::acquire($this->db);
+			$locked = true;
+			Payment_reference::transactional($this->db, ['tr_rp_pengajuan_h', 'tr_rp_pengajuan_d', 'tr_rp_record', 'tr_rp_reject_log', 'tr_rp_transfer', 'payment_approve']);
+			$this->decide_batch($id_pengajuan, $transfers);
+		} catch (Throwable $e) {
+			$this->db->trans_rollback();
+			$this->completeAudit('Gagal menyimpan keputusan transfer', 0, ['id_pengajuan' => $id_pengajuan, 'reason' => 'transfer_decision_failed']);
+			echo json_encode(['status' => 0, 'msg' => $e instanceof DomainException ? $e->getMessage() : 'Gagal menyimpan keputusan. Silakan coba lagi.']);
+		} finally {
+			if ($locked) {
+				Payment_reference::release($this->db);
+			}
+			$this->db->db_debug = $debug;
+		}
+	}
+
+	private function decide_batch($id_pengajuan, array $transfers)
+	{
 		$decisions = $this->input->post('decisions'); // [{no_dokumen, decision(approved|rejected), alasan}]
 
 		$this->Approval_request_payment_model->resetAuditQueriesOk();
@@ -187,6 +219,9 @@ class Approval_request_payment extends Admin_Controller
 		// index decision by no_dokumen
 		$dec_map = [];
 		foreach ($decisions as $d) {
+			if ($transfers && (!is_array($d) || !is_string($d['no_dokumen'] ?? null) || isset($dec_map[$d['no_dokumen']]) || !in_array($d['decision'] ?? '', ['approved', 'rejected'], true) || !is_string($d['alasan'] ?? ''))) {
+				throw new DomainException('Data keputusan dokumen tidak valid.');
+			}
 			if (!empty($d['no_dokumen'])) {
 				$dec_map[$d['no_dokumen']] = [
 					'decision' => (isset($d['decision']) && $d['decision'] === 'rejected') ? 'rejected' : 'approved',
@@ -217,6 +252,34 @@ class Approval_request_payment extends Admin_Controller
 		}
 
 		// Validasi alasan reject wajib
+		$accountEdits = [];
+		$transferNet = [];
+		if ($transfers) {
+			$members = array_map(static function ($item) { return $item->no_dokumen; }, $items);
+			if (count($dec_map) !== count($members) || array_diff($members, array_keys($dec_map))) {
+				throw new DomainException('Keputusan harus mencakup seluruh dokumen pengajuan.');
+			}
+			$edits = $this->input->post('transfer_accounts');
+			if ($edits !== null && $edits !== false && !is_array($edits)) {
+				throw new DomainException('Perubahan rekening transfer tidak valid.');
+			}
+			foreach ((array) $edits as $id => $account) {
+				if (!ctype_digit((string) $id) || !in_array((int) $id, array_map('intval', array_column($transfers, 'id')), true)) {
+					throw new DomainException('Transfer bukan bagian dari pengajuan ini.');
+				}
+				$accountEdits[$id] = Rp_transfer::account($account);
+			}
+			foreach ($items as $it) {
+				if (!empty($it->id_transfer) && $dec_map[$it->no_dokumen]['decision'] === 'approved') {
+					$transferNet[$it->id_transfer] = ($transferNet[$it->id_transfer] ?? 0) + Rp_transfer::cents($it->dibayarkan);
+				}
+			}
+			foreach ($transfers as $transfer) {
+				if (isset($transferNet[$transfer['id']])) {
+					Rp_transfer::totals($transferNet[$transfer['id']], Rp_transfer::cents($transfer['admin']), $transfer['bearer']);
+				}
+			}
+		}
 		foreach ($items as $it) {
 			$dec = isset($dec_map[$it->no_dokumen]) ? $dec_map[$it->no_dokumen] : ['decision' => 'approved', 'alasan' => ''];
 			if ($dec['decision'] === 'rejected' && $dec['alasan'] === '') {
@@ -256,6 +319,7 @@ class Approval_request_payment extends Admin_Controller
 			$dec = isset($dec_map[$it->no_dokumen]) ? $dec_map[$it->no_dokumen] : ['decision' => 'approved', 'alasan' => ''];
 
 			if ($dec['decision'] === 'approved') {
+				$modern = !empty($it->id_transfer) && $transfers;
 				$approvedCount++;
 				$writeOk = (bool) $this->db->update('tr_rp_pengajuan_d', ['decision' => 'approved'], ['id' => $it->id]) && $writeOk;
 
@@ -282,7 +346,7 @@ class Approval_request_payment extends Admin_Controller
 				// Idempotent: skip kalau no_doc sudah ada di payment_approve.
 				if (!$this->Approval_request_payment_model->payment_exists($it->no_dokumen)) {
 					$tipe     = $this->Approval_request_payment_model->map_kategori_to_tipe($it->kategori);
-					$id_pay   = $this->Approval_request_payment_model->generate_id_payment(null);
+					$id_pay   = $modern ? 'RPA-' . $it->id : $this->Approval_request_payment_model->generate_id_payment(null);
 					$tgl_doc  = $this->Approval_request_payment_model->get_tgl_doc($it->no_dokumen);
 					$tipe_pph = $it->flag_pph21 ? '21' : ($it->flag_pph23 ? '23' : null);
 					$paymentIds[] = (string) $id_pay;
@@ -292,7 +356,7 @@ class Approval_request_payment extends Admin_Controller
 						'no_doc'        => $it->no_dokumen,
 						'nama'          => $it->request_by,
 						'tgl_doc'       => $tgl_doc,
-						'keperluan'     => $it->keperluan,
+						'keperluan'     => $modern && !empty($it->keterangan_finance) ? $it->keterangan_finance : $it->keperluan,
 						'tipe'          => $tipe,
 						'jumlah'        => $it->dpp,        // DPP murni (ppn/pph/admin dihitung terpisah di form pembayaran)
 						'status'        => 1,               // agar lolos v_list_payment (status<>2)
@@ -313,6 +377,11 @@ class Approval_request_payment extends Admin_Controller
 						'selisih'       => 0,
 						'kurs_payment'  => 0,
 					]) && $writeOk;
+					if ($modern) {
+						Rp_transfer::write($this->db->update('tr_rp_pengajuan_d', ['payment_approval_id' => $id_pay], ['id' => $it->id]));
+					}
+				} elseif ($modern) {
+					throw new DomainException('Dokumen sudah memiliki approval pembayaran. Muat ulang pengajuan.');
 				}
 			} else {
 				$rejectedCount++;
@@ -332,6 +401,13 @@ class Approval_request_payment extends Admin_Controller
 
 		if (!empty($record_rows)) {
 			$writeOk = (bool) $this->db->insert_batch('tr_rp_record', $record_rows) && $writeOk;
+		}
+
+		foreach ($transfers as $transfer) {
+			$id = $transfer['id'];
+			Rp_transfer::write($this->db->update('tr_rp_transfer', ($accountEdits[$id] ?? []) + [
+				'status' => isset($transferNet[$id]) ? 'approved' : 'cancelled',
+			], ['id' => $id, 'id_pengajuan' => $id_pengajuan]));
 		}
 
 		// finalize batch

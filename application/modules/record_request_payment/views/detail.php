@@ -89,6 +89,21 @@ foreach ($records as $r) {
 			</div>
 		</div>
 
+		<?php if (!empty($rp_transfers)): ?>
+			<h4>Rincian Transfer</h4>
+			<div class="table-responsive"><table class="table table-bordered rec-table">
+				<thead><tr><th>TRANSFER</th><th>REKENING TUJUAN</th><th>ADMIN DITANGGUNG</th><th>JUMLAH TRANSFER</th><th>TOTAL KELUAR BANK</th><th>STATUS</th></tr></thead>
+				<tbody><?php foreach ($rp_transfers as $group): ?>
+					<?php $planned = Rp_transfer_payment::planned($group); ?>
+					<tr><td><b>Transfer <?= (int) $group['urutan'] ?></b><br><?= count($group['docs']) ?> dokumen</td>
+						<td><?= html_escape($group['bank'] . ' ' . $group['no_rek'] . ' a/n ' . $group['nama']) ?></td>
+						<td><?= (float) $group['admin'] ? html_escape(Rp_transfer_record::bearer($group['bearer']) . ' (Rp ' . number_format($group['admin'], 2, ',', '.') . ')') : 'Tanpa admin' ?></td>
+						<td>Rp <?= number_format($planned['transfer'] / 100, 2, ',', '.') ?></td><td>Rp <?= number_format($planned['bank'] / 100, 2, ',', '.') ?></td>
+						<td><?= $group['status'] === 'paid' ? 'Sudah dibayar<br>' . html_escape($group['id_payment']) : 'Belum dibayar' ?></td>
+					</tr>
+				<?php endforeach; ?></tbody>
+			</table></div>
+		<?php endif; ?>
 		<div style="overflow-x:auto;">
 			<table class="table table-bordered rec-table" style="width:100%;">
 				<thead>
@@ -100,29 +115,33 @@ foreach ($records as $r) {
 						<th class="text-center">PPN</th>
 						<th class="text-center">PPH23</th>
 						<th class="text-center">PPH21</th>
-						<th class="text-center">ADMIN</th>
+						<th class="text-center"><?= !empty($rp_transfers) ? 'TRANSFER' : 'ADMIN' ?></th>
 						<th class="text-right-imp">DIBAYARKAN</th>
 						<th class="text-center" style="width:60px;">AKSI</th>
 					</tr>
 				</thead>
 				<tbody>
 					<?php foreach ($records as $r): ?>
+						<?php $rpDoc = $rp_doc_transfers[$r->no_dokumen] ?? null; ?>
 						<tr>
 							<td>
 								<span class="rp-kategori-badge"><?= html_escape($r->kategori); ?></span><br>
 								<b><?= html_escape($r->no_dokumen); ?></b>
 							</td>
 							<td><?= html_escape($r->request_by); ?><?= $r->company_nama ? ' - ' . html_escape($r->company_nama) : ''; ?></td>
-							<td><?= html_escape($r->keperluan); ?></td>
+							<td><?= html_escape($rpDoc['keterangan_finance'] ?? $r->keperluan); ?>
+								<?php if (!empty($rpDoc['keterangan_finance'])): ?><div class="text-muted">Keterangan asli: <?= html_escape($r->keperluan) ?></div><?php endif; ?>
+							</td>
 							<td class="text-right-imp"><?= number_format($r->dpp, 0, ',', '.'); ?></td>
 							<td class="text-center"><?= ((int) $r->flag_ppn) ? number_format($r->nilai_ppn, 0, ',', '.') : '-'; ?></td>
 							<td class="text-center"><?= ((int) $r->flag_pph23) ? number_format($r->nilai_pph, 0, ',', '.') : '-'; ?></td>
 							<td class="text-center"><?= ((int) $r->flag_pph21) ? number_format($r->nilai_pph, 0, ',', '.') : '-'; ?></td>
-							<td class="text-center"><?= ((int) $r->admin) ? number_format($r->admin, 0, ',', '.') : '-'; ?></td>
+							<td class="text-center"><?= $rpDoc ? 'Transfer ' . (int) $rpDoc['group']['urutan'] : (((int) $r->admin) ? number_format($r->admin, 0, ',', '.') : '-'); ?></td>
 							<td class="text-right-imp"><?= number_format($r->dibayarkan, 0, ',', '.'); ?></td>
 							<td class="text-center">
-								<?php if (!empty($r->print_url)): ?>
-									<a href="<?= $r->print_url; ?>" target="_blank" class="btn btn-sm btn-info" title="Print Dokumen"><i class="fa fa-print"></i></a>
+								<?php if (!empty($rpDoc['has_files']) || !empty($r->print_url)): ?>
+									<a href="<?= html_escape(!empty($rpDoc['has_files']) ? site_url('record_request_payment/print_transfer_document/' . $rpDoc['detail_id']) : $r->print_url) ?>" target="_blank" rel="noopener" class="btn btn-sm btn-info" title="Print Dokumen"><i class="fa fa-print"></i></a>
+									<?php if (!empty($rpDoc['has_files'])): ?><i class="fa fa-paperclip" title="Lampiran tambahan"></i><?php endif; ?>
 								<?php else: ?>
 									<span class="text-muted" title="Tidak ada dokumen print untuk tipe ini">-</span>
 								<?php endif; ?>

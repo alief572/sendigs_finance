@@ -264,6 +264,12 @@ class Pembayaran_material_model extends BF_Model
 		}
 		$ids = array_values(array_unique(array_map('strval', $ids)));
 		if (!$ids) { return array(); }
+		$legacyIds = array_values(array_filter($ids, static function ($id) { return strpos($id, 'RPA-') !== 0; }));
+		if (!$allowMissing && $legacyIds !== $ids) {
+			throw new DomainException('Pilih transfer melalui daftar Pembayaran Non PR.');
+		}
+		$ids = $legacyIds;
+		if (!$ids) { return array(); }
 		$payments = $this->selectionQuery($this->db->select('id, tipe, no_doc')->from('payment_approve')->where_in('id', $ids)->get())->result();
 		$groups = array(); $sources = array('kasbon' => array(), 'expense' => array());
 		foreach ($payments as $payment) {
@@ -338,6 +344,7 @@ class Pembayaran_material_model extends BF_Model
 
 		$this->db->from('v_list_payment');
 		$this->db->where('status <>', 2);
+		$this->db->where("id NOT LIKE 'RPA-%'", null, false);
 
 		// Logika Filter Jenis Payment
 		if ($jenis_payment == 1) {
@@ -589,13 +596,18 @@ class Pembayaran_material_model extends BF_Model
 		}
 	}
 
-	public function set_jurnal(&$auditSummary = null)
+	public function set_jurnal(&$auditSummary = null, ?array $transferPost = null)
 	{
 		$auditSummary = array('queries_ok' => true, 'row_count' => 0);
 		$this->auditReadState =& $auditSummary;
-		$post = $this->input->post();
+		$post = $transferPost ?? $this->input->post();
+		$transferRows = [];
+		$collect = $transferPost !== null;
 
 		$id_payment = $post['id_payment'];
+		if (!$collect && is_string($id_payment) && preg_match('/(?:^|,)RPA-/', $id_payment)) {
+			throw new DomainException('Preview jurnal tersedia melalui form transfer.');
+		}
 		foreach (['id_payment', 'payment_bank', 'bank_charge', 'bank', 'total_payment', 'admin_charge_bearer'] as $field) {
 			if (isset($post[$field]) && (!is_scalar($post[$field]) || is_bool($post[$field]))) { throw new DomainException('Input payment tidak valid.'); }
 		}
@@ -651,7 +663,7 @@ class Pembayaran_material_model extends BF_Model
 		$totals = null;
 		$nilai_pph = $post['nilai_pph'] ?? 0;
 		$nilai_ppn = $post['nilai_ppn'] ?? 0;
-		if (!$is_all_petty_cash_hutang && !$is_refill_pettycash) {
+		if (!$collect && !$is_all_petty_cash_hutang && !$is_refill_pettycash) {
 			self::payment_cents(($post['payment_bank'] ?? '') === '' ? '0' : $post['payment_bank']);
 			$ids = array_map(function ($payment) { return (string) $payment->id; }, $get_payment);
 			foreach ([$item_ppn_arr, $item_pph_arr, $pph_data] as $values) {
@@ -748,7 +760,17 @@ class Pembayaran_material_model extends BF_Model
 
 		// Helper closure to generate HTML rows
 		$consolidated = false;
-		$generate_tr = function ($no_jurnal, $id_payment_ref, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_divisi, $nm_divisi, $coa, $nm_coa, $keterangan, $debit, $kredit, $div_key = 'id_divisi', $coa_key = 'coa') use (&$ttl_debit, &$ttl_kredit, $coa_bank, $totals, &$consolidated) {
+		$collectRow = static function ($ref, $division, $divisionName, $coa, $name, $description, $debit, $credit) use (&$transferRows) {
+			if ($ref !== null && ((float) $debit !== 0.0 || (float) $credit !== 0.0)) {
+				$transferRows[] = ['reference' => $ref, 'id_divisi' => $division, 'nm_divisi' => $divisionName, 'coa' => $coa, 'nm_coa' => $name,
+					'keterangan' => $description, 'debit' => $debit, 'kredit' => $credit];
+			}
+			return '';
+		};
+		$generate_tr = function ($no_jurnal, $id_payment_ref, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_divisi, $nm_divisi, $coa, $nm_coa, $keterangan, $debit, $kredit, $div_key = 'id_divisi', $coa_key = 'coa') use (&$ttl_debit, &$ttl_kredit, $coa_bank, $totals, &$consolidated, $collect, $collectRow) {
+			if ($collect) {
+				return $collectRow($id_payment_ref, $id_divisi, $nm_divisi, $coa, $nm_coa, $keterangan, $debit, $kredit);
+			}
 			$is_bank_coa = (!empty($coa_bank) && $coa == $coa_bank) || in_array($coa, ['1101-02-01', '1101-02-09']);
 			if ($totals !== null && !$consolidated && ($is_bank_coa || $coa === '7201-01-04')) { return ''; }
 			if ($totals !== null) {
@@ -812,7 +834,10 @@ class Pembayaran_material_model extends BF_Model
 			return $tr;
 		};
 
-		$generate_tr_refill = function ($no_jurnal, $id_payment_ref, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_divisi, $nm_divisi, $coa, $nm_coa, $keterangan, $debit, $kredit, $div_key = 'id_divisi', $coa_key = 'coa') use ($coa_bank) {
+		$generate_tr_refill = function ($no_jurnal, $id_payment_ref, $tgl_bayar_display, $tgl_bayar_value, $id_company, $nm_company, $id_divisi, $nm_divisi, $coa, $nm_coa, $keterangan, $debit, $kredit, $div_key = 'id_divisi', $coa_key = 'coa') use ($coa_bank, $collect, $collectRow) {
+			if ($collect) {
+				return $collectRow($id_payment_ref, $id_divisi, $nm_divisi, $coa, $nm_coa, $keterangan, $debit, $kredit);
+			}
 			$is_bank_coa = (!empty($coa_bank) && $coa == $coa_bank) || in_array($coa, ['1101-02-01', '1101-02-09']);
 			if ($id_payment_ref !== null && !empty($id_payment_ref) && !$is_bank_coa) {
 				if (strpos($keterangan, ' - ' . $id_payment_ref) === false) {
@@ -1851,6 +1876,12 @@ class Pembayaran_material_model extends BF_Model
 			$no++;
 		endforeach;
 
+		if ($collect) {
+			if (empty($auditSummary['queries_ok']) || !empty($auditSummary['source_missing'])) {
+				throw new DomainException('Sumber jurnal salah satu dokumen tidak tersedia.');
+			}
+			return $transferRows;
+		}
 		$consolidated = true;
 		if (!$is_refill_pettycash && $is_all_petty_cash_hutang === false) {
 			$debit_admin = ($admin_charge_bearer === 'recipient') ? 0 : $bank_charge;
@@ -2211,7 +2242,7 @@ class Pembayaran_material_model extends BF_Model
 				COALESCE(NULLIF(a.id_payment, ''), a.id) as no_payment,
 				GROUP_CONCAT(DISTINCT a.no_doc ORDER BY a.id ASC SEPARATOR ', ') as no_doc,
 				MAX(a.tgl_bayar) as tgl_bayar,
-				SUBSTRING_INDEX(GROUP_CONCAT(COALESCE(NULLIF(a.created_by, ''), a.nm_supplier, '-') ORDER BY a.id ASC SEPARATOR '|||'), '|||', 1) as requestor,
+				SUBSTRING_INDEX(GROUP_CONCAT(COALESCE(CASE WHEN a.id LIKE 'RPA-%' THEN NULLIF(a.nm_supplier, '') END, NULLIF(a.created_by, ''), a.nm_supplier, '-') ORDER BY a.id ASC SEPARATOR '|||'), '|||', 1) as requestor,
 				COALESCE(NULLIF(MAX(a.payment_bank), 0), SUM(a.jumlah), 0) as nilai_bayar,
 				MAX(a.keterangan_pembayaran) as keterangan,
 				GROUP_CONCAT(DISTINCT a.link_doc SEPARATOR ',') as link_docs
