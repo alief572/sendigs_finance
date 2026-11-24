@@ -1,3 +1,8 @@
+# Referensi detail Jurnal Pembayaran (24 November 2026)
+
+- Selesai. `jurnal_all/views/preview.php` memakai No. Referensi dari ringkasan sebagai label dan nilai kolom referensi pada detail Jurnal Pembayaran sebelum posting. Perubahan sebatas tampilan modal untuk sumber PAY.
+- `jurnal_all/tests/Payment_reference_test.php` memverifikasi referensi kedua baris dan nomor voucher di ringkasan. PHP lint dan enam tes CLI terkait lulus. Validasi browser tidak dijalankan. Tidak ada tindak lanjut implementasi.
+
 # Menu sidebar Approval Perubahan Budget di DB live (11 Nov 2026)
 
 - **Masalah**: menu belum muncul karena `001_register_menu_and_permissions.sql` (modul `approval_perubahan_budget`) belum dijalankan di DB live `db_sendigs_ss`. Schema prasyarat periodik (`ms_budget_rutin`, `tr_budget_bg`, `tr_budget_bg_line`, `ms_periodik_counter`, kolom `tr_pengajuan_rutin_detail`) sudah lengkap di live; perubahan budget (BG) pending 0.
