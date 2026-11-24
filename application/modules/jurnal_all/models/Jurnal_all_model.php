@@ -118,6 +118,8 @@ class Jurnal_all_model extends BF_Model
         if ($f['year'] !== '') {
             $start = sprintf('%04d-%02d-01',$f['year'],$f['month'] === '' ? 1 : (int)$f['month']);
             $end = $f['month'] === '' ? sprintf('%04d-01-01',$f['year']+1) : date('Y-m-d',strtotime($start.' +1 month'));
+            // Every rule below needs at least one line in the range, so this only narrows the scan; HAVING keeps the exact group semantics.
+            $this->db->where('a.no_transaksi IN (SELECT p.no_transaksi FROM tr_jurnal p WHERE p.jenis_transaksi IN ('.implode(',',array_map([$this->db,'escape'],$types)).') AND p.tgl_jurnal >= '.$this->db->escape($start).' AND p.tgl_jurnal < '.$this->db->escape($end).')',null,false);
             if ($f['tab'] === 'INV') {
                 $match = 'a.tgl_jurnal >= '.$this->db->escape($start).' AND a.tgl_jurnal < '.$this->db->escape($end);
                 $this->db->having('SUM(CASE WHEN '.$match.' THEN 1 ELSE 0 END) >',0,false);
@@ -417,6 +419,27 @@ class Jurnal_all_model extends BF_Model
         return $result;
     }
 
+    /**
+     * First javh header whose keterangan mentions each key (what `LIKE '%key%' LIMIT 1` per key returned), found with one
+     * scan per 50 keys instead of one scan per key; javh has no index usable for a leading wildcard.
+     */
+    private function javhByKeyword($gl, array $keys)
+    {
+        $result = [];
+        foreach (array_chunk(array_values(array_unique($keys)), 50) as $chunk) {
+            $gl->select('nomor, tgl, user_id, keterangan')->group_start();
+            foreach ($chunk as $key) $gl->or_like('keterangan', $key);
+            $q = $gl->group_end()->get('javh');
+            if (!$q) continue;
+            foreach ($q->result_array() as $h) foreach ($chunk as $key) {
+                if (!isset($result[$key]) && stripos((string)$h['keterangan'], (string)$key) !== false) {
+                    $result[$key] = ['nomor' => $h['nomor'], 'tgl' => $h['tgl'], 'user' => $h['user_id']];
+                }
+            }
+        }
+        return $result;
+    }
+
     /** Fill source_numbers/posted_* of Payment rows from one accounting database (japh, then jurnal). */
     private function fillPaymentNumbers($gl, array &$payRows, array &$allUserIds)
     {
@@ -518,27 +541,21 @@ class Jurnal_all_model extends BF_Model
                         }
                     }
                     if ($jurnalNomors && $gl->table_exists('javh')) {
+                        $byNomor = [];
+                        foreach ($glData as $refKey => $gd) $byNomor[(string)$gd['nomor']][] = $refKey;
                         foreach (array_chunk(array_unique($jurnalNomors), 200) as $chunk) {
                             $q = $gl->select('nomor, tgl, user_id')->where_in('nomor', $chunk)->get('javh');
                             if ($q) foreach ($q->result_array() as $h) {
-                                foreach ($glData as &$gd) {
-                                    if ($gd['nomor'] === $h['nomor']) {
-                                        if (!empty($h['tgl'])) $gd['tgl'] = $h['tgl'];
-                                        if (!empty($h['user_id'])) $gd['user'] = $h['user_id'];
-                                    }
+                                foreach ($byNomor[(string)$h['nomor']] ?? [] as $refKey) {
+                                    if (!empty($h['tgl'])) $glData[$refKey]['tgl'] = $h['tgl'];
+                                    if (!empty($h['user_id'])) $glData[$refKey]['user'] = $h['user_id'];
                                 }
-                                unset($gd);
                             }
                         }
                     }
                     $unmatched = array_diff($keys, array_keys($glData));
                     if ($unmatched && $gl->table_exists('javh')) {
-                        foreach ($unmatched as $uInv) {
-                            $q = $gl->select('nomor, tgl, user_id')->like('keterangan', $uInv)->limit(1)->get('javh');
-                            if ($q && ($h = $q->row_array())) {
-                                $glData[$uInv] = ['nomor' => $h['nomor'], 'tgl' => $h['tgl'], 'user' => $h['user_id']];
-                            }
-                        }
+                        foreach ($this->javhByKeyword($gl, $unmatched) as $uInv => $meta) $glData[$uInv] = $meta;
                     }
                     foreach ($glData as $invNo => $meta) {
                         if (!empty($meta['user'])) $allUserIds[] = (string)$meta['user'];
@@ -618,12 +635,7 @@ class Jurnal_all_model extends BF_Model
                     }
                     $unmatched = array_diff($keys, array_keys($glData));
                     if ($unmatched && $gl->table_exists('javh')) {
-                        foreach ($unmatched as $uExp) {
-                            $q = $gl->select('nomor, tgl, user_id')->like('keterangan', $uExp)->limit(1)->get('javh');
-                            if ($q && ($h = $q->row_array())) {
-                                $glData[$uExp] = ['nomor' => $h['nomor'], 'tgl' => $h['tgl'], 'user' => $h['user_id']];
-                            }
-                        }
+                        foreach ($this->javhByKeyword($gl, $unmatched) as $uExp => $meta) $glData[$uExp] = $meta;
                     }
                     foreach ($glData as $no => $meta) {
                         if (!empty($meta['user'])) $allUserIds[] = (string)$meta['user'];
