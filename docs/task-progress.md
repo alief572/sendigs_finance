@@ -1,3 +1,8 @@
+# Referensi detail Jurnal Pembayaran (24 November 2026)
+
+- Selesai. `jurnal_all/views/preview.php` memakai No. Referensi dari ringkasan sebagai label dan nilai kolom referensi pada detail Jurnal Pembayaran sebelum posting. Perubahan sebatas tampilan modal untuk sumber PAY.
+- `jurnal_all/tests/Payment_reference_test.php` memverifikasi referensi kedua baris dan nomor voucher di ringkasan. PHP lint dan enam tes CLI terkait lulus. Validasi browser tidak dijalankan. Tidak ada tindak lanjut implementasi.
+
 # Print lampiran PDF Periodik Full Halaman (A4) — 30 Oktober 2026
 
 - **Status Akhir**: SELESAI 100% (Seluruh fase analisis, RED test, implementasi script klien renderer, perbaruan view cetak, dan validasi regresi tuntas).
