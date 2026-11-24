@@ -133,7 +133,8 @@ class Jurnal_all_model extends BF_Model
             }
         }
         $rows = $this->read($this->db->get())->result_array();
-        $this->enrich($rows, $posted);
+        // Pending list never shows accounting numbers; skipping the GL lookup avoids per-row javh LIKE scans.
+        $this->enrich($rows, $posted, $posted);
         if($f['tab']==='PAY')foreach($this->debt_groups()->all() as $detail){
             $header=$detail['header'];
             if($posted?($header['group_status']!=='Sudah posting'):($header['group_status']==='Sudah posting'))continue;
@@ -712,7 +713,7 @@ class Jurnal_all_model extends BF_Model
         }
     }
 
-    private function postingMetadata(&$rows)
+    private function postingMetadata(&$rows, $withGl = true)
     {
         if (!$rows) return;
         if ($this->posting_metadata_ready()) {
@@ -736,7 +737,7 @@ class Jurnal_all_model extends BF_Model
             }
             unset($row);
         }
-        $this->resolveGlMetadata($rows);
+        if ($withGl) $this->resolveGlMetadata($rows);
     }
 
     public function company_sections($rows)
@@ -838,7 +839,7 @@ class Jurnal_all_model extends BF_Model
     private function scalar($value) { return is_scalar($value) ? mb_substr((string)$value,0,255,'UTF-8') : ''; }
     private function read($query) { if ($query===false) throw new RuntimeException('Gagal membaca data jurnal.'); return $query; }
 
-    private function enrich(&$rows, $posted = false)
+    private function enrich(&$rows, $posted = false, $withGl = true)
     {
         if (!$posted) {
             if ($this->paymentReference===null) $this->paymentReference=new Payment_reference((object)['db'=>$this->db], true);
@@ -1049,7 +1050,7 @@ class Jurnal_all_model extends BF_Model
                 unset($r);
             }
         }
-        $this->postingMetadata($rows);
+        $this->postingMetadata($rows, $withGl);
     }
 
     private function expenseMap($numbers)

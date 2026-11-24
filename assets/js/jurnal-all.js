@@ -29,6 +29,7 @@
         let active = tabs.includes(el.dataset.tab) ? el.dataset.tab : 'INV';
         let generation = 0, detailGeneration = 0, busy = false, loading = false, selected = null, searchTimer, summaryGeneration = 0;
         let canPost = false, postBlockReason = '';
+        const optionsCache = new Map();
         const message = (text, modal, warning) => { const box = find(modal ? '#ja-modal-message' : '#ja-message'); box.classList.toggle('alert-warning', !!warning); box.classList.toggle('alert-danger', !warning); box.textContent = text || ''; box.hidden = !text; };
         function params(values) {
             const result = new URLSearchParams();
@@ -82,7 +83,12 @@
             ['#ja-export', '#ja-prev', '#ja-next'].forEach(selector => { find(selector).disabled = true; });
             setLoading(true);
             try {
-                const [options, page] = await Promise.all([request('get_filters', filter), request('get_data_jurnal', filter)]);
+                // Filter options depend only on tab/year/month, so paging, sorting and searching reuse them.
+                const optionsKey = [tab, filter.year, filter.month].join('|');
+                const [options, page] = await Promise.all([
+                    optionsCache.has(optionsKey) ? optionsCache.get(optionsKey) : request('get_filters', filter).then(result => { optionsCache.set(optionsKey, result); return result; }),
+                    request('get_data_jurnal', filter)
+                ]);
                 if (token !== generation) return;
                 fill(form.elements.year, Object.fromEntries(options.years.map(year => [year, year])), 'Semua Tahun', state[tab].year);
                 if (form.elements.company.multiple) fillMulti(form.elements.company, options.companies, state[tab].company); else fill(form.elements.company, options.companies, 'Semua Company', state[tab].company);
@@ -205,7 +211,7 @@
             busy = true; find('#ja-post').disabled = true; find('#ja-revise').disabled = true; message('', true);
             try {
                 const result = await request(action, { ...selected, alasan_revisi: reason });
-                busy = false; root.jQuery(find('#ja-modal')).modal('hide'); state[active].start = 0; await load(); await summary();
+                busy = false; optionsCache.clear(); root.jQuery(find('#ja-modal')).modal('hide'); state[active].start = 0; await load(); await summary();
                 const successTitle = isRevise ? 'Revisi Berhasil!' : 'Posting Berhasil!';
                 const successMsg = result.msg || (isRevise ? 'Jurnal berhasil dikembalikan untuk revisi.' : 'Jurnal berhasil diposting ke accounting.');
                 if (typeof root.Swal !== 'undefined' && typeof root.Swal.fire === 'function') {
@@ -225,7 +231,7 @@
             } catch (error) {
                 const errorTitle = isRevise ? 'Revisi Gagal!' : 'Posting Gagal!';
                 const errorMsg = error.message || (isRevise ? 'Gagal memproses revisi jurnal.' : 'Posting jurnal ke accounting gagal.');
-                message(errorMsg, true); await load(); await summary();
+                message(errorMsg, true); optionsCache.clear(); await load(); await summary();
                 if (typeof root.Swal !== 'undefined' && typeof root.Swal.fire === 'function') {
                     root.Swal.fire({
                         icon: 'error',
@@ -251,7 +257,7 @@
         form.addEventListener('submit', event => { event.preventDefault(); saveFilters(); state[active].start = 0; load(); summary(); });
         find('#ja-reset').addEventListener('click', () => { state[active] = defaults(); load(); summary(); });
         find('#ja-length').addEventListener('change', event => { state[active].length = Number(event.target.value); state[active].start = 0; load(); });
-        find('#ja-search').addEventListener('input', event => { state[active].q = event.target.value; state[active].start = 0; clearTimeout(searchTimer); searchTimer = setTimeout(load, 250); });
+        find('#ja-search').addEventListener('input', event => { state[active].q = event.target.value; state[active].start = 0; clearTimeout(searchTimer); searchTimer = setTimeout(load, 500); });
         find('#ja-prev').addEventListener('click', () => { state[active].start = Math.max(0, state[active].start - state[active].length); load(); });
         find('#ja-next').addEventListener('click', () => { state[active].start += state[active].length; load(); });
         find('#ja-export').addEventListener('click', () => { root.location.assign(el.dataset.base + '/export_excel?' + params(values())); });

@@ -25,4 +25,11 @@ foreach(['1'=>'accounting_vuca','4'=>'accounting_vuca','3'=>'accounting_sustain'
     $reader->invokeArgs($m,[&$rows]);
     check(end($companyRuntime->load->groups)===$target,'report fallback uses Expense target '.$company);
 }
+// Pending lists skip the accounting lookup (per-row javh LIKE scans); the report and detail modal keep it.
+$lookup=new Jurnal_all_model();$lookup->db=$db;
+$companyRuntime->load->groups=[];
+$pending=$lookup->groups(['tab'=>'EXP','year'=>''],false);
+check($pending && $companyRuntime->load->groups===[],'pending list does not open accounting databases');
+$posted=$lookup->groups(['tab'=>'EXP','year'=>''],true);
+check($posted && $companyRuntime->load->groups!==[],'posted report still resolves accounting numbers');
 echo "PASS Jurnal All Expense company checks\n";

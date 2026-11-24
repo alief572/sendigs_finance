@@ -162,6 +162,8 @@ class Jurnal_all extends Admin_Controller
         $audit = ['reason' => 'request_failed'];
         try {
             if (!has_permission($this->posted ? 'Report_Jurnal_All.View' : 'Jurnal_All.View')) throw new RuntimeException('Anda tidak memiliki hak akses.', 403);
+            // Read endpoints never write the session; release its lock so parallel requests do not queue PHP workers.
+            if (in_array($method, ['get_data_jurnal', 'get_filters', 'get_summary', 'preview', 'export_excel'], true) && session_status() === PHP_SESSION_ACTIVE) session_write_close();
             $response = $callback();
             $ok = !isset($response['status']) || (string)$response['status'] === '1';
             $audit = isset($response['outcome']) ? $response : ['row_count' => isset($response['data']) ? count($response['data']) : 0, $ok ? 'outcome' : 'reason' => $ok ? 'completed' : 'action_failed'];
