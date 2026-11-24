@@ -38,6 +38,27 @@ class Payment_reference_cli extends CI_Controller
         }catch(Throwable $error){fwrite(STDERR,'Payment identity: '.$error->getMessage().PHP_EOL);exit(1);}
     }
 
+    /** Keterangan Payment berakhiran payment_approve.id -> id_payment. Daftar voucher: file JSON {voucher:{type,status,target}} dari PAYMENT_VOUCHER_LIST. */
+    public function repair_keterangan($mode='screen',$path=null)
+    {
+        try{
+            if(!in_array($mode,['screen','dry-run','apply','verify','rollback','verify-rollback'],true))throw new DomainException('Mode CLI tidak valid.');
+            require_once dirname(__DIR__).'/libraries/Payment_identity_repair.php';
+            $list=getenv('PAYMENT_VOUCHER_LIST');$specs=$list&&is_file($list)?json_decode(file_get_contents($list),true,512,JSON_THROW_ON_ERROR):null;
+            if(!is_array($specs)||!$specs)throw new DomainException('PAYMENT_VOUCHER_LIST tidak valid.');
+            if($mode==='screen'){
+                list($ok,$skipped)=(new Payment_identity_repair($this,$specs))->screen($specs);
+                echo json_encode(['status'=>1,'ok'=>array_keys($ok),'skipped'=>$skipped],JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE).PHP_EOL;return;
+            }
+            $path=$this->manifestPath(getenv('PAYMENT_MANIFEST') ?: $path);
+            $repair=new Payment_identity_repair($this,$specs);
+            if($mode==='dry-run')$result=$repair->prepare($path);
+            elseif($mode==='verify'||$mode==='verify-rollback')$result=$repair->verify($path,$mode==='verify-rollback');
+            else $result=$repair->run($path,$mode==='rollback');
+            echo json_encode(['status'=>1,'result'=>$result],JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE).PHP_EOL;
+        }catch(Throwable $error){fwrite(STDERR,'Payment keterangan: '.$error->getMessage().PHP_EOL);exit(1);}
+    }
+
     /** Posted Payment journals still keyed by approval id (whitelist in Payment_posted_repair). */
     public function repair_posted($mode='dry-run', $path=null)
     {

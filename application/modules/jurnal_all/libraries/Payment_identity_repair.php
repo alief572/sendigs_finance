@@ -8,7 +8,9 @@ class Payment_identity_repair
     const PENDING = ['BK--0826-0016','BK--0826-0017','BK--0826-0020','BK--1126-0007','BK--1126-0008','BK--1126-0010','BK--1126-0018','BK--1126-0019','BK--1126-0020','BK--1126-0021'];
     const POSTED = ['BK--0926-0011','BK--0926-0014','BK--0926-0018','BK--1126-0011','BK--1126-0015','BK--1126-0012','BK--1126-0027','BK--1126-0028','BK--1126-0029','BK--1126-0030','BK--1126-0031','BK--1126-0025'];
     private $ci;
-    public function __construct($ci) { $this->ci=$ci; }
+    private $specs;
+    /** $specs null = kohort tetap (specs()); batch keterangan memberi daftar sendiri (lihat screen()). */
+    public function __construct($ci,$specs=null) { $this->ci=$ci;$this->specs=$specs ?? self::specs(); }
     private function read($q) { if(!$q)throw new RuntimeException('Pemeriksaan identity repair gagal.');return $q->result_array(); }
     private function environment() { $d=$this->ci->db;return hash('sha256',json_encode([$d->hostname,$d->port ?? '',$d->database],JSON_THROW_ON_ERROR)); }
     public static function specs()
@@ -35,9 +37,10 @@ class Payment_identity_repair
         foreach($a as $table=>$rows)if(Payment_normalization::digest($rows)!==Payment_normalization::digest($b[$table]))return false;
         return true;
     }
-    private function collect($v,$spec)
+    /** $a: koneksi accounting yang sedang memegang LOCK TABLES; koneksi lain akan menunggu lock itu tanpa akhir. */
+    private function collect($v,$spec,$a=null)
     {
-        $d=$this->ci->db;$a=$this->ci->load->database($spec['target'],true);
+        $d=$this->ci->db;$a=$a ?: $this->ci->load->database($spec['target'],true);
         $rows=$this->read($d->order_by('id')->get_where('tr_jurnal',['no_transaksi'=>$v,'jenis_transaksi'=>$spec['type']]));
         if(!$rows)throw new DomainException('Kelompok tidak ditemukan: '.$v);
         return [
@@ -100,12 +103,24 @@ class Payment_identity_repair
         foreach($after['jurnal'] as &$row)$row['keterangan']=self::replaceApproval($row['keterangan'],$ids,$v);unset($row);
         return $after;
     }
+    /** Read-only: pisahkan voucher yang lolos guard/project dari yang tidak (alasan dilaporkan, tidak dipaksa). */
+    public function screen($specs)
+    {
+        $ok=[];$skipped=[];$run=str_repeat('0',32);
+        foreach($specs as $v=>$spec){
+            try{$b=$this->collect($v,$spec);$this->guard($v,$spec,$b);$after=self::project($v,$spec,$b,$run,'1970-01-01 00:00:00');
+                $n=0;foreach($b['source'] as $i=>$r)if($r['keterangan']!==$after['source'][$i]['keterangan'])$n++;
+                if(!$n)throw new DomainException('Tidak ada keterangan yang berubah.');$ok[$v]=$spec;
+            }catch(Throwable $e){$skipped[$v]=$e->getMessage();}
+        }
+        return [$ok,$skipped];
+    }
     public function prepare($path)
     {
         foreach([$path,$path.'.backup.json',$path.'.journal'] as $file)if(is_link($file)||file_exists($file))throw new DomainException('Manifest/backup sudah ada.');
         $d=$this->ci->db;Payment_reference::transactional($d,['tr_jurnal','tr_jurnal_payment_reference_aliases']);
         $m=['kind'=>'payment_identity_repair','version'=>1,'environment'=>$this->environment(),'run_id'=>bin2hex(random_bytes(16)),'created_at'=>(new DateTimeImmutable('now',new DateTimeZone('Asia/Jakarta')))->format('Y-m-d H:i:s'),'items'=>[]];$backup=[];
-        foreach(self::specs() as $v=>$spec){$b=$this->collect($v,$spec);$this->guard($v,$spec,$b);$after=self::project($v,$spec,$b,$m['run_id'],$m['created_at']);$backup[$v]=$b;
+        foreach($this->specs as $v=>$spec){$b=$this->collect($v,$spec);$this->guard($v,$spec,$b);$after=self::project($v,$spec,$b,$m['run_id'],$m['created_at']);$backup[$v]=$b;
             $counts=['source'=>0,'jurnal'=>0,'aliases'=>count($after['aliases'])-count($b['aliases'])];foreach(['source','jurnal'] as $table)foreach($b[$table] as $i=>$r)if($r['keterangan']!==$after[$table][$i]['keterangan'])$counts[$table]++;
             $m['items'][$v]=['status'=>'prepared','changes'=>$counts];
         }
@@ -114,10 +129,10 @@ class Payment_identity_repair
     private function load($path)
     {
         $m=Payment_patch::load($path);
-        if(($m['kind'] ?? '')!=='payment_identity_repair'||($m['version'] ?? null)!==1||($m['environment'] ?? '')!==$this->environment()||!preg_match('/^[a-f0-9]{32}$/D',$m['run_id'] ?? '')||array_keys($m['items'])!==array_keys(self::specs()))throw new DomainException('Manifest/environment tidak sesuai batch.');
+        if(($m['kind'] ?? '')!=='payment_identity_repair'||($m['version'] ?? null)!==1||($m['environment'] ?? '')!==$this->environment()||!preg_match('/^[a-f0-9]{32}$/D',$m['run_id'] ?? '')||array_keys($m['items'])!==array_keys($this->specs))throw new DomainException('Manifest/environment tidak sesuai batch.');
         if(is_link($path)||is_link($path.'.backup.json')||!is_file($path.'.backup.json')||hash_file('sha256',$path.'.backup.json')!==$m['backup_sha256'])throw new DomainException('Backup berubah/tidak tersedia.');
         $backup=json_decode(file_get_contents($path.'.backup.json'),true,512,JSON_THROW_ON_ERROR);
-        if(array_keys($backup)!==array_keys(self::specs()))throw new DomainException('Cakupan backup berubah.');
+        if(array_keys($backup)!==array_keys($this->specs))throw new DomainException('Cakupan backup berubah.');
         return [$m,$backup];
     }
     private function accounting($a,$from,$to)
@@ -153,24 +168,25 @@ class Payment_identity_repair
         $d=$this->ci->db;Payment_reference::acquire($d);
         try{
             Payment_reference::transactional($d,['tr_jurnal','tr_jurnal_payment_reference_aliases']);list($m,$backup)=$this->load($path);
-            foreach(self::specs() as $v=>$spec){
+            foreach($this->specs as $v=>$spec){
                 $b=$backup[$v];$after=self::project($v,$spec,$b,$m['run_id'],$m['created_at']);$from=$rollback?$after:$b;$to=$rollback?$b:$after;
                 $a=$this->ci->load->database($spec['target'],true);$begun=false;$locked=false;$committing=false;$writeAttempted=false;
                 try{
                     if(!$d->trans_begin())throw new RuntimeException('Transaksi koreksi gagal dimulai.');$begun=true;
                     $ids=array_column($b['source'],'id');$this->read($d->query('SELECT id FROM tr_jurnal WHERE id IN ('.implode(',',array_fill(0,count($ids),'?')).') ORDER BY id FOR UPDATE',$ids));
                     $this->read($d->query('SELECT id FROM payment_approve WHERE id_payment=? ORDER BY id FOR UPDATE',[$v]));
-                    if(!$a->query('LOCK TABLES jurnal WRITE, japh READ, pastibisa_tb_cabang READ'))throw new RuntimeException('Lock accounting gagal.');$locked=true;
-                    $now=$this->collect($v,$spec);
+                    // Pending tidak menulis accounting; LOCK TABLES di satu koneksi membuat collect() (koneksi lain) menunggu lock itu tanpa akhir.
+                    if($spec['status']!=='0'){if(!$a->query('LOCK TABLES jurnal WRITE, japh READ, pastibisa_tb_cabang READ'))throw new RuntimeException('Lock accounting gagal.');$locked=true;}
+                    $now=$this->collect($v,$spec,$a);
                     if(self::equal($now,$to)){$d->trans_rollback();$begun=false;$m['items'][$v]['status']=$rollback?'rolled_back':'applied';Payment_patch::save($path,$m);continue;}
                     if(!self::equal($now,$from)||(!$rollback&&($m['items'][$v]['status'] ?? '')==='reconcile'))throw new DomainException('Data/checkpoint berbeda; perlu rekonsiliasi: '.$v);
                     $this->guard($v,$spec,$now);$m['items'][$v]['status']=$rollback?'rolling_back':'applying';Payment_patch::save($path,$m);
                     $writeAttempted=true;$this->accounting($a,$from['jurnal'],$to['jurnal']);$this->source($d,$from,$to,$m['run_id'],$rollback);
-                    if(!$d->trans_status()||!self::equal($this->collect($v,$spec),$to))throw new RuntimeException('Verifikasi sebelum commit gagal.');
-                    if($spec['type']==='Payment')$this->guard($v,$spec,$this->collect($v,$spec));
+                    if(!$d->trans_status()||!self::equal($this->collect($v,$spec,$a),$to))throw new RuntimeException('Verifikasi sebelum commit gagal.');
+                    if($spec['type']==='Payment')$this->guard($v,$spec,$this->collect($v,$spec,$a));
                     $m['items'][$v]['status']='committing';Payment_patch::save($path,$m);$committing=true;
                     if(!$d->trans_commit())throw new RuntimeException('Commit tidak pasti; jangan ulangi tanpa rekonsiliasi.');$begun=false;
-                    if(!self::equal($this->collect($v,$spec),$to))throw new RuntimeException('Verifikasi sesudah commit gagal.');
+                    if(!self::equal($this->collect($v,$spec,$a),$to))throw new RuntimeException('Verifikasi sesudah commit gagal.');
                     $m['items'][$v]['status']=$rollback?'rolled_back':'applied';Payment_patch::save($path,$m);
                 }catch(Throwable $e){
                     $safe=true;if($begun)$safe=$d->trans_rollback()!==false;
@@ -184,7 +200,7 @@ class Payment_identity_repair
     public function verify($path,$rollback=false)
     {
         list($m,$backup)=$this->load($path);$counts=['groups'=>0,'source'=>0,'jurnal'=>0,'aliases'=>0];
-        foreach(self::specs() as $v=>$spec){$expected=$rollback?$backup[$v]:self::project($v,$spec,$backup[$v],$m['run_id'],$m['created_at']);$now=$this->collect($v,$spec);
+        foreach($this->specs as $v=>$spec){$expected=$rollback?$backup[$v]:self::project($v,$spec,$backup[$v],$m['run_id'],$m['created_at']);$now=$this->collect($v,$spec);
             if(!self::equal($now,$expected))throw new RuntimeException('Verifikasi exact gagal: '.$v);
             $this->guard($v,$spec,$now);$counts['groups']++;foreach(['source','jurnal','aliases'] as $key)$counts[$key]+=$m['items'][$v]['changes'][$key];
         }

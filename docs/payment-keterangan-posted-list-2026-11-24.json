@@ -1,0 +1,112 @@
+{
+    "BK--0426-0032": {
+        "type": "Payment",
+        "status": "1",
+        "target": "accounting_stm"
+    },
+    "BK--0926-0001": {
+        "type": "Payment",
+        "status": "1",
+        "target": "accounting_stm"
+    },
+    "BK--0926-0004": {
+        "type": "Payment",
+        "status": "1",
+        "target": "accounting_stm"
+    },
+    "BK--0926-0010": {
+        "type": "Payment",
+        "status": "1",
+        "target": "accounting_stm"
+    },
+    "BK--1026-0004": {
+        "type": "Payment",
+        "status": "1",
+        "target": "accounting_vuca"
+    },
+    "BK--1026-0005": {
+        "type": "Payment",
+        "status": "1",
+        "target": "accounting_vuca"
+    },
+    "BK--1126-0001": {
+        "type": "Payment",
+        "status": "1",
+        "target": "accounting_stm"
+    },
+    "BK--1126-0002": {
+        "type": "Payment",
+        "status": "1",
+        "target": "accounting_stm"
+    },
+    "BK--1126-0003": {
+        "type": "Payment",
+        "status": "1",
+        "target": "accounting_stm"
+    },
+    "BK--1126-0004": {
+        "type": "Payment",
+        "status": "1",
+        "target": "accounting_stm"
+    },
+    "BK--1126-0006": {
+        "type": "Payment",
+        "status": "1",
+        "target": "accounting_stm"
+    },
+    "BK--1126-0009": {
+        "type": "Payment",
+        "status": "1",
+        "target": "accounting_stm"
+    },
+    "BK--1126-0016": {
+        "type": "Payment",
+        "status": "1",
+        "target": "accounting_sustain"
+    },
+    "BK--1126-0017": {
+        "type": "Payment",
+        "status": "1",
+        "target": "accounting_sustain"
+    },
+    "BK--1126-0023": {
+        "type": "Payment",
+        "status": "1",
+        "target": "accounting_sustain"
+    },
+    "BK--1126-0024": {
+        "type": "Payment",
+        "status": "1",
+        "target": "accounting_sustain"
+    },
+    "BK--1126-0032": {
+        "type": "Payment",
+        "status": "1",
+        "target": "accounting_vuca"
+    },
+    "BK--1126-0034": {
+        "type": "Payment",
+        "status": "1",
+        "target": "accounting_vuca"
+    },
+    "BK--1126-0035": {
+        "type": "Payment",
+        "status": "1",
+        "target": "accounting_vuca"
+    },
+    "BK--1126-0036": {
+        "type": "Payment",
+        "status": "1",
+        "target": "accounting_vuca"
+    },
+    "BK--1126-0039": {
+        "type": "Payment",
+        "status": "1",
+        "target": "accounting_vuca"
+    },
+    "BK--1126-0040": {
+        "type": "Payment",
+        "status": "1",
+        "target": "accounting_vuca"
+    }
+}
