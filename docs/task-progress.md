@@ -1,3 +1,8 @@
+# Referensi detail Report Jurnal All (24 November 2026)
+
+- Selesai. `jurnal_all/views/preview.php` memakai label No. Referensi dan nilai ringkasan di kedua modal tab Pembayaran, termasuk laporan setelah posting. Urutan baris dan mode baca laporan mengikuti perilaku sebelumnya.
+- `jurnal_all/tests/Report_payment_mapping_test.php` memeriksa dua baris laporan dengan beberapa dokumen sumber, voucher di ringkasan, dan keterangan yang hanya bisa dibaca. PHP lint dan tes CLI terkait lulus di workspace. Validasi browser tidak dijalankan.
+
 # Referensi detail Jurnal Pembayaran (24 November 2026)
 
 - Selesai. `jurnal_all/views/preview.php` memakai No. Referensi dari ringkasan sebagai label dan nilai kolom referensi pada detail Jurnal Pembayaran sebelum posting. Perubahan sebatas tampilan modal untuk sumber PAY.
