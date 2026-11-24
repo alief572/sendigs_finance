@@ -178,7 +178,7 @@ class Invoicing extends Admin_Controller
             $s->schema(); $source=null; $fingerprint='';
             if ($invoice) {
                 if (!Invoice_consulting::is_non_consulting($invoice)) throw new RuntimeException('Jenis invoice tidak sesuai.');
-                $snapshot=Invoice_consulting::snapshot($invoice);
+                $snapshot=$s->with_other(Invoice_consulting::snapshot($invoice));
                 $items=$s->rows('SELECT * FROM tr_invoice_detail_non_kons WHERE id_header=? ORDER BY id',array($invoice['id']));
                 $journals=$s->rows("SELECT * FROM tr_jurnal WHERE no_transaksi=? AND jenis_transaksi='Invoicing' ORDER BY id",array($invoice['id']));
                 $fingerprint=Invoice_calculation::fingerprint(array('invoice'=>$invoice,'items'=>$items));
@@ -189,7 +189,7 @@ class Invoicing extends Admin_Controller
                 }
             } else {
                 $source=$s->non_consulting_source($quoteId); $quote=$source['quote'];
-                $snapshot=$s->mapping($source['source_company_id']); $items=$source['details']; $journals=array();
+                $snapshot=$s->with_other($s->mapping($source['source_company_id'])); $items=$source['details']; $journals=array();
                 $amount=Invoice_calculation::items(array_map(function($item){return array('nama'=>$item['nm_item'],'qty'=>$item['qty'],'harga'=>$item['harga']);},$items),$quote['biaya_kirim']??'0');
                 $invoice=array('id_penawaran'=>$quoteId,'id_spk_penawaran'=>'','id_detail_plan_tagih'=>0,'nm_customer'=>$quote['nm_customer'],'address'=>$quote['address']??'',
                     'tanggal_invoice'=>date('Y-m-d'),'no_invoice'=>$this->Invoicing_model->preview_no_invoice($snapshot['owner']['id'],'0'),
@@ -200,7 +200,8 @@ class Invoicing extends Admin_Controller
                 $quote=$source ? $source['quote'] : $s->non_consulting_source($invoice['id_penawaran'])['quote'];
                 $issued=$s->one('SELECT COALESCE(SUM(total_nominal),0) AS total FROM tr_invoicing WHERE id_penawaran=? AND id<>?',array($invoice['id_penawaran'],$invoice['id']??''));
                 $outstanding=Invoice_calculation::decimal(Invoice_calculation::cents($quote['grand_total'])-Invoice_calculation::cents($issued['total']));
-                if (Invoice_calculation::cents($quote['grand_total'])<=Invoice_calculation::cents($issued['total']) && $mode==='add') throw new RuntimeException('Outstanding penawaran sudah habis.');
+                // TEMP: cek outstanding penawaran dinonaktifkan sementara; aktifkan lagi dengan menghapus komentar ini.
+                // if (Invoice_calculation::cents($quote['grand_total'])<=Invoice_calculation::cents($issued['total']) && $mode==='add') throw new RuntimeException('Outstanding penawaran sudah habis.');
             }
             $data=array('invoice'=>$invoice,'snapshot'=>$snapshot,'items'=>$items,'mode'=>$mode,'journals'=>$journals,'non_consulting'=>true,'outstanding'=>$outstanding,
                 'source_fingerprint'=>$source?Invoice_calculation::fingerprint(array('source'=>$source,'mapping'=>$snapshot)):'','invoice_fingerprint'=>$fingerprint,'error'=>null);

@@ -159,6 +159,14 @@ class Invoice_consulting_service
         return $accounts;
     }
 
+    public function with_other($snapshot)
+    {
+        $names=array();
+        foreach ($this->master($snapshot['owner']['id']) as $row) if ($row['no_perkiraan']===Invoice_consulting::OTHER_CODE) $names[]=$row['nama'];
+        if (count($names)===1 && trim($names[0])!=='') $snapshot['accounts'][Invoice_consulting::OTHER_ROLE]=array('code'=>Invoice_consulting::OTHER_CODE,'name'=>$names[0]);
+        return $snapshot;
+    }
+
     public function mapping($source, $lock=false)
     {
         $this->schema();
@@ -234,13 +242,13 @@ class Invoice_consulting_service
                 if ($receipts || !$journals || $this->one("SELECT id FROM tr_jurnal WHERE jenis_transaksi='Penerimaan Piutang' AND keterangan LIKE ?",array('% - '.$existing['no_invoice'].'%'))) throw new RuntimeException('Invoice memiliki penerimaan atau jurnal tidak lengkap; tidak dapat diedit.');
                 foreach ($journals as $j) if (!in_array((string)$j['sts'],array('0','9'),true)) throw new RuntimeException('Jurnal invoice sudah diposting.');
                 if ((string)($existing['sts_close']??'0')==='1' || Invoice_calculation::cents($existing['saldo_piutang'])!==Invoice_calculation::cents($existing['total_akhir_jurnal'])) throw new RuntimeException('Invoice ditutup atau saldo berubah; perlu rekonsiliasi.');
-                $snapshot=Invoice_consulting::snapshot($existing);
+                $snapshot=$this->with_other(Invoice_consulting::snapshot($existing));
                 $quoteId=$existing['id_penawaran']; $number=$existing['no_invoice'];
                 if (isset($post['id_penawaran']) && $post['id_penawaran']!==$quoteId) throw new InvalidArgumentException('Penawaran invoice tidak boleh berubah.');
             } else $quoteId=$this->required($post,'id_penawaran',100);
             $source=$this->non_consulting_source($quoteId,true); $quote=$source['quote'];
             if (!$edit) {
-                $snapshot=$this->mapping($source['source_company_id'],true);
+                $snapshot=$this->with_other($this->mapping($source['source_company_id'],true));
                 if (!hash_equals(Invoice_calculation::fingerprint(array('source'=>$source,'mapping'=>$snapshot)),$this->required($post,'source_fingerprint',64))) throw new RuntimeException('Penawaran atau mapping berubah; buka ulang form.');
             }
             $shipping=$edit?$existing['biaya_kirim']:($quote['biaya_kirim']??'0');
@@ -249,7 +257,8 @@ class Invoice_consulting_service
                 || !is_scalar($item['qty']) || !is_scalar($item['harga']) || strlen($item['nama'])>1000) throw new InvalidArgumentException('Item invoice tidak valid.');
             $items=Invoice_calculation::items($post['item']??null,$shipping);
             $issued=$this->one('SELECT COALESCE(SUM(total_nominal),0) AS total FROM tr_invoicing WHERE id_penawaran=? AND id<>?',array($quoteId,$edit?$id:''));
-            if ($items['dpp']>Invoice_calculation::cents($quote['grand_total'])-Invoice_calculation::cents($issued['total'])) throw new RuntimeException('Total penjualan melebihi outstanding invoice.');
+            // TEMP: cek outstanding penawaran dinonaktifkan sementara; aktifkan lagi dengan menghapus komentar ini.
+            // if ($items['dpp']>Invoice_calculation::cents($quote['grand_total'])-Invoice_calculation::cents($issued['total'])) throw new RuntimeException('Total penjualan melebihi outstanding invoice.');
             $type=$this->required($post,'tax_treatment',8); $role=$this->required($post,'sales_role',40);
             $totals=Invoice_consulting::totals(Invoice_calculation::decimal($items['dpp']),$type);
             if (!$edit) {

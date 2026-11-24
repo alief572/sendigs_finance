@@ -12,6 +12,15 @@ class Invoice_consulting
             'sales_public'=>'Penjualan Public Training & Seminar', 'sales_hse'=>'Penjualan HSE Pengujian');
     }
 
+    const OTHER_ROLE = 'sales_other';
+    const OTHER_CODE = '4101-01-07';
+
+    // Hanya invoice non konsultasi; tidak masuk mapping wajib agar mapping lama tetap valid.
+    public static function non_consulting_revenues()
+    {
+        return self::revenues() + array(self::OTHER_ROLE=>'Penjualan Lain-lain');
+    }
+
     public static function roles()
     {
         return array('receivable'=>'Piutang Dagang Usaha', 'vat_domestic'=>'Hutang PPN DN',
@@ -88,7 +97,7 @@ class Invoice_consulting
 
     public static function journal($t, $accounts, $salesRole, $invoiceNo, $spkNo)
     {
-        if (!is_string($salesRole) || !isset(self::revenues()[$salesRole])) throw new InvalidArgumentException('Pilihan COA penjualan tidak valid.');
+        if (!is_string($salesRole) || !isset(self::non_consulting_revenues()[$salesRole])) throw new InvalidArgumentException('Pilihan COA penjualan tidak valid.');
         $lines = array();
         if ($t['type'] === 'WAPU') $lines[] = array('vat_wapu_prepaid', $t['ppn'], 0);
         $lines[] = array('receivable', $t['receivable'], 0);
