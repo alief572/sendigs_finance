@@ -19,6 +19,8 @@ try{
     foreach($schemas as $schema)sql($admin,"CREATE DATABASE `$schema` CHARACTER SET utf8mb4");
     $connections=[];foreach($schemas as $schema)$connections[]=DB(['dbdriver'=>'mysqli','hostname'=>'127.0.0.1','port'=>$port,'username'=>'root','password'=>$password,'database'=>$schema,'db_debug'=>false,'pconnect'=>false,'char_set'=>'utf8mb4','dbcollat'=>'utf8mb4_general_ci'],true);
     list($db,$acc,$auto)=$connections;
+    sql($db,'SET SESSION lock_wait_timeout=2');
+    sql($acc,'SET SESSION lock_wait_timeout=2');
     sql($db,'CREATE TABLE tr_jurnal (id INT PRIMARY KEY,no_transaksi VARCHAR(255),jenis_transaksi VARCHAR(50),sts VARCHAR(10),id_company VARCHAR(10),nm_company VARCHAR(100),tgl_jurnal DATE,coa VARCHAR(30),debit DECIMAL(20,2),kredit DECIMAL(20,2),keterangan TEXT,tgl_posting DATETIME NULL,posted_by VARCHAR(100) NULL) ENGINE=InnoDB');
     sql($db,'CREATE TABLE payment_approve (id VARCHAR(100) PRIMARY KEY,id_payment VARCHAR(100),no_doc VARCHAR(100),tipe VARCHAR(50)) ENGINE=InnoDB');
     sql($db,'CREATE TABLE tr_payment_paid (id VARCHAR(100) PRIMARY KEY) ENGINE=InnoDB');
@@ -38,6 +40,7 @@ try{
     $loader=new class {public $targets; public function database($name,$return){return $this->targets[$name];}};
     $loader->targets=['accounting_stm'=>$acc,'accounting'=>$auto];
     $numbers=(new ReflectionClass('Jurnal_payment_nomor_model'))->newInstanceWithoutConstructor();$numbers->db=$db;
+    check($numbers->get_no_buk('101','7')==='101BK'.date('y').'00001','two-argument caller still reads the configured accounting schema');
     $auth=new class {public function user_id(){return '42';} public function user_name(){return 'Finance';}};
     $ci=(object)['db'=>$db,'load'=>$loader,'auth'=>$auth,'Jurnal_payment_nomor_model'=>$numbers];
     $db->insert('payment_approve',['id'=>'BK--1026-0004','id_payment'=>'','no_doc'=>'PERIODIK-2026-00170','tipe'=>'periodik']);
