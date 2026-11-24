@@ -64,7 +64,7 @@ $number = $invoice['no_invoice'];
                 <section aria-labelledby="invoice-revenue-title">
                     <div class="invoice-section-heading"><h3 id="invoice-revenue-title">Akun penjualan</h3><p>Kategori penjualan menentukan akun pendapatan pada jurnal invoice.</p></div>
                     <?php if ($editable): ?><div class="form-group"><label for="consulting-sales">COA penjualan <span class="invoice-required" aria-hidden="true">*</span></label><select class="form-control" id="consulting-sales" name="sales_role" required><option value="">Pilih COA Penjualan</option>
-                        <?php foreach(Invoice_consulting::revenues() as $key=>$label): ?><option value="<?= $key ?>" <?= $role===$key?'selected':'' ?>><?= $escape($snapshot['accounts'][$key]['code'].' - '.$label) ?></option><?php endforeach; ?>
+                        <?php foreach(($non_consulting?Invoice_consulting::non_consulting_revenues():Invoice_consulting::revenues()) as $key=>$label): if(!isset($snapshot['accounts'][$key])) continue; ?><option value="<?= $key ?>" <?= $role===$key?'selected':'' ?>><?= $escape($snapshot['accounts'][$key]['code'].' - '.$label) ?></option><?php endforeach; ?>
                     </select></div><?php else: ?><div class="invoice-customer"><?= $escape(($snapshot['accounts'][$role]['code']??'').' - '.($snapshot['accounts'][$role]['name']??'')) ?></div><?php endif; ?>
                     <p class="invoice-help">PPh dicatat saat penerimaan sesuai bukti yang diinput. Nilainya tidak mengurangi piutang awal invoice ini.</p>
                 </section>
