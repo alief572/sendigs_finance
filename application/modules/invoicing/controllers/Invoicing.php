@@ -2442,20 +2442,20 @@ class Invoicing extends Admin_Controller
             redirect('invoicing');
         }
 
-        $data_item_invoice = $this->Invoicing_model->get_invoice_non_kons_detail($id);
-        $data_jurnal_invoice = $this->Invoicing_model->get_view_jurnal_invoice_non_kons($id);
+        // Invoice lama: tampil dengan layout yang sama dengan invoice baru (read-only, tanpa snapshot).
+        $items = $this->db->order_by('id')->get_where('tr_invoice_detail_non_kons', array('id_header' => $id))->result_array();
+        $journals = $this->db->order_by('id')->get_where('tr_jurnal', array('no_transaksi' => $id, 'jenis_transaksi' => 'Invoicing'))->result_array();
+        $fixed = array('1102-01-01', '2104-01-07', '1106-01-02');
+        $snapshot = array('accounts' => array(), 'owner' => array('nm_company' => ''), 'sales_role' => 'legacy');
+        foreach ($journals as $line) {
+            if (!in_array($line['coa'], $fixed, true)) $snapshot['accounts']['legacy'] = array('code' => $line['coa'], 'name' => $line['nm_coa']);
+            $snapshot['owner']['nm_company'] = $line['nm_company'];
+        }
 
-        $data = [
-            'data_invoicing' => $data_invoice,
-            'data_item_invoice' => $data_item_invoice,
-            'list_jurnal_invoice' => (!empty($data_jurnal_invoice['hasil_jurnal'])) ? $data_jurnal_invoice['hasil_jurnal'] : '',
-            'total_kredit' => (!empty($data_jurnal_invoice['total_kredit'])) ? $data_jurnal_invoice['total_debit'] : '',
-            'total_debit' => (!empty($data_jurnal_invoice['total_debit'])) ? $data_jurnal_invoice['total_kredit'] : ''
-        ];
-
-        $this->template->title('View Invoice Non Konsultasi');
-        $this->template->set($data);
-        $this->template->render('view_invoice_non_konsultasi');
+        $this->template->title('Invoice Non Konsultasi');
+        $this->template->set(array('invoice' => (array)$data_invoice, 'snapshot' => $snapshot, 'items' => $items, 'mode' => 'view', 'journals' => $journals,
+            'non_consulting' => true, 'outstanding' => null, 'source_fingerprint' => '', 'invoice_fingerprint' => '', 'error' => null));
+        $this->template->render('consulting_invoice');
         $this->auditPage('Melihat invoice non konsultasi', true, 'non_kons', array('id_invoicing' => $id));
     }
 

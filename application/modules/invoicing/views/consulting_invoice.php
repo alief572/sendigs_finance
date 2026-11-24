@@ -11,6 +11,10 @@ $role = $snapshot['sales_role'] ?? '';
 $type = $invoice['tax_treatment'] ?? '';
 $totals = $type ? Invoice_consulting::totals($invoice['total_nominal'],$type) : null;
 $number = $invoice['no_invoice'];
+if (!$totals && !$editable && isset($invoice['dpp_lain_lain_jurnal'])) { // invoice lama: pakai nilai tersimpan
+    $c = function ($k) use ($invoice) { return (int) round((float) ($invoice[$k] ?? 0) * 100); };
+    $totals = array('sales'=>$c('total_nominal'), 'other'=>$c('dpp_lain_lain_jurnal'), 'ppn'=>$c('pajak'), 'gross'=>$c('tagihan_ppn_jurnal'), 'receivable'=>$c('total_akhir_jurnal'));
+}
 ?>
 <link rel="stylesheet" href="<?= base_url('assets/css/invoicing.css?v='.filemtime(FCPATH.'assets/css/invoicing.css')) ?>">
 <div class="box invoice-workspace consulting-invoice<?= $mode==='add'?' invoice-compact':'' ?>">
