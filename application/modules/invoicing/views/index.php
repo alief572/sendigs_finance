@@ -314,31 +314,6 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
     </div>
 </div>
 
-<div class="modal" id="modal_list_non_kons" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-md">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-                <h4 class="modal-title" id="myModalLabel"><span class="fa fa-print"></span> Closing Invoice</h4>
-            </div>
-            <form action="" method="post" id="form_close_invoice">
-                <div class="modal-body" id="MyModalBody">
-                    <input type="hidden" name="id_invoicing">
-                    <div class="form-group">
-                        <label for="">Alasan Closing Invoice</label>
-                        <textarea name="alasan_closing" id="" class="form-control form-control-sm"></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-sm btn-danger" name="simpan_closing"><i class="fa fa-close"></i> Close Invoice !</button>
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
-                        <span class="glyphicon glyphicon-remove"></span> Batal
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 <div id="form-data"></div>
 <!-- DataTables -->
 <!-- <script src="<?= base_url('assets/plugins/datatables/jquery.dataTables.min.js') ?>"></script>
@@ -648,91 +623,6 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
         DataTablesInvoiced();
     });
 
-    $(document).on('click', '.close_invoice_non_kons', function() {
-        var id = $(this).data('id');
-
-        $('input[name="id_invoicing"]').val(id);
-
-        $('#modal_list_non_kons').modal('show');
-    })
-
-    $(document).on('submit', '#form_close_invoice', function(e) {
-        e.preventDefault();
-
-        // 1. Tambahkan .trim() untuk membuang spasi di awal/akhir
-        var alasan_closing = $('textarea[name="alasan_closing"]').val();
-
-        if (!alasan_closing || alasan_closing.trim() === "") {
-            Swal.fire({
-                title: 'Perhatian!',
-                text: 'Mohon isi alasan penutupan invoice terlebih dahulu.',
-                icon: 'warning', // Pakai warning biasanya lebih pas untuk validasi input
-                confirmButtonText: 'Oke, Saya Isi'
-            });
-            return false;
-        }
-
-        Swal.fire({
-            title: 'Konfirmasi Penutupan',
-            text: 'Invoice ini akan ditutup secara permanen dan tidak dapat diubah kembali. Lanjutkan?',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33',
-            confirmButtonText: 'Ya, Tutup Invoice!',
-            cancelButtonText: 'Batal',
-            allowOutsideClick: false
-        }).then((result) => {
-            if (result.isConfirmed) {
-                // Tampilkan loading agar tidak double-submit
-                Swal.fire({
-                    title: 'Sedang memproses...',
-                    allowOutsideClick: false,
-                    didOpen: () => {
-                        Swal.showLoading();
-                    }
-                });
-
-                // Gunakan $(this) untuk mengambil form yang sedang di-submit
-                var formData = $(this).serialize();
-
-                $.ajax({
-                    type: 'POST',
-                    url: siteurl + active_controller + 'save_close_invoice',
-                    data: formData,
-                    dataType: 'json',
-                    success: function(response) {
-                        Swal.fire({
-                            title: 'Berhasil!',
-                            text: response.msg,
-                            icon: 'success',
-                            timer: 2000,
-                            showConfirmButton: false
-                        }).then(() => {
-                            location.reload();
-                        });
-                    },
-                    error: function(xhr) {
-                        let errorMsg = 'Terjadi kesalahan sistem.';
-                        try {
-                            const response = JSON.parse(xhr.responseText);
-                            errorMsg = response.msg;
-                        } catch (e) {
-                            errorMsg = 'Gagal memproses permintaan (Error: ' + xhr.status + ')';
-                        }
-
-                        Swal.fire({
-                            title: 'Oops!',
-                            text: errorMsg,
-                            icon: 'error',
-                            confirmButtonText: 'Tutup'
-                        });
-                    }
-                });
-            }
-        });
-    });
-
     function invoiceTableLanguage() {
         return {
             search: 'Cari:', searchPlaceholder: 'Nomor, customer, atau project',
@@ -764,6 +654,9 @@ $ENABLE_DELETE  = has_permission('Invoicing.Delete');
     function invoiceDocumentCell(data, type, row) {
         if (type !== 'display') return [row.no_invoice || '', row.no_spk || ''].join(' ');
         var number = row.no_invoice ? invoiceCellText(row.no_invoice) : 'Belum ada invoice';
+        if (row.no_invoice && row.fu_url) { // buka invoice di Follow Up Piutang (mockup tab Invoiced)
+            number = '<a href="' + invoiceCellText(row.fu_url) + '" title="Buka di Follow Up Piutang">' + number + '</a>';
+        }
         return '<div class="invoice-cell-primary">' + number + '</div><div class="invoice-cell-secondary"><span class="invoice-cell-label">SPK:</span> ' + invoiceCellText(row.no_spk) + '</div>';
     }
 

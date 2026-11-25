@@ -1521,11 +1521,8 @@ class Invoicing extends Admin_Controller
         }
 
         $btn_revisi = '';
-        $btn_close = '';
         if (has_permission($this->managePermission)) {
             $btn_revisi = '<a href="' . base_url('invoicing/edit_invoice_non_kons/' . $id) . '" class="btn btn-sm btn-warning" title="Edit Invoice Non KOnsultasi"><i class="fa fa-pencil"></i></a>';
-
-            $btn_close = '<button type="button" class="btn btn-sm btn-danger close_invoice_non_kons" data-id="' . $id . '" title="Close Invoice"><i class="fa fa-close"></i></button>';
         }
 
         $btn_print = '<a href="javascript:void(0);" class="btn btn-sm btn-primary pilih_print_inv_non_kons" data-id_inv="' . $id . '" title="Print Invoice Non Konsultasi" data-toggle="modal" data-target="#modal_print_non_kons"><i class="fa fa-print"></i></a>';
@@ -1534,7 +1531,6 @@ class Invoicing extends Admin_Controller
 
             $btn_view = '';
             $btn_revisi = '';
-            $btn_close = '';
         }
 
         $btn_print_kwitansi = '<a href="javascript:void(0);" class="btn btn-sm btn-default pilih_print_kwitansi" data-id_inv="' . $id . '" title="Print Kwitansi" data-toggle="modal" data-target="#modal_print_kwitansi"><i class="fa fa-file-pdf-o"></i></a>';
@@ -2462,72 +2458,6 @@ class Invoicing extends Admin_Controller
         $this->template->render('consulting_invoice');
         $this->auditPage('Melihat invoice non konsultasi', true, 'non_kons', array('id_invoicing' => $id));
     }
-
-    public function save_close_invoice()
-    {
-        $this->beginAudit(__FUNCTION__);
-        $this->auditRestrict($this->managePermission);
-
-        $id_invoicing   = $this->input->post('id_invoicing', true);
-        $alasan_closing = $this->input->post('alasan_closing', true);
-
-        // Validasi input awal
-        if (empty($id_invoicing)) {
-            $this->completeAudit('Menutup invoice ditolak', 0, array('reason' => 'invalid_id', 'outcome' => 'rejected'));
-            return $this->_send_response(400, 'Data invoice tidak ditemukan. Silakan muat ulang halaman.');
-        }
-
-        if (empty($alasan_closing)) {
-            $this->completeAudit('Menutup invoice ditolak', 0, array('id_invoicing' => $id_invoicing, 'reason' => 'reason_required', 'outcome' => 'rejected'));
-            return $this->_send_response(400, 'Mohon isi alasan penutupan invoice terlebih dahulu.');
-        }
-
-        $this->db->trans_begin();
-        $auditReason = 'failed';
-
-        try {
-            // Close hanya bila lunas: sisa piutang 0 persis (INV-FR-10)
-            $inv = $this->db->query('SELECT saldo_piutang FROM tr_invoicing WHERE id = ? FOR UPDATE', [$id_invoicing])->row();
-            if ($inv && (int) round($inv->saldo_piutang * 100) !== 0) {
-                $auditReason = 'not_settled';
-                throw new Exception('Invoice belum lunas, tidak bisa di-close. Selesaikan sisa piutang di Penerimaan Uang dulu.');
-            }
-
-            $arr_update = [
-                'sts_close'    => '1',
-                'close_by'     => $this->auth->user_id(),
-                'close_date'   => date('Y-m-d H:i:s'),
-                'close_reason' => $alasan_closing
-            ];
-
-            // Cek lunas diulang di dalam UPDATE supaya aman dari penerimaan yang masuk bersamaan
-            $this->db->where('id', $id_invoicing);
-            $this->db->where('ROUND(saldo_piutang * 100) = 0', null, false);
-            $this->db->update('tr_invoicing', $arr_update);
-
-            // Cek apakah ada baris yang benar-benar terupdate
-            if ($this->db->affected_rows() === 0) {
-                $auditReason = 'no_rows_updated';
-                throw new Exception('Gagal memperbarui status. Invoice mungkin sudah ditutup atau belum lunas.');
-            }
-
-            // Sukses ditentukan dari nilai balik commit (CI3); sebelumnya tidak diperiksa.
-            if ($this->db->trans_commit() === false) {
-                $auditReason = 'commit_failed';
-                throw new Exception('Gagal menyimpan penutupan invoice. Silakan coba lagi.');
-            }
-            $this->completeAudit('Menutup invoice', 1, array('id_invoicing' => $id_invoicing, 'outcome' => 'closed'));
-            return $this->_send_response(200, 'Invoice telah berhasil ditutup dan tersimpan di sistem.');
-        } catch (Exception $e) {
-            $this->db->trans_rollback();
-            // Ambil pesan dari exception atau pakai pesan default jika terjadi error database
-            $msg = $e->getMessage() ?: 'Terjadi kendala teknis saat memproses permintaan Anda. Silakan coba beberapa saat lagi.';
-            $this->completeAudit('Menutup invoice gagal', 0, array('id_invoicing' => $id_invoicing, 'reason' => $auditReason, 'outcome' => 'rejected'));
-            return $this->_send_response(500, $msg);
-        }
-    }
-
-
 
     public function close_penawaran_non_kons()
     {

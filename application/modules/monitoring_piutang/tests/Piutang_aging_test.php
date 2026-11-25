@@ -8,7 +8,7 @@ function same($a, $b, $msg) { ok($a === $b, "$msg (got " . var_export($a, true) 
 function row($o = []) {
     return $o + ['id' => 'INV1', 'no_invoice' => 'INV-001', 'tgl_invoice' => '2026-10-01', 'customer' => 'PT A', 'project' => 'P', 'company' => '7',
         'nilai' => 1000, 'saldo' => 1000, 'sts_close' => '0', 'tgl_kirim' => null, 'kirim_via' => null, 'tgl_terima' => null, 'plan_bayar' => null,
-        'extra_fu' => []];
+        'no_faktur' => '010.000-26.00000001', 'extra_fu' => []];
 }
 $A = 'Piutang_aging';
 $today = '2026-11-06';
@@ -26,8 +26,10 @@ $rows = [row(['id' => 'a', 'tgl_terima' => '2026-10-30', 'saldo' => 100]), row([
 $s = $A::summary($rows, $today);
 same($s['lancar']['cents'], 10000, 'lancar'); same($s['potensi']['cents'], 20000, 'potensi'); same($s['macet']['cents'], 30000, 'macet');
 same($s['total']['cents'], 60000, 'total'); same($s['belum']['cents'], 5000, 'belum'); same($s['grand_cents'], 65000, 'grand');
-same($s['macet']['oldest'], 158, 'oldest macet'); same($s['macet']['pct'], 46.2, 'pct dari card Total Piutang (diterima + belum diterima)');
-same($s['semua']['cents'], 65000, 'card Total Piutang = diterima + belum diterima'); same($s['semua']['count'], 5, 'card Total Piutang: 4 bersisa + 1 lunas belum close (e), close (f) tidak');
+same($s['macet']['oldest'], 158, 'oldest macet'); same($s['macet']['pct'], 50.0, 'pct dari Total Piutang = Lancar+Potensi+Macet (mockup)');
+same(round($s['lancar']['pct'] + $s['potensi']['pct'] + $s['macet']['pct'], 1), 100.0, 'persen L/P/M berjumlah 100');
+same($s['total']['customers'], 1, 'card Total: jumlah customer');
+same($s['semua']['cents'], 65000, 'semua = diterima + belum diterima (tetap tersedia)'); same($s['semua']['count'], 5, 'semua: 4 bersisa + 1 lunas belum close (e), close (f) tidak');
 same($s['lunas']['count'], 1, 'lunas belum close dihitung terpisah'); same($s['total']['count'], 3, 'total diterima tetap 3');
 
 // ar_status berurutan
@@ -66,7 +68,23 @@ same($A::close_block_reason(row(['plan_bayar' => '2026-12-01', 'saldo' => 0])), 
 same($A::close_block_reason(row(['plan_bayar' => '2026-12-01', 'saldo' => 0, 'sts_close' => '1'])), 'Invoice sudah close.', 'close ganda');
 
 // plan_nominal
-same($A::plan_nominal(row(['saldo' => 5, 'plan_bayar_nominal' => '900.00'])), 900.0, 'nominal tersimpan'); same($A::plan_nominal(row(['saldo' => 5])), 5.0, 'cadangan saldo');
+same($A::plan_nominal(row(['saldo' => 5, 'plan_bayar_nominal' => '900.00'])), 900.0, 'nominal tersimpan'); same($A::plan_nominal(row(['saldo' => 0, 'nilai' => 1000])), 1000.0, 'MP-R-24: lunas tanpa nominal tersimpan tidak jadi 0 (nilai invoice)');
+same($A::plan_nominal(row(['saldo' => 0, 'nilai' => 1000, 'bayar_sebelum_terima' => 400])), 600.0, 'MP-R-24: nilai invoice - penerimaan sebelum terima');
+same($A::plan_nominal(row(['saldo' => 0, 'nilai' => 100, 'bayar_sebelum_terima' => 400])), 0.0, 'tidak negatif');
+same($A::plan_nominal(row(['saldo' => 0, 'plan_bayar_nominal' => '900.00'])), 900.0, 'nominal tersimpan tidak menyusut walau sudah dibayar');
+// periode (MP-FR-21)
+ok($A::in_period('2026-11-05', []), 'periode kosong = semua'); ok(!$A::in_period('', ['tahun' => '2026']), 'tanggal kosong ditolak bila ada filter');
+ok($A::in_period('2026-11-05', ['tahun' => '2026', 'bulan' => '11']), 'tahun+bulan'); ok(!$A::in_period('2026-11-05', ['bulan' => '10']), 'bulan lain');
+ok($A::in_period('2026-11-05', ['dari' => '2026-11-05', 'sampai' => '2026-11-05']), 'batas dari/sampai inklusif');
+ok(!$A::in_period('2026-11-04', ['dari' => '2026-11-05']), 'sebelum dari'); ok(!$A::in_period('2026-11-06', ['sampai' => '2026-11-05']), 'setelah sampai');
+foreach ([['tahun' => 'x'], ['bulan' => '13'], ['dari' => '2026-13-01'], ['dari' => '2026-12-01', 'sampai' => '2026-11-01']] as $bad) {
+    $threw = false; try { $A::period_check($bad); } catch (InvalidArgumentException $e) { $threw = true; } ok($threw, 'periode tidak valid ditolak');
+}
+$thr = false; try { $A::filter_ar_rows([], ['tab' => 'all', 'inv_dari' => '2026-12-01', 'inv_sampai' => '2026-11-01'], '2026-11-06'); } catch (InvalidArgumentException $e) { $thr = true; } ok($thr, 'filter Follow Up: dari > sampai ditolak');
+$pr = [row(['id' => 'q1', 'tgl_invoice' => '2026-11-03', 'saldo' => 1]), row(['id' => 'q2', 'tgl_invoice' => '2026-11-20', 'saldo' => 1])];
+same(implode(',', array_column($A::filter_ar_rows($pr, ['tab' => 'all', 'inv_dari' => '2026-11-10', 'inv_sampai' => '2026-11-30'], '2026-11-30'), 'id')), 'q2', 'Follow Up: periode dari-sampai');
+same(count($A::monitoring_base($pr, ['dari' => '2026-11-01', 'sampai' => '2026-11-05'], '2026-11-30')), 1, 'Monitoring: periode dari-sampai');
+same(count($A::monitoring_base($pr, [], '2026-11-30')), 2, 'Monitoring: default semua');
 
 // validate_ar
 function errs($r, $old = []) { return Piutang_aging::validate_ar($r, $old); }
@@ -91,13 +109,50 @@ ok(count(errs(array_merge($base, ['bukti_terima' => null]))) > 0, 'terima tanpa 
 ok(in_array('Bukti terima (file) wajib diunggah.', errs(array_merge($base, ['bukti_terima' => '']))), 'pesan bukti wajib');
 ok(count(errs(row(['tgl_kirim' => '2026-10-01', 'kirim_via' => 'JNE', 'no_resi' => 'R1']))) === 0, 'tanpa tanggal terima bukti tidak diminta');
 ok(count(errs($base)) === 0, 'terima + bukti valid');
-ok(count(errs($base + ['fu1_aktual' => '2026-10-05', 'fu1_ket' => 'ok'])) === 0, 'FU1 valid');
+ok(count(errs($base + ['fu1_aktual' => '2026-10-05', 'fu1_ket' => 'ok', 'fu1_status' => 'SUDAH DI TERIMA DI KEUANGAN'])) === 0, 'FU1 valid');
 ok(count(errs($base + ['fu1_aktual' => '2026-10-05'])) > 0, 'FU tanpa keterangan');
-ok(count(errs(['fu_pic_nama' => null, 'fu1_aktual' => '2026-10-05', 'fu1_ket' => 'ok'] + $base)) === 0, 'FU tanpa PIC boleh (opsional)');
-ok(count(errs(['fu_pic_nama' => 'B', 'fu_pic_telp' => null, 'fu1_aktual' => '2026-10-05', 'fu1_ket' => 'ok'] + $base)) === 0, 'FU dengan nama PIC saja boleh');
+ok(count(errs(['fu_pic_nama' => null, 'fu1_aktual' => '2026-10-05', 'fu1_ket' => 'ok', 'fu1_status' => 'SUDAH DI TERIMA DI KEUANGAN'] + $base)) === 0, 'FU tanpa PIC boleh (opsional)');
+ok(count(errs(['fu_pic_nama' => 'B', 'fu_pic_telp' => null, 'fu1_aktual' => '2026-10-05', 'fu1_ket' => 'ok', 'fu1_status' => 'SUDAH DI TERIMA DI KEUANGAN'] + $base)) === 0, 'FU dengan nama PIC saja boleh');
 ok(count(errs(['fu_pic_telp' => '1234'] + $base)) > 0, 'telp terlalu pendek');
 ok(count(errs(['fu_pic_telp' => '08ab34567890'] + $base)) > 0, 'telp huruf');
-ok(count(errs($base + ['fu2_aktual' => '2026-10-05', 'fu2_ket' => 'ok'])) > 0, 'FU2 sebelum FU1');
+ok(count(errs($base + ['fu2_aktual' => '2026-10-05', 'fu2_ket' => 'ok', 'fu2_status' => 'SEDANG DALAM PROSES'])) > 0, 'FU2 sebelum FU1');
+// status per FU (MP-FR-17)
+$fu1 = $base + ['fu1_aktual' => '2026-10-05', 'fu1_ket' => 'ok'];
+ok(in_array('FU 1: status wajib diisi bila tanggal dilakukan diisi.', errs($fu1)), 'FU1 dilakukan tanpa status ditolak');
+ok(count(errs($fu1, $fu1)) === 0, 'FU lama sudah dilakukan tanpa status tidak diblokir');
+ok(in_array('FU 1: status tidak valid.', errs(array_merge($fu1, ['fu1_status' => 'BERMASALAH']))), 'status di luar pilihan FU1');
+ok(in_array('FU 1: status tidak valid.', errs(array_merge($fu1, ['fu1_status' => 'INVOICE BERMASALAH']))), 'FU1 tidak punya opsi bermasalah');
+ok(count(errs(array_merge($fu1, ['fu1_status' => 'BELUM DI TERIMA DI KEUANGAN']))) === 0, 'FU1 status belum diterima valid');
+same($A::fu_status_options(5), $A::fu_status_options(3), 'FU 5 dst pakai daftar FU3');
+// INVOICE BERMASALAH: follow up berhenti, plan bayar dan close ditolak, tidak terlambat
+$bm = ['fu1_aktual' => '2026-10-05', 'fu1_ket' => 'ok', 'fu1_status' => 'SUDAH DI TERIMA DI KEUANGAN', 'fu2_aktual' => '2026-10-10', 'fu2_ket' => 'customer menolak', 'fu2_status' => 'INVOICE BERMASALAH'] + $base;
+ok($A::is_bermasalah($bm), 'is_bermasalah');
+ok(!$A::is_bermasalah(array_merge($fu1, ['fu1_status' => 'SUDAH DI TERIMA DI KEUANGAN'])), 'bukan bermasalah');
+same($A::fu_current($bm), null, 'bermasalah: tidak ada FU berjalan'); same($A::fu_stage($bm), 'bermasalah', 'stage bermasalah');
+ok(!$A::fu_late($bm, '2027-01-01'), 'bermasalah tidak masuk FU Terlambat');
+ok(in_array('Invoice bermasalah tidak bisa diberi plan bayar.', errs(array_merge($bm, ['plan_bayar' => '2026-12-01', 'ket_plan_bayar' => 'x']))), 'plan bayar ditolak');
+same($A::close_block_reason(array_merge($bm, ['saldo' => 0, 'plan_bayar' => '2026-12-01'])), 'Invoice bermasalah belum bisa di-close.', 'close ditolak');
+// tab Invoice Bermasalah dan card (MP-FR-22)
+$bmRow = array_merge($bm, ['id' => 'BM', 'saldo' => 500, 'nilai' => 900]);
+$okRow = array_merge($base, ['id' => 'OK', 'saldo' => 300, 'nilai' => 700]);
+$ids2 = function ($x) { return implode(',', array_map(function ($r) { return $r['id']; }, $x)); };
+same($ids2($A::filter_ar_rows([$bmRow, $okRow], ['tab' => 'bermasalah'], $today)), 'BM', 'tab bermasalah');
+same($ids2($A::filter_ar_rows([$bmRow, $okRow], ['tab' => '3'], $today)), 'OK', 'bermasalah keluar dari tab 3');
+same($ids2($A::filter_ar_rows([$bmRow, $okRow], ['tab' => 'all'], $today)), 'BM,OK', 'tab Semua tetap memuat bermasalah');
+$cards = $A::ar_cards([$bmRow, $okRow, row(['id' => 'K1', 'saldo' => 100, 'nilai' => 100])], [], $today);
+same([$cards['bermasalah']['count'], $cards['bermasalah']['cents']], [1, 50000], 'card bermasalah');
+same([$cards['belum_fu']['count'], $cards['belum_fu']['cents']], [1, 30000], 'card belum di-follow up (FU1 berjalan)');
+same([$cards['belum_kirim']['count'], $cards['belum_kirim']['cents']], [1, 10000], 'card belum dikirim');
+$cl = array_merge($okRow, ['id' => 'CL', 'sts_close' => '1', 'close_date' => date('Y') . '-01-05', 'nilai' => 800, 'saldo' => 0]);
+same($A::ar_cards([$cl], ['close_tahun' => date('Y')], $today)['closed']['cents'], 80000, 'card closed = nilai invoice');
+same($A::ket_bermasalah($bm), 'customer menolak', 'ket bermasalah');
+$dec = $A::decorate(array_merge($bm, ['nilai' => 900, 'saldo' => 500, 'bukti_extra' => [['path' => 'u/b.png', 'nama' => 'b.png']]]), $today);
+same([$dec['bermasalah'], $dec['ket_bermasalah'], $dec['terbayar'], $dec['bukti_jumlah']], [true, 'customer menolak', 400, 2], 'decorate: bermasalah, terbayar, bukti');
+same($dec['bukti_text'], 'tanda terima.pdf, b.png', 'decorate: nama bukti untuk export');
+same($dec['fu_next_plan'], null, 'bermasalah tanpa jadwal FU berikut');
+// no faktur (MP-FR-18)
+ok(in_array('No faktur wajib diisi.', errs(array_merge($base, ['no_faktur' => '']))), 'terima baru tanpa no faktur ditolak');
+ok(count(errs(array_merge($base, ['no_faktur' => '']), ['tgl_terima' => '2026-10-02', 'no_faktur' => ''])) === 0, 'data lama tanpa faktur tidak diblokir');
 ok(count(errs(array_merge($base, ['plan_bayar' => '2026-12-01']))) > 0, 'plan tanpa keterangan');
 ok(count(errs(array_merge($base, ['plan_bayar' => '2020-01-01', 'ket_plan_bayar' => 'x']))) === 0, 'tanggal plan bebas');
 
@@ -106,12 +161,14 @@ $old = row(['tgl_kirim' => '2026-10-01', 'kirim_via' => 'JNE', 'ket_kirim' => 'r
     'fu_pic_nama' => 'B', 'fu_pic_telp' => '08123456789']);
 $m = $A::lock_saved(['tgl_kirim' => '2026-09-01', 'kirim_via' => 'Driver', 'ket_kirim' => 'x'] + $old, $old);
 same($m['tgl_kirim'], '2026-10-01', 'kirim terkunci setelah terima'); same($m['kirim_via'], 'JNE', 'via terkunci');
+$m = $A::lock_saved(['tgl_kirim' => '2026-09-01', 'kirim_via' => 'Driver'] + $old, array_merge($old, ['tgl_terima' => null]));
+same([$m['tgl_kirim'], $m['kirim_via']], ['2026-10-01', 'JNE'], 'pengiriman terkunci begitu disimpan, sebelum tanggal terima (MP-R-19)');
 $m = $A::lock_saved(['tgl_terima' => '2026-10-04', 'ket_terima' => 'Ani'] + $old, $old);
 same([$m['tgl_terima'], $m['ket_terima']], ['2026-10-02', 'Budi'], 'terima dan keterangan terkunci begitu tanggal terima tersimpan (tanpa menunggu FU1)');
 $m = $A::lock_saved(['tgl_kirim' => '2026-10-01', 'kirim_via' => 'JNE', 'tgl_terima' => '2026-10-04'] + $old, ['tgl_terima' => null] + $old);
 same($m['tgl_terima'], '2026-10-04', 'tanggal terima pertama kali masih bisa diisi');
 $m = $A::lock_saved(['tgl_terima' => '2026-10-02'] + $old, $old); same($m['tgl_terima'], '2026-10-02', 'simpan ulang dengan nilai sama tetap utuh');
-$m = $A::lock_saved(['tgl_terima' => '', 'fu_pic_nama' => ''] + $old, $old); same($m['tgl_terima'], '2026-10-02', 'terima tidak dikosongkan'); same($m['fu_pic_nama'], 'B', 'PIC tidak dikosongkan');
+$m = $A::lock_saved(['tgl_terima' => '', 'fu_pic_nama' => ''] + $old, $old); same($m['tgl_terima'], '2026-10-02', 'terima tidak dikosongkan'); same($m['fu_pic_nama'], '', 'PIC boleh dikosongkan (MP-R-19)');
 // bukti terima: terkunci begitu tanggal terima tersimpan; data lama tanpa bukti masih bisa dilengkapi sekali, lalu terkunci
 $oldB = ['bukti_terima' => 'u/lama.pdf', 'bukti_terima_nama' => 'lama.pdf'] + $old;
 $m = $A::lock_saved(['bukti_terima' => 'u/baru.png', 'bukti_terima_nama' => 'baru.png'] + $oldB, $oldB);
@@ -127,12 +184,12 @@ $m = $A::lock_saved(['bukti_terima' => '', 'bukti_terima_nama' => ''] + $oldB, $
 same([$m['bukti_terima'], $m['bukti_terima_nama']], ['u/lama.pdf', 'lama.pdf'], 'bukti tidak dikosongkan, nama ikut file lama');
 $m = $A::lock_saved(['bukti_terima_nama' => 'ganti-nama-saja.pdf'] + $oldB + ['bukti_terima' => 'u/lama.pdf'], $oldB);
 same($m['bukti_terima_nama'], 'lama.pdf', 'nama tidak bisa diubah tanpa file baru');
-$oldB1 = ['fu1_plan' => '2026-10-05', 'fu1_aktual' => '2026-10-05', 'fu1_ket' => 'ok'] + $oldB;
+$oldB1 = ['fu1_plan' => '2026-10-05', 'fu1_aktual' => '2026-10-05', 'fu1_ket' => 'ok', 'fu1_status' => 'SUDAH DI TERIMA DI KEUANGAN'] + $oldB;
 $m = $A::lock_saved(['bukti_terima' => 'u/baru.png', 'bukti_terima_nama' => 'baru.png'] + $oldB1, $oldB1);
 same([$m['bukti_terima'], $m['bukti_terima_nama']], ['u/lama.pdf', 'lama.pdf'], 'bukti terkunci setelah FU1');
 $m = $A::lock_saved(['fu_pic_nama' => 'B2'] + $oldB1, $oldB1);
 same($m['bukti_terima'], 'u/lama.pdf', 'simpan tanpa memilih file mempertahankan bukti');
-$old1 = ['fu1_plan' => '2026-10-05', 'fu1_aktual' => '2026-10-05', 'fu1_ket' => 'ok', 'no_resi' => 'R1'] + $old;
+$old1 = ['fu1_plan' => '2026-10-05', 'fu1_aktual' => '2026-10-05', 'fu1_ket' => 'ok', 'fu1_status' => 'SUDAH DI TERIMA DI KEUANGAN', 'no_resi' => 'R1'] + $old;
 $m = $A::lock_saved(['tgl_terima' => '2026-10-09', 'no_resi' => 'R2', 'fu1_aktual' => '2026-10-06'] + $old1, $old1);
 same($m['tgl_terima'], '2026-10-02', 'terima terkunci setelah FU1'); same($m['no_resi'], 'R1', 'resi terkunci'); same($m['fu1_aktual'], '2026-10-05', 'FU yang sudah dilakukan langsung terkunci (tidak bisa dikoreksi)');
 $m = $A::lock_saved(['fu1_aktual' => '', 'fu1_ket' => '', 'fu1_plan' => '2026-12-31'] + $old1, $old1);
@@ -140,6 +197,11 @@ same([$m['fu1_aktual'], $m['fu1_ket'], $m['fu1_plan']], ['2026-10-05', 'ok', '20
 $old1b = ['fu2_plan' => '2026-10-12'] + $old1;
 $m = $A::lock_saved(['fu2_plan' => '2026-10-15', 'fu2_aktual' => '2026-10-14', 'fu2_ket' => 'baru'] + $old1b, $old1b);
 same([$m['fu2_plan'], $m['fu2_aktual'], $m['fu2_ket']], ['2026-10-15', '2026-10-14', 'baru'], 'FU berjalan (belum dilakukan) tetap bisa diisi');
+$oldF = ['no_faktur' => 'F-1', 'fu1_aktual' => null] + $old;
+$m = $A::lock_saved(['no_faktur' => 'F-2'] + $oldF, $oldF); same($m['no_faktur'], 'F-2', 'no faktur masih bisa dikoreksi sebelum FU1');
+$m = $A::lock_saved(['no_faktur' => ''] + $oldF, $oldF); same($m['no_faktur'], 'F-1', 'no faktur tidak dikosongkan');
+$m = $A::lock_saved(['no_faktur' => 'F-3'] + $old1 + ['no_faktur' => 'F-1'], ['no_faktur' => 'F-1'] + $old1); same($m['no_faktur'], 'F-1', 'no faktur terkunci setelah FU1');
+$m = $A::lock_saved(['fu1_status' => 'BELUM DI TERIMA DI KEUANGAN'] + $old1, $old1); same($m['fu1_status'], 'SUDAH DI TERIMA DI KEUANGAN', 'status FU terkunci begitu FU dilakukan');
 $m = $A::lock_saved(['no_resi' => 'R9'] + $old, $old); same($m['no_resi'], 'R9', 'data lama terima tanpa resi: resi masih bisa dilengkapi');
 $oldR = ['no_resi' => 'R1'] + $old;
 $m = $A::lock_saved(['no_resi' => 'R2'] + $oldR, $oldR); same($m['no_resi'], 'R1', 'resi terkunci begitu terima + resi tersimpan (tanpa menunggu FU1)');
@@ -177,7 +239,7 @@ same($ids($A::filter_ar_rows($set, ['tab' => 'all', 'cari' => '1.500.000'], $tod
 same($ids($A::filter_ar_rows($set, ['tab' => 'all', 'fu' => 'selesai'], $today)), '4', 'filter FU selesai');
 same($ids($A::filter_ar_rows($set, ['tab' => 'all', 'fu' => '1'], $today)), '3', 'filter FU1');
 // Batas mulai periode (Dashboard Plan Bayar): >= Okt 2026
-same($A::TANGGAL_MULAI_FOLLOW_UP, '2026-10-01', 'tanggal mulai follow up');
+same($A::tanggal_mulai(), '2026-10-01', 'tanggal mulai daftar dibaca dari config/piutang.php');
 same($A::dari_mulai(2025, 12), false, 'dari_mulai 2025-12'); same($A::dari_mulai(2026, 9), false, 'dari_mulai 2026-09');
 same($A::dari_mulai(2026, 10), true, 'dari_mulai 2026-10'); same($A::dari_mulai('2026', '12'), true, 'dari_mulai string 2026-12');
 same($A::dari_mulai(2027, 1), true, 'dari_mulai 2027-01');
@@ -189,8 +251,9 @@ same($ids($A::filter_ar_rows($tg, ['tab' => 'all', 'inv_bulan' => '10'], $today)
 same($ids($A::filter_ar_rows($tg, ['tab' => 'all', 'inv_tahun' => '2026', 'inv_bulan' => '10'], $today)), 'b', 'inv_tahun + inv_bulan');
 same($ids($A::filter_ar_rows($tg, ['tab' => 'all', 'inv_tahun' => '2024'], $today)), '', 'inv_tahun tanpa hasil');
 same($ids($A::filter_ar_rows($tg, ['tab' => 'all', 'inv_bulan' => '1'], $today)), 'a', 'inv_bulan 1 (tanpa nol di depan)');
-same($ids($A::filter_ar_rows($tg, ['tab' => 'close', 'close_tahun' => '2026', 'inv_bulan' => '10'], $today)), 'd', 'inv_bulan berlaku di tab close');
-same($ids($A::filter_ar_rows($tg, ['tab' => 'close', 'close_tahun' => '2026', 'inv_bulan' => '1'], $today)), '', 'tab close bulan lain');
+same($ids($A::filter_ar_rows($tg, ['tab' => 'close', 'close_tahun' => '2026', 'inv_bulan' => '10'], $today)), 'd', 'tab close memakai Tahun Close');
+same($ids($A::filter_ar_rows($tg, ['tab' => 'close', 'close_tahun' => '2026', 'inv_bulan' => '1'], $today)), 'd', 'tab close tidak ikut periode invoice (MP-FR-21)');
+same($ids($A::filter_ar_rows($tg, ['tab' => 'close', 'close_tahun' => '2025'], $today)), '', 'tab close tahun close lain');
 same($A::tab_counts($tg, ['inv_tahun' => '2026'], $today)['all'], 2, 'jumlah tab mengikuti inv_tahun');
 same($ids($A::filter_ar_rows($tg, ['tab' => 'all', 'inv_tahun' => '', 'inv_bulan' => ''], $today)), 'a,b,c', 'filter kosong = semua');
 foreach ([['tab' => 'x'], ['fu' => 'x'], ['plan_bulan' => '13'], ['inv_bulan' => '13'], ['inv_bulan' => '0'], ['inv_tahun' => 'abc'], ['inv_tahun' => '1999']] as $bad) {
@@ -232,7 +295,7 @@ $threw = false; try { $A::monitoring_base($mon, ['kategori' => 'x'], $today); } 
 ok($threw, 'kategori tidak valid ditolak');
 
 // Dashboard Plan Bayar
-same($A::ketepatan('2026-10-05', '2026-10-05')['label'], 'Sesuai janji', 'tepat'); same($A::ketepatan('2026-10-03', '2026-10-05')['label'], 'Lebih cepat 2 hari', 'cepat');
+same($A::ketepatan('2026-10-05', '2026-10-05')['label'], 'Sesuai plan', 'tepat'); same($A::ketepatan('2026-10-03', '2026-10-05')['label'], 'Lebih cepat 2 hari', 'cepat');
 same($A::ketepatan('2026-10-08', '2026-10-05')['label'], 'Telat 3 hari', 'telat'); same($A::ketepatan('2026-10-08', null), ['days' => null, 'label' => '–'], 'tanpa plan');
 same($A::posisi(row(['saldo' => 0, 'sts_close' => '1'])), 'Lunas & close', 'posisi close'); same($A::posisi(row(['saldo' => 0])), 'Lunas, belum close', 'posisi lunas');
 same($A::posisi(row(['saldo' => 5])), 'Bayar sebagian', 'posisi sebagian');
@@ -244,14 +307,15 @@ $inv = [
     'p5' => row(['id' => 'p5', 'no_invoice' => 'I5', 'saldo' => 50, 'company' => '7'])];
 $plan = $A::plan_rows(array_values($inv), 2026, '', '2026-11-06');
 same($ids($plan), 'p2,p1,p3', 'plan: tahun terpilih, termasuk close, urut tanggal');
-same($plan[1]['nilai_plan'], 1000.0, 'nilai plan close tetap'); same($plan[2]['nilai_plan'], 300.0, 'cadangan sisa sekarang');
+same($plan[1]['nilai_plan'], 1000.0, 'nilai plan close tetap'); same($plan[2]['nilai_plan'], 1000.0, 'MP-R-24: tanpa nominal tersimpan = nilai invoice, bukan sisa sekarang');
 same($ids($A::plan_rows(array_values($inv), 2026, '3', '2026-11-06')), 'p3', 'plan filter company');
+same($ids($A::plan_rows(array_values($inv), 2026, '', '2026-11-06', ['dari' => '2026-10-10', 'sampai' => '2026-10-31'])), 'p1', 'plan: filter tanggal plan bayar dari-sampai');
 $receipts = [['id_inv' => 'p2', 'no_penerimaan' => 'R1', 'tanggal' => '2026-10-07', 'nominal' => '300'], ['id_inv' => 'p5', 'no_penerimaan' => 'R2', 'tanggal' => '2026-11-02', 'nominal' => '50'],
     ['id_inv' => 'p1', 'no_penerimaan' => 'R3', 'tanggal' => '2026-10-20', 'nominal' => '1000'], ['id_inv' => 'p4', 'no_penerimaan' => 'R4', 'tanggal' => '2025-10-01', 'nominal' => '9'],
     ['id_inv' => 'zz', 'no_penerimaan' => 'R5', 'tanggal' => '2026-10-01', 'nominal' => '9']];
 $real = $A::realisasi_rows($receipts, $inv, 2026, '', '2026-11-06');
 same(implode(',', array_column($real, 'no_penerimaan')), 'R1,R3,R2', 'realisasi: tahun ini, semua invoice termasuk tanpa plan dan close');
-same($real[0]['ketepatan'], 'Telat 2 hari', 'ketepatan R1'); same($real[1]['ketepatan'], 'Sesuai janji', 'ketepatan R3'); same($real[2]['ketepatan'], '–', 'tanpa plan');
+same($real[0]['ketepatan'], 'Telat 2 hari', 'ketepatan R1'); same($real[1]['ketepatan'], 'Sesuai plan', 'ketepatan R3'); same($real[2]['ketepatan'], '–', 'tanpa plan');
 same($real[1]['posisi'], 'Lunas & close', 'posisi R3');
 $sum = $A::dashboard_summary($plan, $real, 2026, '2026-11-06');
 same(count($sum), 12, '12 bulan'); same($sum[9]['plan_count'], 2, 'okt plan 2'); same($sum[9]['plan_cents'], 150000, 'okt plan nominal'); same($sum[9]['real_cents'], 130000, 'okt realisasi');
@@ -353,4 +417,51 @@ $d = new FakeDb(); $A::apply_company_filter($d, 'a.id_company', ['VUCA'], null, 
 same($d->c, ['group_start:[]', 'where_in:["a.id_company",["4"]]', 'group_end:[]'], 'array satu grup exact');
 same($A::company_match('7', 'STM,VUCA'), true, 'company_match salah satu'); same($A::company_match('3', 'STM,VUCA'), false, 'company_match tidak ada yang cocok');
 same($A::company_match('6', 'VUCA,STM'), true, 'company_match id 6 masuk STM (COMPANY_GROUPS)'); same($A::company_match('4', ' , '), true, 'company_match daftar kosong = semua');
+// ---- Fase 5: sisa gap mockup (25 Nov 2026) ----
+$f5 = function ($x) { return implode(',', array_map(function ($r) { return $r['id']; }, $x)); };
+// cari: banyak kata = semua kata harus cocok; haystack memuat faktur, PO, konsultan, status FU, TOP, label kategori, FU n
+$cr = [row(['id' => 'c1', 'customer' => 'PT Maju Jaya', 'no_po' => 'PO-77', 'konsultan' => 'Budi', 'top_ke' => 2, 'tgl_kirim' => '2026-10-02', 'tgl_terima' => '2026-08-20',
+        'fu1_plan' => '2026-08-23', 'fu1_aktual' => '2026-08-23', 'fu1_ket' => 'ok', 'fu1_status' => 'SUDAH DI TERIMA DI KEUANGAN']),
+    row(['id' => 'c2', 'customer' => 'PT Maju Mundur'])];
+same($f5($A::filter_ar_rows($cr, ['tab' => 'all', 'cari' => 'maju jaya'], $today)), 'c1', 'cari dua kata: semua harus cocok (tidak harus berurutan)');
+same($f5($A::filter_ar_rows($cr, ['tab' => 'all', 'cari' => 'jaya maju'], $today)), 'c1', 'cari kata urutan terbalik');
+same($f5($A::filter_ar_rows($cr, ['tab' => 'all', 'cari' => '010.000-26'], $today)), 'c1,c2', 'cari no faktur');
+same($f5($A::filter_ar_rows($cr, ['tab' => 'all', 'cari' => 'po-77'], $today)), 'c1', 'cari PO');
+same($f5($A::filter_ar_rows($cr, ['tab' => 'all', 'cari' => 'budi'], $today)), 'c1', 'cari konsultan');
+same($f5($A::filter_ar_rows($cr, ['tab' => 'all', 'cari' => 'sudah di terima'], $today)), 'c1', 'cari status FU');
+same($f5($A::filter_ar_rows($cr, ['tab' => 'all', 'cari' => 'top 2'], $today)), 'c1', 'cari TOP n');
+same($f5($A::filter_ar_rows($cr, ['tab' => 'all', 'cari' => 'potensi macet'], $today)), 'c1', 'cari label kategori');
+same($f5($A::filter_ar_rows($cr, ['tab' => 'all', 'cari' => 'fu 2'], $today)), 'c1', 'cari FU berjalan');
+same($f5($A::monitoring_base($cr, ['cari' => 'maju jaya'], $today)), 'c1', 'Monitoring cari banyak kata');
+// filter "Belum ada FU" = belum diterima (mockup fuTahap kosong)
+same($f5($A::filter_ar_rows($cr, ['tab' => 'all', 'fu' => 'none'], $today)), 'c2', 'Belum ada FU = belum diterima');
+// label Baru tidak untuk invoice close
+same($A::is_baru(['status_changed_date' => '2026-11-06 08:00:00', 'sts_close' => '1'], $today), false, 'invoice close tidak berlabel Baru');
+// card Closed = close dalam periode filter; card Tunggu bayar mengabaikan filter bulan/tahun plan
+$cA = row(['id' => 'CA', 'sts_close' => '1', 'close_date' => '2026-11-03', 'nilai' => 800, 'saldo' => 0, 'tgl_invoice' => '2026-10-05']);
+$cB = row(['id' => 'CB', 'sts_close' => '1', 'close_date' => '2026-10-20', 'nilai' => 500, 'saldo' => 0, 'tgl_invoice' => '2026-11-02']);
+$pb = row(['id' => 'PB', 'tgl_invoice' => '2026-11-02', 'tgl_kirim' => '2026-11-02', 'tgl_terima' => '2026-11-03', 'plan_bayar' => '2027-01-10', 'ket_plan_bayar' => 'x', 'saldo' => 400]);
+$cc = $A::ar_cards([$cA, $cB, $pb], ['inv_tahun' => '2026', 'inv_bulan' => '11', 'close_tahun' => '2025', 'plan_bulan' => '3'], $today);
+same([$cc['closed']['count'], $cc['closed']['cents']], [1, 80000], 'card Closed: tanggal close di periode (Nov), bukan tanggal invoice/close_tahun');
+same($cc['tunggu_bayar']['count'], 1, 'card Tunggu bayar tidak ikut filter bulan plan');
+same($A::ar_cards([$cA, $cB], [], $today)['closed']['count'], 2, 'card Closed tanpa periode = semua close');
+// rekap per customer: ikut kategori, company, umur tertua
+$rkRows = [row(['id' => 'r1', 'customer' => 'X', 'company_name' => 'STM', 'tgl_terima' => '2026-10-30', 'saldo' => 100]),
+    row(['id' => 'r2', 'customer' => 'X', 'company_name' => 'STM', 'tgl_terima' => '2026-06-01', 'saldo' => 300])];
+$rk2 = $A::rekap_customer($rkRows, $today);
+same([$rk2[0]['company'], $rk2[0]['oldest']], ['STM', 158], 'rekap: company dan umur tertua');
+$rk3 = $A::rekap_customer($rkRows, $today, 'lancar');
+same([$rk3[0]['count'], $rk3[0]['total'], $rk3[0]['oldest']], [1, 10000, 7], 'rekap ikut card kategori');
+// nama kategori untuk Excel
+same($A::decorate(row(['tgl_terima' => '2026-08-20']), $today)['kategori_label'], 'Potensi Macet', 'kategori_label untuk Excel');
+same($A::decorate(row(['tgl_terima' => '2026-08-01', 'saldo' => 0]), $today)['kategori_label'], '', 'kategori_label kosong bila lunas');
+same($A::kategori_label('macet'), 'Macet', 'kategori_label macet');
+// Fase 7: FU terakhir + status, FU berikutnya, teks FU tambahan (mockup)
+$fx = row(['tgl_kirim' => '2026-08-01', 'tgl_terima' => '2026-08-02', 'fu1_plan' => '2026-08-05', 'fu1_aktual' => '2026-08-05', 'fu1_ket' => 'a', 'fu1_status' => 'SUDAH DI TERIMA DI KEUANGAN',
+    'fu2_aktual' => '2026-08-12', 'fu2_ket' => 'b', 'fu2_status' => 'SEDANG DALAM PROSES', 'fu3_aktual' => '2026-08-26', 'fu3_ket' => 'c', 'fu3_status' => 'BELUM PLAN BAYAR',
+    'fu4_aktual' => '2026-09-09', 'fu4_ket' => 'd', 'fu4_status' => 'MASIH MENUNGGU JAWABAN',
+    'extra_fu' => [['ke' => 5, 'plan' => '2026-09-23', 'aktual' => '2026-09-23', 'ket' => 'e', 'status' => 'BELUM PLAN BAYAR'], ['ke' => 6, 'plan' => '2026-10-07', 'aktual' => null, 'ket' => null, 'status' => null]]]);
+$dx = $A::decorate($fx, $today);
+same([$dx['fu_last_ke'], $dx['fu_last_status'], $dx['fu_next_ke']], [5, 'BELUM PLAN BAYAR', 6], 'decorate: FU terakhir + status, FU berikutnya');
+same($dx['fu_extra_text'], 'FU5: 23-09-2026 · BELUM PLAN BAYAR · e; FU6: jadwal 07-10-2026', 'FU tambahan dengan status dan tanggal dd-mm-yyyy');
 echo "PASS: $n assertions\n";

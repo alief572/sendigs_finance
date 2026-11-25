@@ -225,6 +225,7 @@ class Invoicing_model extends BF_Model
 
             $status = '<span class="badge bg-yellow">Uninvoiced</span>';
             $status2 = '';
+            $fuUrl = '';
             if ($item->sts_invoice == '1') {
                 $status = '<span class="badge bg-green">Invoiced</span>';
             }
@@ -255,6 +256,11 @@ class Invoicing_model extends BF_Model
 
                     $get_jurnal = $this->db->get_where('tr_jurnal', ['no_transaksi' => $get_invoicing->id, 'sts' => '1'])->result();
                     $get_penerimaan = $this->db->get_where('tr_penerimaan_piutang_detail', ['id_inv' => $get_invoicing->id])->result();
+                    // Nomor invoice membuka invoice ini di Follow Up Piutang; invoice yang sudah di-close (di Follow Up) diberi label Close (mockup).
+                    $fuUrl = site_url('follow_up_piutang') . '?open=' . rawurlencode((string) $get_invoicing->id);
+                    if ((string) ($get_invoicing->sts_close ?? '') === '1') {
+                        $status2 .= ' <span class="badge bg-gray">Close</span>';
+                    }
                     if (empty($get_jurnal) && empty($get_penerimaan)) {
                         // if ($get_invoicing->tipe_invoice == '1') {
                         //     $option .= ' <a href="' . base_url('invoicing/edit_invoicing_vuca/' . $get_invoicing->id) . '" class="btn btn-sm btn-success" title="Revisi Invoice"><i class="fa fa-pencil"></i></a>';
@@ -297,7 +303,8 @@ class Invoicing_model extends BF_Model
                 'project_leader' => $item->nm_project_leader,
                 'sales' => $item->nm_sales,
                 'status' => $status . $status2,
-                'option' => $option
+                'option' => $option,
+                'fu_url' => $fuUrl
             ];
             if ($filter_status == 'invoiced') {
                 $last = &$hasil[count($hasil) - 1];

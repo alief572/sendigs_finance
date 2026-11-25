@@ -10,7 +10,9 @@ class Follow_up_piutang extends Admin_Controller
     protected $viewPermission = 'Follow_Up_Piutang.View';
     protected $managePermission = 'Follow_Up_Piutang.Manage';
     const PER_PAGE = 100;
-    const FILTER_KEYS = ['tab', 'company', 'customer', 'cari', 'fu', 'plan_bulan', 'plan_tahun', 'close_tahun', 'inv_tahun', 'inv_bulan'];
+    const TAB_LABEL = ['all' => 'Semua', '1' => '1. Kirim Invoice', '2' => '2. Konfirmasi Diterima', '3' => '3. Follow Up Customer', '4' => '4. Tunggu Bayar & Close',
+        'late' => 'FU Terlambat', 'bermasalah' => 'Invoice Bermasalah', 'close' => 'Invoice Close (Laporan)'];
+    const FILTER_KEYS = ['tab', 'company', 'customer', 'cari', 'fu', 'plan_bulan', 'plan_tahun', 'close_tahun', 'inv_tahun', 'inv_bulan', 'inv_dari', 'inv_sampai'];
 
     public function __construct()
     {
@@ -64,14 +66,21 @@ class Follow_up_piutang extends Admin_Controller
     }
 
     /** Baris terfilter dan terdekorasi; dipakai layar dan Excel (aturan sama). */
+    private $cards = [];
+    private $customers = [];
+
     private function filtered($f, &$counts = null, &$total = null)
     {
         $today = Piutang_aging::today();
         $golive = $this->golive();
-        $all = array_values(array_filter($this->Monitoring_piutang_model->get_rows((int) $f['close_tahun']), function ($r) {
+        // Semua invoice close ikut dimuat: card Closed memakai tanggal close dalam periode filter (bukan Tahun Close); tab Invoice Close tetap per Tahun Close.
+        $all = array_values(array_filter($this->Monitoring_piutang_model->get_rows(true), function ($r) {
             return Piutang_aging::eligible_invoice_date($r);
         }));
+        $this->customers = array_values(array_unique(array_filter(array_column($all, 'customer'), 'strlen')));
+        sort($this->customers, SORT_NATURAL | SORT_FLAG_CASE);
         $counts = Piutang_aging::tab_counts($all, $f, $today, $golive);
+        $this->cards = Piutang_aging::ar_cards($all, $f, $today, $golive);
         // recordsTotal DataTables = isi tab tanpa filter dan pencarian
         $total = count(Piutang_aging::filter_ar_rows($all, ['tab' => $f['tab'], 'close_tahun' => $f['close_tahun']], $today, $golive));
         $rows = Piutang_aging::filter_ar_rows($all, $f, $today, $golive);
@@ -99,6 +108,13 @@ class Follow_up_piutang extends Admin_Controller
         $length = (int) $this->input->get('length');
         $length = $length < 1 ? self::PER_PAGE : min($length, 500);
         $manage = has_permission($this->managePermission);
+        // Baris total tab Semua (mockup): seluruh hasil filter, bukan hanya halaman ini.
+        $totals = ['dpp' => 0.0, 'ppn' => 0.0, 'nilai' => 0.0, 'terbayar' => 0.0, 'saldo' => 0.0];
+        foreach ($rows as $r) {
+            foreach ($totals as $k => $_) {
+                $totals[$k] += (float) ($r[$k] ?? 0);
+            }
+        }
         $slice = array_slice($rows, $start, $length);
         foreach ($slice as &$r) {
             $r['can_update'] = $manage && !in_array($r['status'], ['plan_bayar', 'close'], true);
@@ -106,8 +122,8 @@ class Follow_up_piutang extends Admin_Controller
         }
         unset($r);
         return $this->json(['draw' => $draw, 'recordsTotal' => $recordsTotal, 'recordsFiltered' => count($rows), 'data' => array_values($slice),
-            'counts' => $counts, 'companies' => Piutang_aging::company_options(),
-            'customers' => array_values(array_unique(array_filter(array_column($rows, 'customer'), 'strlen')))]);
+            'counts' => $counts, 'cards' => $this->cards, 'totals' => $totals, 'companies' => Piutang_aging::company_options(),
+            'customers' => $this->customers]);
     }
 
     /** Data form Update: baris + status kunci per step + usulan jadwal FU. */
@@ -125,8 +141,8 @@ class Follow_up_piutang extends Admin_Controller
         foreach ($fu as $x) {
             $done[$x['ke']] = !empty($x['aktual']);
         }
-        $locks = ['all' => in_array($d['status'], ['plan_bayar', 'close'], true), 'kirim' => !empty($row['tgl_terima']), 'terima' => !empty($row['tgl_terima']),
-            'resi' => !empty($row['no_resi']) && !empty($row['tgl_terima']), 'fu' => []];
+        $locks = ['all' => in_array($d['status'], ['plan_bayar', 'close'], true), 'kirim' => !empty($row['tgl_kirim']), 'terima' => !empty($row['tgl_terima']),
+            'resi' => !empty($row['no_resi']) && !empty($row['tgl_terima']), 'faktur' => !empty($fu[0]['aktual']), 'fu' => []];
         foreach ($fu as $x) {
             $locks['fu'][$x['ke']] = !empty($done[$x['ke']]); // FU terkunci begitu tanggal dilakukan tersimpan
         }
@@ -135,8 +151,16 @@ class Follow_up_piutang extends Admin_Controller
         foreach ($fu as $x) {
             $suggest[$x['ke']] = Piutang_aging::default_fu_plan($row, $x['ke']);
         }
-        return $this->json(['status' => 'success', 'row' => $d, 'fu' => $fu, 'locks' => $locks, 'suggest' => $suggest, 'next_extra_ke' => $nextKe,
-            'can_add_extra' => $d['status'] === 'diterima' && $this->all_done($fu),
+        $statusOpts = [];
+        foreach ($fu as $x) {
+            $statusOpts[$x['ke']] = Piutang_aging::fu_status_options($x['ke']);
+        }
+        return $this->json(['status' => 'success', 'row' => $d, 'fu' => $fu, 'status_opts' => $statusOpts, 'locks' => $locks, 'suggest' => $suggest, 'next_extra_ke' => $nextKe,
+            'can_add_extra' => $d['status'] === 'diterima' && $d['fu_stage'] !== 'bermasalah' && $this->all_done($fu),
+            'extra_status_opts' => Piutang_aging::fu_status_options(5),
+            // invoice lama yang sudah terima tanpa bukti boleh melengkapi bukti (wajib) walau data terima terkunci
+            'bukti_boleh' => !$locks['all'] && Piutang_aging::bukti_boleh_ditambah($row),
+            'log_count' => count($this->Monitoring_piutang_model->get_log($id)), // tombol "Riwayat perubahan (n)"
             'today' => $today]);
     }
 
@@ -173,12 +197,28 @@ class Follow_up_piutang extends Admin_Controller
                 @unlink(FCPATH . $u[0]);
             }
         }
-        return $this->json($res['ok'] ? ['status' => 'success', 'msg' => 'Data follow up tersimpan.'] : ['status' => 'error', 'msg' => implode("\n", $res['errors'])], $res['ok'] ? 200 : 422);
+        if (!$res['ok']) {
+            return $this->json(['status' => 'error', 'msg' => implode("\n", $res['errors'])], 422);
+        }
+        // Tab tempat invoice berada setelah disimpan, untuk pesan "pindah ke tab X" + tombol lihat (mockup showMsg).
+        $row = $this->Monitoring_piutang_model->get_row($id);
+        return $this->json(['status' => 'success', 'msg' => 'Data follow up tersimpan.', 'tab' => $row ? self::tab_of($row) : '']);
+    }
+
+    /** Tab kerja invoice: 1-4, bermasalah, atau close (sama dengan tabOf di view). */
+    public static function tab_of($row)
+    {
+        $status = Piutang_aging::ar_status($row);
+        if ($status !== 'close' && Piutang_aging::is_bermasalah($row)) {
+            return 'bermasalah';
+        }
+        $map = ['belum_kirim' => '1', 'dikirim' => '2', 'diterima' => '3', 'plan_bayar' => '4', 'close' => 'close'];
+        return $map[$status];
     }
 
     const BUKTI_DIR = 'uploads/bukti_terima_invoice/';
 
-    const BUKTI_MAKS_FILE = 10;
+    const BUKTI_MAKS_FILE = 20;
 
     /**
      * Simpan semua file bukti terima (field bukti_terima[]). Mengembalikan daftar [path relatif, nama asli] (kosong bila tidak ada file)
@@ -250,31 +290,39 @@ class Follow_up_piutang extends Admin_Controller
         } catch (InvalidArgumentException $e) {
             show_error(html_escape($e->getMessage()), 400);
         }
+        // Urutan kolom dan judul mengikuti mockup exportFU (satu informasi per kolom supaya bisa difilter; tanpa PPh 23 dan Divisi).
         $cols = [['h' => 'No', 'k' => '#', 't' => 'int'], ['h' => 'No Invoice', 'k' => 'no_invoice'], ['h' => 'Tgl Invoice', 'k' => 'tgl_invoice', 't' => 'date'],
-            ['h' => 'Customer', 'k' => 'customer'], ['h' => 'Company', 'k' => 'company_name'], ['h' => 'Project', 'k' => 'project'],
-            ['h' => 'Nilai Invoice', 'k' => 'nilai', 't' => 'num'], ['h' => 'Sisa Piutang', 'k' => 'saldo', 't' => 'num'],
-            ['h' => 'Tgl Kirim', 'k' => 'tgl_kirim', 't' => 'date'], ['h' => 'Dikirim Via', 'k' => 'kirim_via'], ['h' => 'Ket Kirim', 'k' => 'ket_kirim'],
-            ['h' => 'No Resi', 'k' => 'no_resi'], ['h' => 'Tgl Terima', 'k' => 'tgl_terima', 't' => 'date'], ['h' => 'Ket Terima', 'k' => 'ket_terima'],
-            ['h' => 'PIC Penerima FU', 'k' => 'fu_pic_nama'], ['h' => 'No WA / Telp PIC', 'k' => 'fu_pic_telp'],
-            ['h' => 'Umur', 'k' => 'umur', 't' => 'int'], ['h' => 'Kategori', 'k' => 'kategori']];
+            ['h' => 'No Faktur', 'k' => 'no_faktur'], ['h' => 'No SPK', 'k' => 'no_spk'], ['h' => 'TOP', 'k' => 'top_text'], ['h' => 'PO', 'k' => 'no_po'],
+            ['h' => 'Customer', 'k' => 'customer'], ['h' => 'Company', 'k' => 'company_name'], ['h' => 'Project', 'k' => 'project'], ['h' => 'Konsultan', 'k' => 'konsultan'],
+            ['h' => 'DPP', 'k' => 'dpp', 't' => 'num'], ['h' => 'PPN', 'k' => 'ppn', 't' => 'num'], ['h' => 'Nilai Invoice', 'k' => 'nilai', 't' => 'num'],
+            ['h' => 'Terbayar', 'k' => 'terbayar', 't' => 'num'], ['h' => 'Sisa Piutang', 'k' => 'saldo', 't' => 'num'],
+            ['h' => 'Tgl Kirim', 'k' => 'tgl_kirim', 't' => 'date'], ['h' => 'Dikirim Via', 'k' => 'kirim_via'], ['h' => 'Ket Kirim', 'k' => 'ket_kirim'], ['h' => 'No Resi', 'k' => 'no_resi'],
+            ['h' => 'Tgl Terima', 'k' => 'tgl_terima', 't' => 'date'], ['h' => 'Nama Penerima', 'k' => 'ket_terima'], ['h' => 'Bukti Terima', 'k' => 'bukti_text'],
+            ['h' => 'PIC Penerima FU', 'k' => 'fu_pic_nama'], ['h' => 'No WA / Telp PIC', 'k' => 'fu_pic_telp']];
         for ($i = 1; $i <= 4; $i++) {
-            $cols[] = ['h' => "FU $i Jadwal", 'k' => "fu{$i}_plan", 't' => 'date'];
-            $cols[] = ['h' => "FU $i Dilakukan", 'k' => "fu{$i}_aktual", 't' => 'date'];
-            $cols[] = ['h' => "FU $i Keterangan", 'k' => "fu{$i}_ket"];
+            $cols[] = ['h' => "FU$i Plan", 'k' => "fu{$i}_plan", 't' => 'date'];
+            $cols[] = ['h' => "FU$i Aktual", 'k' => "fu{$i}_aktual", 't' => 'date'];
+            $cols[] = ['h' => "FU$i Status", 'k' => "fu{$i}_status"];
+            $cols[] = ['h' => "FU$i Keterangan", 'k' => "fu{$i}_ket"];
         }
-        $cols[] = ['h' => 'FU Tambahan', 'k' => 'fu_extra_text'];
+        $cols[] = ['h' => 'FU Tambahan (FU 5 dst.)', 'k' => 'fu_extra_text'];
         $cols[] = ['h' => 'Plan Bayar', 'k' => 'plan_bayar', 't' => 'date'];
         $cols[] = ['h' => 'Ket Plan Bayar', 'k' => 'ket_plan_bayar'];
-        $cols[] = ['h' => 'Status', 'k' => 'status_label'];
+        $cols[] = ['h' => 'Umur (hari)', 'k' => 'umur', 't' => 'int'];
+        $cols[] = ['h' => 'Kategori', 'k' => 'kategori_label'];
+        $cols[] = ['h' => 'Status Invoice', 'k' => 'status_invoice'];
         if ($f['tab'] === 'close') {
             $cols[] = ['h' => 'Tgl Close', 'k' => 'close_date', 't' => 'date'];
             $cols[] = ['h' => 'Ket Close', 'k' => 'close_reason'];
         }
         $rows = array_map(function ($r) {
             $r['umur'] = $r['umur'] === null ? '' : $r['umur'];
+            $r['top_text'] = ($r['top_ke'] ?? '') !== '' && $r['top_ke'] !== null ? 'TOP ' . $r['top_ke'] : '';
+            $r['status_invoice'] = $r['bermasalah'] && $r['status'] !== 'close' ? 'Invoice bermasalah' . ($r['ket_bermasalah'] !== '' ? ': ' . $r['ket_bermasalah'] : '') : $r['status_label'];
             return $r;
         }, $rows);
-        Piutang_export::send([['title' => 'Follow Up Piutang', 'heading' => ['Follow Up Piutang - tab ' . $f['tab'] . ' - ' . date('d-m-Y')],
-            'cols' => $cols, 'rows' => $rows, 'sum' => ['nilai', 'saldo']]], 'Follow_Up_Piutang_' . $f['tab'] . '_' . date('Ymd') . '.xlsx');
+        $label = self::TAB_LABEL[$f['tab']] . ($f['tab'] === 'close' ? ' ' . $f['close_tahun'] : '');
+        Piutang_export::send([['title' => 'Follow Up Piutang', 'heading' => ['Follow Up Piutang - ' . $label, 'Posisi per ' . date('d-m-Y') . ' - ' . count($rows) . ' invoice'],
+            'cols' => $cols, 'rows' => $rows, 'sum' => ['dpp', 'ppn', 'nilai', 'terbayar', 'saldo']]], 'Follow_Up_Piutang_' . ($f['tab'] === 'all' ? 'semua' : $f['tab']) . '_' . date('Ymd') . '.xlsx');
     }
 }

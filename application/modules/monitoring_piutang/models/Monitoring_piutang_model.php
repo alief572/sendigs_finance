@@ -10,8 +10,8 @@ require_once __DIR__ . '/../libraries/Piutang_aging.php';
 class Monitoring_piutang_model extends BF_Model
 {
     const AR_FIELDS = ['tgl_kirim', 'kirim_via', 'ket_kirim', 'no_resi', 'tgl_terima', 'ket_terima', 'bukti_terima', 'bukti_terima_nama', 'fu_pic_nama', 'fu_pic_telp',
-        'fu1_plan', 'fu1_aktual', 'fu1_ket', 'fu2_plan', 'fu2_aktual', 'fu2_ket', 'fu3_plan', 'fu3_aktual', 'fu3_ket',
-        'fu4_plan', 'fu4_aktual', 'fu4_ket', 'plan_bayar', 'ket_plan_bayar'];
+        'fu1_plan', 'fu1_aktual', 'fu1_ket', 'fu1_status', 'fu2_plan', 'fu2_aktual', 'fu2_ket', 'fu2_status', 'fu3_plan', 'fu3_aktual', 'fu3_ket', 'fu3_status',
+        'fu4_plan', 'fu4_aktual', 'fu4_ket', 'fu4_status', 'plan_bayar', 'ket_plan_bayar'];
 
     public function __construct()
     {
@@ -22,12 +22,12 @@ class Monitoring_piutang_model extends BF_Model
     private function base_sql()
     {
         return "SELECT i.id, i.no_invoice, i.tanggal_invoice AS tgl_invoice, COALESCE(NULLIF(i.nm_customer, ''), s.nm_customer) AS customer, COALESCE(NULLIF(i.nm_project, ''), mk.nm_paket) AS project, i.id_spk_penawaran AS no_spk,
-                    i.total_akhir_jurnal AS nilai, i.saldo_piutang AS saldo, i.sts_close, i.close_date, i.close_reason,
+                    i.no_faktur, i.no_po, i.total_nominal_jurnal AS dpp, i.ppn_jurnal AS ppn, COALESCE(NULLIF(s.nm_project_leader, ''), '') AS konsultan, i.total_akhir_jurnal AS nilai, i.saldo_piutang AS saldo, i.sts_close, i.close_date, i.close_reason,
                     c.id AS company, c.nm_company AS company_name,
                     (SELECT d.urutan FROM kons_tr_plan_tagih_detail d WHERE d.id = i.id_detail_plan_tagih LIMIT 1) AS top_ke,
                     ar.tgl_kirim, ar.kirim_via, ar.ket_kirim, ar.no_resi, ar.tgl_terima, ar.ket_terima, ar.bukti_terima, ar.bukti_terima_nama, ar.fu_pic_nama, ar.fu_pic_telp,
-                    ar.fu1_plan, ar.fu1_aktual, ar.fu1_ket, ar.fu2_plan, ar.fu2_aktual, ar.fu2_ket,
-                    ar.fu3_plan, ar.fu3_aktual, ar.fu3_ket, ar.fu4_plan, ar.fu4_aktual, ar.fu4_ket,
+                    ar.fu1_plan, ar.fu1_aktual, ar.fu1_ket, ar.fu1_status, ar.fu2_plan, ar.fu2_aktual, ar.fu2_ket, ar.fu2_status,
+                    ar.fu3_plan, ar.fu3_aktual, ar.fu3_ket, ar.fu3_status, ar.fu4_plan, ar.fu4_aktual, ar.fu4_ket, ar.fu4_status,
                     ar.plan_bayar, ar.ket_plan_bayar, ar.plan_bayar_nominal, ar.status_from, ar.status_changed_date
                 FROM tr_invoicing i
                 LEFT JOIN tr_invoice_ar ar ON ar.id_invoice = i.id
@@ -42,8 +42,8 @@ class Monitoring_piutang_model extends BF_Model
     {
         $extra = [];
         if ($rows) {
-            foreach ($this->db->query('SELECT id_invoice, ke, plan, aktual, ket FROM tr_invoice_ar_fu ORDER BY ke')->result_array() as $e) {
-                $extra[$e['id_invoice']][] = ['ke' => (int) $e['ke'], 'plan' => $e['plan'], 'aktual' => $e['aktual'], 'ket' => $e['ket']];
+            foreach ($this->db->query('SELECT id_invoice, ke, plan, aktual, ket, status FROM tr_invoice_ar_fu ORDER BY ke')->result_array() as $e) {
+                $extra[$e['id_invoice']][] = ['ke' => (int) $e['ke'], 'plan' => $e['plan'], 'aktual' => $e['aktual'], 'ket' => $e['ket'], 'status' => $e['status']];
             }
         }
         $bukti = [];
@@ -96,7 +96,7 @@ class Monitoring_piutang_model extends BF_Model
              ) t WHERE t.tanggal >= '2000-01-01'",
             array_merge($targets, $targets)
         )->row_array();
-        return min((int) date('Y'), (int) substr(Piutang_aging::TANGGAL_MULAI_FOLLOW_UP, 0, 4), (int) ($row['tahun'] ?? date('Y')));
+        return min((int) date('Y'), (int) substr(Piutang_aging::tanggal_mulai(), 0, 4), (int) ($row['tahun'] ?? date('Y')));
     }
 
     public function get_row($id)
@@ -123,6 +123,26 @@ class Monitoring_piutang_model extends BF_Model
      * Semua penerimaan piutang di tahun $year (MP-FR-14): tanggal = tanggal transaksi bank dari alokasi
      * (cadangan tanggal input), nominal = pengurang piutang (cadangan penerimaan + biaya admin).
      */
+    /** id invoice => total penerimaan sebelum tanggal terima customer; dasar nilai plan untuk plan yang diisi setelah invoice lunas (MP-R-24). */
+    public function get_bayar_sebelum_terima()
+    {
+        $out = [];
+        foreach ($this->db->query(
+            "SELECT t.id_inv, SUM(t.nominal) AS total FROM (
+                SELECT ppd.id_inv, COALESCE(ad.tanggal_transaksi, DATE(pph.created_date)) AS tanggal,
+                       COALESCE(ppd.consulting_reduction, COALESCE(ppd.penerimaan, 0) + COALESCE(ppd.biaya_admin, 0)) AS nominal
+                FROM tr_penerimaan_piutang_detail ppd
+                LEFT JOIN tr_penerimaan_piutang pph ON pph.no_surat = ppd.id_header
+                LEFT JOIN tr_alokasi_split sp ON sp.id = pph.id_alokasi
+                LEFT JOIN tr_alokasi_detail ad ON ad.id = COALESCE(sp.id_alokasi_detail, pph.id_alokasi)
+             ) t JOIN tr_invoice_ar ar ON ar.id_invoice = t.id_inv
+             WHERE ar.tgl_terima IS NOT NULL AND t.tanggal < ar.tgl_terima GROUP BY t.id_inv"
+        )->result_array() as $r) {
+            $out[$r['id_inv']] = (float) $r['total'];
+        }
+        return $out;
+    }
+
     public function get_realisasi($year)
     {
         return $this->db->query(
@@ -141,7 +161,9 @@ class Monitoring_piutang_model extends BF_Model
 
     public function get_log($id)
     {
-        return $this->db->query('SELECT aksi, data_json, created_by, created_date FROM tr_invoice_ar_log WHERE id_invoice = ? ORDER BY id DESC', [$id])->result_array();
+        // nama user ditampilkan di riwayat (bukan id); cadangan id bila user tidak ditemukan
+        return $this->db->query('SELECT a.aksi, a.data_json, a.created_by, COALESCE(NULLIF(b.nm_lengkap, \'\'), a.created_by) AS created_by_name, a.created_date
+            FROM tr_invoice_ar_log a LEFT JOIN users b ON b.id_user = a.created_by WHERE a.id_invoice = ? ORDER BY a.id DESC', [$id])->result_array();
     }
 
     private function nullify($v)
@@ -179,8 +201,9 @@ class Monitoring_piutang_model extends BF_Model
             }
             $new['extra_fu'] = [];
             foreach (($input['extra_fu'] ?? []) as $e) {
-                $new['extra_fu'][] = ['ke' => (int) ($e['ke'] ?? 0), 'plan' => $this->nullify($e['plan'] ?? null), 'aktual' => $this->nullify($e['aktual'] ?? null), 'ket' => $this->nullify($e['ket'] ?? null)];
+                $new['extra_fu'][] = ['ke' => (int) ($e['ke'] ?? 0), 'plan' => $this->nullify($e['plan'] ?? null), 'aktual' => $this->nullify($e['aktual'] ?? null), 'ket' => $this->nullify($e['ket'] ?? null), 'status' => $this->nullify($e['status'] ?? null)];
             }
+            $new['no_faktur'] = array_key_exists('no_faktur', $input) ? $this->nullify($input['no_faktur']) : ($old['no_faktur'] ?? null);
             // File bukti baru ([path, nama] hasil upload controller): hanya bila belum terkunci. File pertama mengisi kolom bukti_terima
             // bila masih kosong, sisanya jadi bukti tambahan. Yang tidak terpakai dilaporkan lewat 'saved' agar controller menghapusnya.
             $buktiTambah = [];
@@ -219,15 +242,21 @@ class Monitoring_piutang_model extends BF_Model
             $set['updated_by'] = $user;
             $set['updated_date'] = date('Y-m-d H:i:s');
             $this->db->update('tr_invoice_ar', $set, ['id_invoice' => $id]);
+            // No faktur milik invoice (tr_invoicing.no_faktur): koreksi di sini ikut mengubah Invoicing (MP-FR-18); tercatat di log.
+            $fakturBaru = trim((string) ($merged['no_faktur'] ?? ''));
+            if ($fakturBaru !== '' && $fakturBaru !== trim((string) ($old['no_faktur'] ?? ''))) {
+                $this->db->update('tr_invoicing', ['no_faktur' => $fakturBaru], ['id' => $id]);
+                $set['no_faktur'] = $fakturBaru;
+            }
 
             // FU tambahan: hapus yang tidak ada lagi dan belum dilakukan, upsert sisanya
             $keep = array_map(function ($e) { return (int) $e['ke']; }, $merged['extra_fu']);
             $this->db->query('DELETE FROM tr_invoice_ar_fu WHERE id_invoice = ? AND aktual IS NULL' . ($keep ? ' AND ke NOT IN (' . implode(',', $keep) . ')' : ''), [$id]);
             foreach ($merged['extra_fu'] as $e) {
                 $this->db->query(
-                    'INSERT INTO tr_invoice_ar_fu (id_invoice, ke, plan, aktual, ket, created_by, created_date) VALUES (?, ?, ?, ?, ?, ?, NOW())
-                     ON DUPLICATE KEY UPDATE plan = VALUES(plan), aktual = VALUES(aktual), ket = VALUES(ket)',
-                    [$id, (int) $e['ke'], $this->nullify($e['plan']), $this->nullify($e['aktual']), $this->nullify($e['ket']), $user]
+                    'INSERT INTO tr_invoice_ar_fu (id_invoice, ke, plan, aktual, ket, status, created_by, created_date) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+                     ON DUPLICATE KEY UPDATE plan = VALUES(plan), aktual = VALUES(aktual), ket = VALUES(ket), status = VALUES(status)',
+                    [$id, (int) $e['ke'], $this->nullify($e['plan']), $this->nullify($e['aktual']), $this->nullify($e['ket']), $this->nullify($e['status'] ?? null), $user]
                 );
             }
             foreach ($buktiTambah as $b) {

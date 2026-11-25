@@ -1,5 +1,5 @@
 <?php
-// Fase 4 / invoicing batch 1-4 (40 endpoint, termasuk invoiced_summary dan download_invoiced untuk tab Invoiced): controller asli + recorder asli; persistensi bisnis = fixture in-memory.
+// Fase 4 / invoicing batch 1-4 (39 endpoint, termasuk invoiced_summary dan download_invoiced untuk tab Invoiced): controller asli + recorder asli; persistensi bisnis = fixture in-memory.
 // Service/writer (Invoice_consulting_service, Invoice_writer) memakai kelas asli di atas fixture DB, kecuali save yang dimock
 // pada level hasil (status) karena transaksi internalnya sudah punya suite sendiri (Consulting_integration_test, integration_test).
 if (!defined('AUDIT_FIXTURE_ONLY')) { define('AUDIT_FIXTURE_ONLY', true); }
@@ -500,26 +500,6 @@ check($e['status'] === 1 && iv_data($e)['outcome'] === 'committed' && iv_data($e
 list($e, $out, , $c) = iv_run('update_invoice', array('lock_fail' => true));
 check($e['status'] === 0 && iv_data($e)['outcome'] === 'rejected' && !$c->db->writes, 'update_invoice: lock gagal -> rejected');
 
-// save_close_invoice
-list($e, $out, , $c) = iv_run('save_close_invoice');
-check($e['status'] === 1 && iv_data($e)['outcome'] === 'closed' && iv_data($e)['id_invoicing'] === '00001-INV-XI-26' && $c->output->status === 200 && in_array('trans_commit', $e['calls_at_write'], true), 'save_close_invoice: closed sesudah commit');
-list($e, $out, , $c) = iv_run('save_close_invoice', array(), array('id_invoicing' => ''));
-check($e['status'] === 0 && iv_data($e)['reason'] === 'invalid_id' && $c->output->status === 400, 'save_close_invoice: id kosong');
-list($e, $out, , $c) = iv_run('save_close_invoice', array(), array('alasan_closing' => ''));
-check($e['status'] === 0 && iv_data($e)['reason'] === 'reason_required' && $c->output->status === 400, 'save_close_invoice: alasan wajib');
-list($e, $out, , $c) = iv_run('save_close_invoice', array('saldo' => 100));
-check($e['status'] === 0 && iv_data($e)['reason'] === 'not_settled' && $c->output->status === 500 && in_array('trans_rollback', $c->db->calls, true), 'save_close_invoice: belum lunas');
-list($e, $out, , $c) = iv_run('save_close_invoice', array('affected' => 0));
-check($e['status'] === 0 && iv_data($e)['reason'] === 'no_rows_updated' && $c->output->status === 500, 'save_close_invoice: tidak ada baris');
-list($e, $out, , $c) = iv_run('save_close_invoice', array('commit_fail' => true));
-check($e['status'] === 0 && iv_data($e)['reason'] === 'commit_failed' && $c->output->status === 500, 'save_close_invoice: commit gagal TIDAK boleh sukses');
-list($e, , $stopped) = iv_run('save_close_invoice', array('deny_perm' => true));
-check($stopped && iv_data($e)['outcome'] === 'denied', 'save_close_invoice: denied');
-foreach (array('writer_failure', 'writer_exception') as $w) {
-    list($e, $out, , $c) = iv_run('save_close_invoice', array($w => true));
-    check($e['status'] === 1 && $c->output->status === 200, "save_close_invoice: bisnis utuh saat $w");
-}
-
 // close_penawaran_non_kons
 list($e, $out, , $c) = iv_run('close_penawaran_non_kons');
 check($e['status'] === 1 && iv_data($e)['outcome'] === 'closed' && iv_data($e)['id_penawaran'] === 'PN1' && $c->output->status === 200 && in_array('trans_commit', $e['calls_at_write'], true), 'close_penawaran: closed sesudah commit');
@@ -536,7 +516,7 @@ check($stopped && iv_data($e)['outcome'] === 'denied', 'close_penawaran: denied'
 $src = file_get_contents(dirname(__DIR__) . '/controllers/Invoicing.php');
 preg_match_all('/\n    public function (\w+)\(/', $src, $m);
 $public = array_values(array_filter($m[1], function ($n) { return $n[0] !== '_' && $n !== '__construct'; }));
-check(count($public) === 40, 'jumlah endpoint publik 40, dapat ' . count($public));
+check(count($public) === 39, 'jumlah endpoint publik 39, dapat ' . count($public));
 foreach ($public as $name) {
     preg_match('/\n    public function ' . $name . '\(.*?(?=\n    (?:public|private) function )/s', $src, $mm);
     $body = $mm[0] ?? '';

@@ -19,8 +19,11 @@ Spec: `specs/docs/review-monitoring-piutang/` (`fr-nfr.md`, `use-case.md`, mocku
 - `models/Monitoring_piutang_model.php`: query dan transaksi simpan/close. Hanya membaca `tr_invoicing.saldo_piutang`.
 - `migrations/`: urutan pemasangan ada di `fr-nfr.md` bagian "Urutan pemasangan", **ditambah `019_align_id_invoice_collation.sql` setelah 015 dan sebelum 017** (menyamakan collation `id_invoice` dengan `tr_invoicing.id`; tanpa ini join gagal di MySQL 8 default). Rollback 019 = 020. Sudah dijalankan di DB dev 6 Nov 2026.
 - Bukti terima (file wajib di step Diterima Customer): migrasi `021_add_bukti_terima.sql` (rollback 022), file disimpan di `uploads/bukti_terima_invoice/` (PDF/JPG/PNG, maks 5 MB per file), diunggah lewat `Follow_up_piutang::save()`.
-  Boleh banyak file (maks 10 per simpan) dan bisa ditempel dengan Ctrl+V. File pertama di kolom `bukti_terima`; file ke-2 dst di tabel `tr_invoice_ar_bukti` (migrasi `031`, rollback `032` — jalankan 031 sebelum deploy kode). File hanya bisa ditambah selama tanggal terima belum tersimpan (`Piutang_aging::bukti_boleh_ditambah`), setelah itu terkunci.
-- `application/config/piutang.php`: `tanggal_mulai_follow_up` (go-live, kosong). Folder config di-`.gitignore`, perlu `git add -f`.
+  Boleh banyak file (maks 20 per simpan) dan bisa ditempel dengan Ctrl+V. File pertama di kolom `bukti_terima`; file ke-2 dst di tabel `tr_invoice_ar_bukti` (migrasi `031`, rollback `032` — jalankan 031 sebelum deploy kode). File hanya bisa ditambah selama tanggal terima belum tersimpan (`Piutang_aging::bukti_boleh_ditambah`), setelah itu terkunci. Invoice lama yang sudah terima tanpa bukti tetap bisa melengkapi bukti di form (flag `bukti_boleh`).
+- `application/config/piutang.php`: `tanggal_mulai_follow_up` (go-live, `2026-11-01` per MP-R-33; aturan invoice lunas belum dikirim) dan `tanggal_mulai_daftar` (`2026-10-01`, batas daftar Monitoring / Follow Up / Dashboard, dibaca `Piutang_aging::tanggal_mulai()`; dipertahankan Oktober agar 34 invoice Oktober 2026 yang sudah berjalan tidak hilang). Folder config di-`.gitignore`, perlu `git add -f`.
+- **Beda dari specs (keputusan user, specs belum diperbarui):** bukti terima wajib (spec: opsional); tanggal terima + no resi terkunci begitu tanggal terima disimpan (spec: setelah FU 1); keterangan plan bayar wajib; tampilan tetap DataTables (spec: AG Grid).
+- Tutorial (driver.js lokal, `assets/js/piutang-tutorial.js`): tombol Tutorial di Follow Up (halaman + alur Invoice sampai Close), Monitoring, dan Dashboard. Tidak menyimpan data.
+- Tautan: Follow Up menerima `?tab=<tab>&open=<id invoice>` (dipakai Monitoring, Dashboard) dan `?open=<id>` tanpa tab (dipakai nomor invoice di Invoicing tab Invoiced).
 
 ## Test (tanpa database)
 ```
@@ -28,6 +31,8 @@ scratch/runtime/php74/php.exe application/modules/monitoring_piutang/tests/Piuta
 scratch/runtime/php74/php.exe application/modules/monitoring_piutang/tests/Piutang_export_test.php
 scratch/runtime/php74/php.exe application/modules/monitoring_piutang/tests/Surat_konfirmasi_test.php
 scratch/runtime/php74/php.exe application/modules/monitoring_piutang/tests/Follow_up_targets_test.php
+node application/modules/follow_up_piutang/tests/Bukti_client_test.js
+node application/modules/follow_up_piutang/tests/Tutorial_client_test.js
 ```
 
 ## Belum ada / diketahui

@@ -9,8 +9,9 @@ require_once __DIR__ . '/../libraries/Surat_konfirmasi.php';
 class Monitoring_piutang extends Admin_Controller
 {
     protected $viewPermission = 'Monitoring_Piutang.View';
-    const FILTER_KEYS = ['company', 'customer', 'cari', 'kategori'];
+    const FILTER_KEYS = ['company', 'customer', 'cari', 'kategori', 'tahun', 'bulan', 'dari', 'sampai'];
     const KAT_LABEL = ['all' => 'Semua', 'lancar' => 'Lancar', 'potensi' => 'Potensi Macet', 'macet' => 'Macet'];
+    const KAT_AGE = ['lancar' => '0 - 60 hari', 'potensi' => '61 - 90 hari', 'macet' => '> 90 hari'];
 
     public function __construct()
     {
@@ -119,11 +120,19 @@ class Monitoring_piutang extends Admin_Controller
     {
         $this->auth->restrict($this->viewPermission);
         try {
-            list($base, $today) = $this->base($this->filters());
+            $f = $this->filters();
+            list($base, $today) = $this->base($f);
         } catch (InvalidArgumentException $e) {
             return $this->dt_error($e->getMessage());
         }
-        return $this->dt_json(Piutang_aging::rekap_customer($base, $today), Piutang_aging::REKAP_SORT_KEYS);
+        $rk = Piutang_aging::rekap_customer($base, $today, $f['kategori']);
+        $t = ['count' => 0, 'lancar' => 0, 'potensi' => 0, 'macet' => 0, 'total' => 0];
+        foreach ($rk as $x) {
+            foreach ($t as $k => $_) {
+                $t[$k] += $x[$k];
+            }
+        }
+        return $this->dt_json($rk, Piutang_aging::REKAP_SORT_KEYS, ['totals' => $t]);
     }
 
     public function detail($id = '')
@@ -133,7 +142,10 @@ class Monitoring_piutang extends Admin_Controller
         if (!$row) {
             return $this->json(['status' => 'error', 'msg' => 'Invoice tidak ditemukan.'], 404);
         }
-        return $this->json(['status' => 'success', 'row' => Piutang_aging::decorate($row, Piutang_aging::today()),
+        $today = Piutang_aging::today();
+        $d = Piutang_aging::decorate($row, $today);
+        $d['can_surat'] = Surat_konfirmasi::can_print($row, $today) === null;
+        return $this->json(['status' => 'success', 'row' => $d,
             'fu' => Piutang_aging::fu_list($row), 'receipts' => $this->Monitoring_piutang_model->get_receipts($id)]);
     }
 
@@ -164,36 +176,57 @@ class Monitoring_piutang extends Admin_Controller
         } catch (InvalidArgumentException $e) {
             show_error(html_escape($e->getMessage()), 400);
         }
+        // Satu sheet seperti mockup exportMP: judul, blok ringkasan (Total = rumus L+P+M, Belum diterima, Total keseluruhan = rumus), lalu daftar.
         $sum = Piutang_aging::summary($base, $today);
         $kat = $f['kategori'];
-        $kats = $kat === 'all' ? ['lancar', 'potensi', 'macet'] : [$kat];
-        $sumRows = [];
-        foreach ($kats as $k) {
-            $sumRows[] = ['kategori' => self::KAT_LABEL[$k], 'count' => $sum[$k]['count'], 'sisa' => $sum[$k]['cents'] / 100];
+        $by = ['lancar' => [0.0, 0], 'potensi' => [0.0, 0], 'macet' => [0.0, 0]];
+        foreach ($rows as $r) {
+            $by[$r['kategori']][0] += (float) $r['saldo'];
+            $by[$r['kategori']][1]++;
         }
-        $summarySheet = ['title' => 'Ringkasan', 'heading' => ['Monitoring Piutang - ' . self::KAT_LABEL[$kat] . ' - ' . date('d-m-Y')],
-            'cols' => [['h' => 'Kategori', 'k' => 'kategori'], ['h' => 'Jumlah Invoice', 'k' => 'count', 't' => 'int'], ['h' => 'Sisa Piutang', 'k' => 'sisa', 't' => 'num']],
-            'rows' => $sumRows, 'sum' => ['count', 'sisa']];
-        if ($kat === 'all') {
-            $belum = ['count' => $sum['belum']['count'], 'sisa' => $sum['belum']['cents'] / 100];
-            $summarySheet['after'] = function ($ws, $r) use ($belum) {
-                // $r = baris TOTAL (Total Piutang); Belum diterima di bawahnya, lalu total keseluruhan = keduanya (rumus)
-                $ws->setCellValueExplicit('A' . ($r + 1), 'Belum diterima customer', PHPExcel_Cell_DataType::TYPE_STRING);
-                $ws->setCellValue('B' . ($r + 1), (int) $belum['count']);
-                $ws->setCellValue('C' . ($r + 1), (float) $belum['sisa']);
-                $ws->setCellValueExplicit('A' . ($r + 2), 'Total keseluruhan sisa piutang', PHPExcel_Cell_DataType::TYPE_STRING);
-                $ws->setCellValue('B' . ($r + 2), "=B{$r}+B" . ($r + 1));
-                $ws->setCellValue('C' . ($r + 2), "=C{$r}+C" . ($r + 1));
-                $ws->getStyle('C' . ($r + 1) . ':C' . ($r + 2))->getNumberFormat()->setFormatCode('#,##0.00');
-                $ws->getStyle('A' . ($r + 2) . ':C' . ($r + 2))->getFont()->setBold(true);
-            };
-        }
-        $list = ['title' => 'Daftar Piutang', 'cols' => [['h' => 'No', 'k' => '#', 't' => 'int'], ['h' => 'No Invoice', 'k' => 'no_invoice'],
-            ['h' => 'Tgl Invoice', 'k' => 'tgl_invoice', 't' => 'date'], ['h' => 'Tgl Diterima', 'k' => 'tgl_terima', 't' => 'date'],
-            ['h' => 'Customer', 'k' => 'customer'], ['h' => 'Project', 'k' => 'project'], ['h' => 'Company', 'k' => 'company_name'],
+        $judul = 'Monitoring Piutang' . ($kat !== 'all' ? ' - ' . self::KAT_LABEL[$kat] . ' (' . self::KAT_AGE[$kat] . ')' : '') . ' - posisi per ' . date('d-m-Y');
+        $belum = $kat === 'all' ? $sum['belum'] : null;
+        $pre = function ($ws, $r) use ($by, $belum, $rows) {
+            $s = PHPExcel_Cell_DataType::TYPE_STRING;
+            $t = $r;
+            $ws->setCellValueExplicit("A$t", 'Total Piutang', $s);
+            $ws->setCellValue("C$t", '=SUM(C' . ($t + 1) . ':C' . ($t + 3) . ')');
+            $ws->setCellValueExplicit("D$t", count($rows) . ' invoice', $s);
+            $i = $t + 1;
+            foreach ($by as $k => $v) {
+                $ws->setCellValueExplicit("A$i", self::KAT_LABEL[$k], $s);
+                $ws->setCellValueExplicit("B$i", self::KAT_AGE[$k], $s);
+                $ws->setCellValue("C$i", $v[0]);
+                $ws->setCellValueExplicit("D$i", $v[1] . ' invoice', $s);
+                $i++;
+            }
+            if ($belum !== null) {
+                $ws->setCellValueExplicit("A$i", 'Belum diterima customer', $s);
+                $ws->setCellValueExplicit("B$i", 'tidak masuk kategori umur', $s);
+                $ws->setCellValue("C$i", $belum['cents'] / 100);
+                $ws->setCellValueExplicit("D$i", $belum['count'] . ' invoice', $s);
+                $i++;
+                $ws->setCellValueExplicit("A$i", 'Total keseluruhan sisa piutang', $s);
+                $ws->setCellValueExplicit("B$i", 'Total Piutang + belum diterima', $s);
+                $ws->setCellValue("C$i", "=C$t+C" . ($i - 1));
+                $ws->setCellValueExplicit("D$i", (count($rows) + $belum['count']) . ' invoice', $s);
+                $ws->getStyle("A$i:D$i")->getFont()->setBold(true);
+                $i++;
+            }
+            $ws->getStyle("C$t:C" . ($i - 1))->getNumberFormat()->setFormatCode('#,##0.00');
+            $ws->getStyle("A$t:D$t")->getFont()->setBold(true);
+            return $i + 1; // satu baris kosong sebelum header daftar
+        };
+        $rows = array_map(function ($r) {
+            $r['fu_berikutnya'] = $r['fu_next_ke'] && $r['fu_next_plan'] ? 'FU ' . $r['fu_next_ke'] . ' - ' . Piutang_export::date_dmy($r['fu_next_plan']) : '-';
+            return $r;
+        }, $rows);
+        $list = ['title' => 'Monitoring Piutang', 'heading' => [$judul], 'pre' => $pre, 'cols' => [['h' => 'No', 'k' => '#', 't' => 'int'], ['h' => 'No Invoice', 'k' => 'no_invoice'],
+            ['h' => 'Tanggal Invoice', 'k' => 'tgl_invoice', 't' => 'date'], ['h' => 'Customer', 'k' => 'customer'], ['h' => 'Company', 'k' => 'company_name'], ['h' => 'Project', 'k' => 'project'],
             ['h' => 'Nilai Invoice', 'k' => 'nilai', 't' => 'num'], ['h' => 'Terbayar', 'k' => 'terbayar', 't' => 'num'], ['h' => 'Sisa Piutang', 'k' => 'saldo', 't' => 'num'],
-            ['h' => 'Umur (hari)', 'k' => 'umur', 't' => 'int'], ['h' => 'Kategori', 'k' => 'kategori'], ['h' => 'Follow Up Berikutnya / Plan Bayar', 'k' => 'fu_text']],
+            ['h' => 'Umur (hari)', 'k' => 'umur', 't' => 'int'], ['h' => 'Kategori', 'k' => 'kategori_label'], ['h' => 'Tanggal Terima', 'k' => 'tgl_terima', 't' => 'date'],
+            ['h' => 'FU Berikutnya', 'k' => 'fu_berikutnya'], ['h' => 'Plan Bayar', 'k' => 'plan_bayar', 't' => 'date']],
             'rows' => $rows, 'sum' => ['nilai', 'terbayar', 'saldo']];
-        Piutang_export::send([$summarySheet, $list], 'Monitoring_Piutang_' . self::KAT_LABEL[$kat] . '_' . date('Ymd') . '.xlsx');
+        Piutang_export::send([$list], 'Monitoring_Piutang_' . ($kat !== 'all' ? str_replace(' ', '_', self::KAT_LABEL[$kat]) . '_' : '') . date('Ymd') . '.xlsx');
     }
 }

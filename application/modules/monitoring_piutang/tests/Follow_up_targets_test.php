@@ -32,6 +32,7 @@ class TargetRows {
     public $rows = [], $receipts = [];
     function get_rows($closed) { return $this->rows; }
     function get_realisasi($year) { return $this->receipts; }
+    function get_bayar_sebelum_terima() { return []; }
     function get_dashboard_start_year() { return 2023; }
 }
 $expected = ['239/STM/2023', '020/VSB/2024', '003/VSB/2025', '005/VSB/2025', '008/VSB/2025',

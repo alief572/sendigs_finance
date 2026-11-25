@@ -17,8 +17,16 @@ class Piutang_aging
     const BARU_HARI = 3;
     const FU_OFFSET = [1 => 3, 2 => 7, 3 => 14, 4 => 14]; // FU1 dari tgl terima, sisanya dari FU sebelumnya dilakukan
     const FU_EXTRA_OFFSET = 14;
-    /** Batas umum Follow Up/Monitoring dan periode Plan Bayar; FOLLOW_UP_INVOICES dikecualikan. */
-    const TANGGAL_MULAI_FOLLOW_UP = '2026-10-01';
+    const FU_BERMASALAH = 'INVOICE BERMASALAH';
+    /** Status wajib per FU saat tanggal dilakukan diisi (MP-FR-17); FU 3 dan seterusnya memakai daftar yang sama. */
+    const FU_STATUS = [
+        1 => ['SUDAH DI TERIMA DI KEUANGAN', 'BELUM DI TERIMA DI KEUANGAN'],
+        2 => ['SEDANG DALAM PROSES', 'INVOICE BERMASALAH'],
+        3 => ['BELUM PLAN BAYAR', 'MASIH MENUNGGU JAWABAN', 'INVOICE BERMASALAH'],
+    ];
+    /** Cadangan bila config/piutang.php tidak terbaca; nilai sebenarnya dari tanggal_mulai(). */
+    const TANGGAL_MULAI_DEFAULT = '2026-10-01';
+    private static $tanggalMulai = null;
     // ponytail: pengecualian tetap untuk 20 invoice; gunakan master terkelola bila cakupan menjadi dinamis.
     const FOLLOW_UP_INVOICES = [
         '239/STM/2023', '020/VSB/2024', '003/VSB/2025', '005/VSB/2025',
@@ -33,13 +41,31 @@ class Piutang_aging
         return in_array($r['no_invoice'] ?? '', self::FOLLOW_UP_INVOICES, true);
     }
 
+    /**
+     * Batas umum Follow Up/Monitoring dan periode Plan Bayar (satu sumber: config/piutang.php `tanggal_mulai_daftar`);
+     * FOLLOW_UP_INVOICES dikecualikan. Dibaca langsung dari file config supaya controller, CLI, dan tes memakai nilai yang sama.
+     */
+    public static function tanggal_mulai()
+    {
+        if (self::$tanggalMulai === null) {
+            $config = [];
+            $file = __DIR__ . '/../../../config/piutang.php';
+            if (is_file($file)) {
+                include $file;
+            }
+            $v = (string) ($config['tanggal_mulai_daftar'] ?? '');
+            self::$tanggalMulai = self::is_date($v) ? $v : self::TANGGAL_MULAI_DEFAULT;
+        }
+        return self::$tanggalMulai;
+    }
+
     public static function eligible_invoice_date($r)
     {
         $tgl = substr((string) ($r['tgl_invoice'] ?? ''), 0, 10);
-        return self::is_date($tgl) && ($tgl >= self::TANGGAL_MULAI_FOLLOW_UP || self::is_follow_up_target($r));
+        return self::is_date($tgl) && ($tgl >= self::tanggal_mulai() || self::is_follow_up_target($r));
     }
-    const TABS = ['all', '1', '2', '3', '4', 'late', 'close'];
-    const FU_FILTERS = ['', 'none', '1', '2', '3', '4', 'tambahan', 'selesai'];
+    const TABS = ['all', '1', '2', '3', '4', 'late', 'bermasalah', 'close'];
+    const FU_FILTERS = ['', 'none', '1', '2', '3', '4', 'tambahan', 'selesai', 'bermasalah'];
     // Filter company grup: id kons_tr_company (STM 7, STM-Sustain 6, STM-Vuca 1, Vuca 4, Sustain 3; sama dengan modul Request Payment/Jurnal).
     const COMPANY_GROUPS = ['STM' => ['7', '6', '1'], 'VUCA' => ['4'], 'SUSTAIN' => ['3']];
 
@@ -244,15 +270,17 @@ class Piutang_aging
 
     public static function summary($rows, $today)
     {
-        // total = sudah diterima (Lancar+Potensi+Macet); semua = card Total Piutang = diterima + belum diterima + lunas belum close
-        // (jumlah invoice sama dengan tab Semua di Follow Up Piutang); lunas tidak menambah nominal.
-        $out = ['total' => ['cents' => 0, 'count' => 0, 'oldest' => null], 'belum' => ['cents' => 0, 'count' => 0],
+        // total = card Total Piutang = sudah diterima (Lancar+Potensi+Macet, mockup renderCards); persen L/P/M dari total ini.
+        // semua = diterima + belum diterima + lunas belum close (jumlah invoice sama dengan tab Semua Follow Up); lunas tidak menambah nominal.
+        $out = ['total' => ['cents' => 0, 'count' => 0, 'oldest' => null, 'customers' => 0], 'belum' => ['cents' => 0, 'count' => 0],
             'semua' => ['cents' => 0, 'count' => 0, 'oldest' => null], 'lunas' => ['count' => 0]];
         foreach (['lancar', 'potensi', 'macet'] as $k) {
             $out[$k] = ['cents' => 0, 'count' => 0, 'oldest' => null, 'pct' => 0.0];
         }
+        $cust = [];
         foreach ($rows as $r) {
             if (self::is_aged($r)) {
+                $cust[(string) ($r['customer'] ?? '')] = true;
                 $u = self::umur($r['tgl_terima'], $today);
                 $k = self::kategori($u);
                 $c = self::cents($r['saldo']);
@@ -272,10 +300,54 @@ class Piutang_aging
             }
         }
         foreach (['lancar', 'potensi', 'macet'] as $k) {
-            $out[$k]['pct'] = $out['semua']['cents'] > 0 ? round($out[$k]['cents'] * 100 / $out['semua']['cents'], 1) : 0.0;
+            $out[$k]['pct'] = $out['total']['cents'] > 0 ? round($out[$k]['cents'] * 100 / $out['total']['cents'], 1) : 0.0;
         }
+        $out['total']['customers'] = count($cust);
         $out['grand_cents'] = $out['total']['cents'] + $out['belum']['cents'];
         return $out;
+    }
+
+    // ---- Filter periode Tahun / Bulan / Tanggal dari-sampai (MP-FR-21) ----
+
+    /** Validasi kunci periode: tahun, bulan, dari, sampai. Tidak valid melempar InvalidArgumentException. */
+    public static function period_check($f)
+    {
+        foreach (['tahun' => [2000, 2100], 'bulan' => [1, 12]] as $k => $range) {
+            if (self::filled($f[$k] ?? null) && (!ctype_digit((string) $f[$k]) || $f[$k] < $range[0] || $f[$k] > $range[1])) {
+                throw new InvalidArgumentException("Filter periode $k tidak valid.");
+            }
+        }
+        foreach (['dari', 'sampai'] as $k) {
+            if (self::filled($f[$k] ?? null) && !self::is_date($f[$k])) {
+                throw new InvalidArgumentException("Filter periode $k tidak valid.");
+            }
+        }
+        if (self::filled($f['dari'] ?? null) && self::filled($f['sampai'] ?? null) && $f['dari'] > $f['sampai']) {
+            throw new InvalidArgumentException('Periode dari tidak boleh setelah sampai.');
+        }
+    }
+
+    /** Tanggal $tgl (Y-m-d...) masuk periode $f (tahun, bulan, dari, sampai)? Periode kosong = semua. Tanggal kosong ditolak bila ada filter. */
+    public static function in_period($tgl, $f)
+    {
+        $has = self::filled($f['tahun'] ?? null) || self::filled($f['bulan'] ?? null) || self::filled($f['dari'] ?? null) || self::filled($f['sampai'] ?? null);
+        if (!$has) {
+            return true;
+        }
+        $d = substr((string) $tgl, 0, 10);
+        if (!self::is_date($d)) {
+            return false;
+        }
+        if (self::filled($f['tahun'] ?? null) && substr($d, 0, 4) !== (string) $f['tahun']) {
+            return false;
+        }
+        if (self::filled($f['bulan'] ?? null) && (int) substr($d, 5, 2) !== (int) $f['bulan']) {
+            return false;
+        }
+        if (self::filled($f['dari'] ?? null) && $d < $f['dari']) {
+            return false;
+        }
+        return !(self::filled($f['sampai'] ?? null) && $d > $f['sampai']);
     }
 
     // ---- Tahap invoice dan follow up ----
@@ -304,19 +376,19 @@ class Piutang_aging
         return $l[$status] ?? $status;
     }
 
-    /** Daftar FU berurutan: FU1-4 lalu tambahan. Tiap item: ke, plan, aktual, ket. */
+    /** Daftar FU berurutan: FU1-4 lalu tambahan. Tiap item: ke, plan, aktual, ket, status. */
     public static function fu_list($r)
     {
         $out = [];
         for ($i = 1; $i <= 4; $i++) {
-            $out[] = ['ke' => $i, 'plan' => $r["fu{$i}_plan"] ?? null, 'aktual' => $r["fu{$i}_aktual"] ?? null, 'ket' => $r["fu{$i}_ket"] ?? null];
+            $out[] = ['ke' => $i, 'plan' => $r["fu{$i}_plan"] ?? null, 'aktual' => $r["fu{$i}_aktual"] ?? null, 'ket' => $r["fu{$i}_ket"] ?? null, 'status' => $r["fu{$i}_status"] ?? null];
         }
         $extra = $r['extra_fu'] ?? [];
         usort($extra, function ($a, $b) {
             return (int) $a['ke'] <=> (int) $b['ke'];
         });
         foreach ($extra as $e) {
-            $out[] = ['ke' => (int) $e['ke'], 'plan' => $e['plan'] ?? null, 'aktual' => $e['aktual'] ?? null, 'ket' => $e['ket'] ?? null];
+            $out[] = ['ke' => (int) $e['ke'], 'plan' => $e['plan'] ?? null, 'aktual' => $e['aktual'] ?? null, 'ket' => $e['ket'] ?? null, 'status' => $e['status'] ?? null];
         }
         return $out;
     }
@@ -346,10 +418,38 @@ class Piutang_aging
         return !self::filled($old['tgl_terima'] ?? null) || !self::filled($old['bukti_terima'] ?? null);
     }
 
+    /** Opsi status untuk FU ke-$ke. */
+    public static function fu_status_options($ke)
+    {
+        return self::FU_STATUS[min((int) $ke, 3)] ?? self::FU_STATUS[3];
+    }
+
+    /** Ada FU dilakukan dengan status INVOICE BERMASALAH: follow up berhenti, plan bayar dan close ditolak (MP-FR-17). */
+    public static function is_bermasalah($r)
+    {
+        foreach (self::fu_list($r) as $f) {
+            if (self::filled($f['aktual']) && ($f['status'] ?? null) === self::FU_BERMASALAH) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Keterangan FU yang menandai INVOICE BERMASALAH ('' bila tidak ada). */
+    public static function ket_bermasalah($r)
+    {
+        foreach (self::fu_list($r) as $f) {
+            if (self::filled($f['aktual']) && ($f['status'] ?? null) === self::FU_BERMASALAH) {
+                return (string) ($f['ket'] ?? '');
+            }
+        }
+        return '';
+    }
+
     /** FU yang sedang berjalan (pertama yang belum dilakukan), atau null. FU 1-4 selalu ada; tambahan hanya bila sudah dibuat. */
     public static function fu_current($r)
     {
-        if (!self::filled($r['tgl_terima'] ?? null) || self::filled($r['plan_bayar'] ?? null) || self::is_closed($r)) {
+        if (!self::filled($r['tgl_terima'] ?? null) || self::filled($r['plan_bayar'] ?? null) || self::is_closed($r) || self::is_bermasalah($r)) {
             return null;
         }
         foreach (self::fu_list($r) as $f) {
@@ -365,6 +465,9 @@ class Piutang_aging
     {
         if (!self::filled($r['tgl_terima'] ?? null)) {
             return '';
+        }
+        if (self::is_bermasalah($r)) {
+            return 'bermasalah';
         }
         $c = self::fu_current($r);
         if ($c === null) {
@@ -410,7 +513,7 @@ class Piutang_aging
     /** Pindah tahap dalam 3 hari terakhir (termasuk hari ini). */
     public static function is_baru($r, $today)
     {
-        if (!self::filled($r['status_changed_date'] ?? null)) {
+        if (self::is_closed($r) || !self::filled($r['status_changed_date'] ?? null)) {
             return false;
         }
         $d = substr($r['status_changed_date'], 0, 10);
@@ -429,10 +532,17 @@ class Piutang_aging
         return self::filled($golive) && self::filled($r['tgl_invoice'] ?? null) && substr($r['tgl_invoice'], 0, 10) >= $golive;
     }
 
-    /** Nilai plan: sisa saat plan disimpan; cadangan sisa sekarang. */
+    /**
+     * Nilai plan (MP-R-24): sisa saat plan bayar disimpan (plan_bayar_nominal), tidak berkurang setelah invoice dibayar.
+     * Tanpa nilai tersimpan: nilai invoice dikurangi penerimaan sebelum tanggal terima ($r['bayar_sebelum_terima'], diisi model),
+     * bukan sisa sekarang karena bisa 0 untuk invoice yang sudah lunas.
+     */
     public static function plan_nominal($r)
     {
-        return self::filled($r['plan_bayar_nominal'] ?? null) ? (float) $r['plan_bayar_nominal'] : (float) ($r['saldo'] ?? 0);
+        if (self::filled($r['plan_bayar_nominal'] ?? null)) {
+            return (float) $r['plan_bayar_nominal'];
+        }
+        return max(0.0, (float) ($r['nilai'] ?? 0) - (float) ($r['bayar_sebelum_terima'] ?? 0));
     }
 
     /** Alasan invoice belum boleh di-close, atau null bila boleh. Lunas = sisa 0 persis. */
@@ -440,6 +550,9 @@ class Piutang_aging
     {
         if (self::is_closed($r)) {
             return 'Invoice sudah close.';
+        }
+        if (self::is_bermasalah($r)) {
+            return 'Invoice bermasalah belum bisa di-close.';
         }
         if (!self::filled($r['plan_bayar'] ?? null)) {
             return 'Invoice belum punya plan bayar.';
@@ -514,6 +627,10 @@ class Piutang_aging
         if ($picTelp && !self::valid_phone(trim($r['fu_pic_telp']))) {
             $e[] = 'Nomor WA / telepon PIC harus 8-20 digit.';
         }
+        $oldDone = [];
+        foreach (self::fu_list($old) as $x) {
+            $oldDone[$x['ke']] = self::filled($x['aktual']);
+        }
         $prevDone = true;
         foreach ($fus as $f) {
             foreach (['plan', 'aktual'] as $k) {
@@ -528,10 +645,25 @@ class Piutang_aging
                 if (!self::filled($f['ket'])) {
                     $e[] = "FU {$f['ke']}: keterangan wajib sebelum tanggal dilakukan diisi.";
                 }
+                if (!self::filled($f['status'] ?? null)) {
+                    // FU lama yang sudah dilakukan sebelum ada status tidak memblokir simpan ulang
+                    if (empty($oldDone[$f['ke']])) {
+                        $e[] = "FU {$f['ke']}: status wajib diisi bila tanggal dilakukan diisi.";
+                    }
+                } elseif (!in_array($f['status'], self::fu_status_options($f['ke']), true)) {
+                    $e[] = "FU {$f['ke']}: status tidak valid.";
+                }
                 $prevDone = true;
             } else {
                 $prevDone = false;
             }
+        }
+        if (self::filled($r['plan_bayar'] ?? null) && self::is_bermasalah($r)) {
+            $e[] = 'Invoice bermasalah tidak bisa diberi plan bayar.';
+        }
+        // No faktur (MP-FR-18): wajib saat tanggal terima pertama kali disimpan; data lama tanpa faktur tidak diblokir saat simpan ulang.
+        if (self::filled($r['tgl_terima'] ?? null) && !self::filled($r['no_faktur'] ?? null) && (!self::filled($old['tgl_terima'] ?? null) || self::filled($old['no_faktur'] ?? null))) {
+            $e[] = 'No faktur wajib diisi.';
         }
         if (self::filled($r['plan_bayar'] ?? null) && !self::filled($r['ket_plan_bayar'] ?? null)) {
             $e[] = 'Keterangan plan bayar wajib diisi.';
@@ -569,8 +701,8 @@ class Piutang_aging
         }
         $fu1Done = isset($oldFu[1]) && self::filled($oldFu[1]['aktual']);
 
-        // 1. Pengiriman terkunci setelah tanggal terima tersimpan
-        if (self::filled($old['tgl_terima'] ?? null)) {
+        // 1. Pengiriman terkunci begitu tersimpan (MP-R-19); yang masih diisi di tahap terima hanya no resi
+        if (self::filled($old['tgl_kirim'] ?? null)) {
             $keep(['tgl_kirim', 'kirim_via', 'ket_kirim']);
         } else {
             $noEmpty(['tgl_kirim']);
@@ -598,13 +730,18 @@ class Piutang_aging
         if (self::filled($old['tgl_terima'] ?? null) && self::filled($old['no_resi'] ?? null)) {
             $keep(['no_resi']);
         }
-        // PIC bisa dikoreksi tapi tidak dikosongkan
-        $noEmpty(['fu_pic_nama', 'fu_pic_telp']);
+        // No faktur ikut terkunci setelah FU 1 dilakukan; sebelumnya boleh dikoreksi tapi tidak dikosongkan (MP-FR-18)
+        if ($fu1Done) {
+            $keep(['no_faktur']);
+        } else {
+            $noEmpty(['no_faktur']);
+        }
+        // PIC opsional dan boleh dikosongkan (MP-R-19)
 
         // 3. FU terkunci begitu tanggal dilakukan tersimpan (tidak bisa dikoreksi maupun dikosongkan)
         for ($ke = 1; $ke <= 4; $ke++) {
             if (isset($oldFu[$ke]) && self::filled($oldFu[$ke]['aktual'])) {
-                $keep(["fu{$ke}_plan", "fu{$ke}_aktual", "fu{$ke}_ket"]);
+                $keep(["fu{$ke}_plan", "fu{$ke}_aktual", "fu{$ke}_ket", "fu{$ke}_status"]);
             }
         }
         // FU tambahan: yang sudah dilakukan terkunci dan tidak bisa dihapus
@@ -641,9 +778,24 @@ class Piutang_aging
     {
         $parts = [$r['no_invoice'] ?? '', $r['customer'] ?? '', $r['project'] ?? '', $r['no_spk'] ?? '', $r['company_name'] ?? '', $r['kirim_via'] ?? '',
             $r['ket_kirim'] ?? '', $r['no_resi'] ?? '', $r['ket_terima'] ?? '', $r['fu_pic_nama'] ?? '', $r['fu_pic_telp'] ?? '',
-            $r['ket_plan_bayar'] ?? '', self::status_label(self::ar_status($r))];
+            $r['ket_plan_bayar'] ?? '', self::status_label(self::ar_status($r)), $r['no_faktur'] ?? '', $r['no_po'] ?? '', $r['konsultan'] ?? '',
+            $r['close_reason'] ?? ''];
+        if (self::filled($r['top_ke'] ?? null)) {
+            $parts[] = 'TOP ' . $r['top_ke'];
+        }
+        if (self::is_bermasalah($r)) {
+            $parts[] = 'Bermasalah';
+        }
         foreach (self::fu_list($r) as $f) {
             $parts[] = $f['ket'];
+            $parts[] = $f['status'];
+        }
+        $stage = self::fu_stage($r);
+        if (ctype_digit($stage)) {
+            $parts[] = 'FU ' . $stage;
+        }
+        if (isset($r['nilai'], $r['saldo'])) {
+            $parts[] = number_format(self::cents($r['nilai']) / 100 - self::cents($r['saldo']) / 100, 0, ',', '.');
         }
         foreach (['tgl_invoice', 'tgl_kirim', 'tgl_terima', 'plan_bayar'] as $k) {
             $v = isset($r[$k]) ? substr((string) $r[$k], 0, 10) : '';
@@ -662,10 +814,33 @@ class Piutang_aging
         }
         $u = self::umur($r['tgl_terima'] ?? null, $today);
         if ($u !== null) {
-            $parts[] = (string) $u;
+            $parts[] = $u . ' hari';
             $parts[] = (string) self::kategori($u);
+            $parts[] = self::kategori_label(self::kategori($u));
         }
         return mb_strtolower(implode(' | ', array_map('strval', $parts)));
+    }
+
+    /** Cari banyak kata (mockup searchMatch): semua kata harus ada di haystack, urutan bebas. */
+    private static function cari_match($r, $cari, $today)
+    {
+        if ($cari === '') {
+            return true;
+        }
+        $h = self::haystack($r, $today);
+        foreach (preg_split('/\s+/u', $cari, -1, PREG_SPLIT_NO_EMPTY) as $w) {
+            if (mb_strpos($h, $w) === false) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** Nama kategori untuk layar/Excel: Lancar / Potensi Macet / Macet ('' bila kosong). */
+    public static function kategori_label($k)
+    {
+        $l = ['lancar' => 'Lancar', 'potensi' => 'Potensi Macet', 'macet' => 'Macet'];
+        return $l[(string) $k] ?? '';
     }
 
     /**
@@ -682,7 +857,9 @@ class Piutang_aging
         if (!in_array($fu, self::FU_FILTERS, true)) {
             throw new InvalidArgumentException('Filter follow up tidak valid.');
         }
-        foreach (['plan_bulan' => [1, 12], 'plan_tahun' => [2000, 2100], 'close_tahun' => [2000, 2100], 'inv_bulan' => [1, 12], 'inv_tahun' => [2000, 2100]] as $k => $range) {
+        self::period_check(['tahun' => $f['inv_tahun'] ?? '', 'bulan' => $f['inv_bulan'] ?? '', 'dari' => $f['inv_dari'] ?? '', 'sampai' => $f['inv_sampai'] ?? '']);
+        $inv = ['tahun' => $f['inv_tahun'] ?? '', 'bulan' => $f['inv_bulan'] ?? '', 'dari' => $f['inv_dari'] ?? '', 'sampai' => $f['inv_sampai'] ?? ''];
+        foreach (['plan_bulan' => [1, 12], 'plan_tahun' => [2000, 2100], 'close_tahun' => [2000, 2100]] as $k => $range) {
             if (self::filled($f[$k] ?? null) && (!ctype_digit((string) $f[$k]) || $f[$k] < $range[0] || $f[$k] > $range[1])) {
                 throw new InvalidArgumentException("Filter $k tidak valid.");
             }
@@ -706,6 +883,11 @@ class Piutang_aging
                 if (isset($map[$tab]) && $status !== $map[$tab]) {
                     continue;
                 }
+                // Invoice bermasalah pindah ke tab sendiri (MP-FR-17); tetap tampil di tab Semua.
+                $bm = self::is_bermasalah($r);
+                if ($tab === 'bermasalah' ? !$bm : ($bm && $tab !== 'all')) {
+                    continue;
+                }
                 if ($tab === 'late' && !($status === 'diterima' && self::fu_late($r, $today))) {
                     continue;
                 }
@@ -716,23 +898,13 @@ class Piutang_aging
             if (self::filled($f['customer'] ?? null) && (string) ($r['customer'] ?? '') !== (string) $f['customer']) {
                 continue;
             }
-            // Tahun/Bulan invoice (Follow Up Piutang): menyaring tanggal invoice di semua tab.
-            $tglInv = (string) ($r['tgl_invoice'] ?? '');
-            if (self::filled($f['inv_tahun'] ?? null) && substr($tglInv, 0, 4) !== (string) $f['inv_tahun']) {
+            // Periode tanggal invoice (Follow Up Piutang): berlaku di semua tab (MP-FR-21).
+            if ($tab !== 'close' && !self::in_period($r['tgl_invoice'] ?? '', $inv)) {
                 continue;
             }
-            if (self::filled($f['inv_bulan'] ?? null) && (int) substr($tglInv, 5, 2) !== (int) $f['inv_bulan']) {
+            // 'none' = Belum ada FU (belum diterima), sama dengan mockup (fuTahap kosong).
+            if ($fu !== '' && self::fu_stage($r) !== ($fu === 'none' ? '' : $fu)) {
                 continue;
-            }
-            if ($fu !== '') {
-                $stage = self::fu_stage($r);
-                $anyDone = false;
-                foreach (self::fu_list($r) as $x) {
-                    $anyDone = $anyDone || self::filled($x['aktual']);
-                }
-                if ($fu === 'none' ? ($stage === '' || $anyDone) : $stage !== $fu) {
-                    continue;
-                }
             }
             if ($tab === '4') {
                 $pb = (string) ($r['plan_bayar'] ?? '');
@@ -743,7 +915,7 @@ class Piutang_aging
                     continue;
                 }
             }
-            if ($cari !== '' && mb_strpos(self::haystack($r, $today), $cari) === false) {
+            if (!self::cari_match($r, $cari, $today)) {
                 continue;
             }
             $out[] = $r;
@@ -759,6 +931,34 @@ class Piutang_aging
             $c[$t] = count(self::filter_ar_rows($rows, array_merge($f, ['tab' => $t]), $today, $golive));
         }
         return $c;
+    }
+
+    /**
+     * Card ringkasan Follow Up (MP-FR-22): jumlah invoice + nominal per kartu. Ikut filter non-tab (company, customer, periode, cari);
+     * filter fu, tab, dan bulan/tahun plan diabaikan. Nominal = sisa piutang; Closed = nilai invoice yang di-close pada periode
+     * filter (tanggal close; mockup), bukan Tahun Close. Hasil: kunci => [count, cents].
+     */
+    public static function ar_cards($rows, $f, $today, $golive = '')
+    {
+        $base = array_merge($f, ['fu' => '', 'plan_bulan' => '', 'plan_tahun' => '']);
+        $period = ['tahun' => $f['inv_tahun'] ?? '', 'bulan' => $f['inv_bulan'] ?? '', 'dari' => $f['inv_dari'] ?? '', 'sampai' => $f['inv_sampai'] ?? ''];
+        $def = ['belum_kirim' => ['1', ''], 'belum_diterima' => ['2', ''], 'belum_fu' => ['3', '1'], 'tunggu_bayar' => ['4', ''],
+            'terlambat' => ['late', ''], 'bermasalah' => ['bermasalah', ''], 'closed' => ['close', '']];
+        $out = [];
+        foreach ($def as $k => $d) {
+            $cents = 0;
+            $list = self::filter_ar_rows($rows, array_merge($base, ['tab' => $d[0], 'fu' => $d[1]], $k === 'closed' ? ['close_tahun' => ''] : []), $today, $golive);
+            if ($k === 'closed') {
+                $list = array_filter($list, function ($r) use ($period) {
+                    return self::in_period($r['close_date'] ?? '', $period);
+                });
+            }
+            foreach ($list as $r) {
+                $cents += self::cents($k === 'closed' ? ($r['nilai'] ?? 0) : ($r['saldo'] ?? 0));
+            }
+            $out[$k] = ['count' => count($list), 'cents' => $cents];
+        }
+        return $out;
     }
 
     // ---- Monitoring Piutang (MP-FR-01, 06, 07, 12) ----
@@ -778,6 +978,7 @@ class Piutang_aging
             throw new InvalidArgumentException('Kategori tidak valid.');
         }
         $cari = mb_strtolower(trim((string) ($f['cari'] ?? '')));
+        self::period_check($f);
         $out = [];
         foreach ($rows as $r) {
             if (self::is_closed($r)) {
@@ -786,13 +987,16 @@ class Piutang_aging
             if (!self::eligible_invoice_date($r)) {
                 continue;
             }
+            if (!self::in_period($r['tgl_invoice'] ?? '', $f)) {
+                continue;
+            }
             if (!self::company_match($r['company'] ?? null, $f['company'] ?? null)) {
                 continue;
             }
             if (self::filled($f['customer'] ?? null) && (string) ($r['customer'] ?? '') !== (string) $f['customer']) {
                 continue;
             }
-            if ($cari !== '' && mb_strpos(self::haystack($r, $today), $cari) === false) {
+            if (!self::cari_match($r, $cari, $today)) {
                 continue;
             }
             $out[] = $r;
@@ -820,7 +1024,7 @@ class Piutang_aging
     }
 
     const PAGE_SORT_KEYS = ['no_invoice', 'customer', 'nilai', 'terbayar', 'saldo', 'umur'];
-    const REKAP_SORT_KEYS = ['customer', 'count', 'lancar', 'potensi', 'macet', 'total'];
+    const REKAP_SORT_KEYS = ['customer', 'count', 'lancar', 'potensi', 'macet', 'total', 'oldest'];
 
     /**
      * Satu halaman DataTables server-side dari baris list yang sudah jadi. $key di luar PAGE_SORT_KEYS = urutan bawaan
@@ -845,21 +1049,34 @@ class Piutang_aging
         return array_slice(array_values($rows), max(0, (int) $start), $length < 0 ? null : $length);
     }
 
-    /** Sisa piutang ber-umur per customer per kategori (dalam sen), terbesar dulu. */
-    public static function rekap_customer($base, $today)
+    /**
+     * Sisa piutang ber-umur per customer per kategori (dalam sen), terbesar dulu. $kategori selain 'all' = hanya invoice
+     * kategori itu (ikut card yang dipilih, mockup). company = nama company (digabung bila lebih dari satu), oldest = umur tertua.
+     */
+    public static function rekap_customer($base, $today, $kategori = 'all')
     {
         $by = [];
         foreach ($base as $r) {
             if (!self::is_aged($r)) {
                 continue;
             }
-            $k = self::kategori(self::umur($r['tgl_terima'], $today));
+            $u = self::umur($r['tgl_terima'], $today);
+            $k = self::kategori($u);
+            if ($kategori !== 'all' && $k !== $kategori) {
+                continue;
+            }
             $c = (string) ($r['customer'] ?? '');
-            $by[$c] = $by[$c] ?? ['customer' => $c, 'lancar' => 0, 'potensi' => 0, 'macet' => 0, 'total' => 0, 'count' => 0];
+            $by[$c] = $by[$c] ?? ['customer' => $c, 'company' => [], 'lancar' => 0, 'potensi' => 0, 'macet' => 0, 'total' => 0, 'count' => 0, 'oldest' => 0];
             $by[$c][$k] += self::cents($r['saldo']);
             $by[$c]['total'] += self::cents($r['saldo']);
             $by[$c]['count']++;
+            $by[$c]['oldest'] = max($by[$c]['oldest'], $u);
+            $by[$c]['company'][(string) ($r['company_name'] ?? '')] = true;
         }
+        foreach ($by as &$x) {
+            $x['company'] = implode(', ', array_filter(array_keys($x['company']), 'strlen'));
+        }
+        unset($x);
         $by = array_values($by);
         usort($by, function ($a, $b) {
             return [$b['total'], $a['customer']] <=> [$a['total'], $b['customer']];
@@ -881,22 +1098,25 @@ class Piutang_aging
         return self::cents($r['saldo'] ?? 0) === 0 ? 'Lunas, belum close' : 'Bayar sebagian';
     }
 
-    /** Tanggal bayar - plan bayar: 0 sesuai janji, negatif lebih cepat, positif telat; null bila tanpa plan. */
+    /** Tanggal bayar - plan bayar: 0 sesuai plan, negatif lebih cepat, positif telat; null bila tanpa plan. */
     public static function ketepatan($tgl_bayar, $plan)
     {
         if (!self::filled($plan) || !self::filled($tgl_bayar)) {
             return ['days' => null, 'label' => '–'];
         }
         $d = self::days_between(substr($plan, 0, 10), substr($tgl_bayar, 0, 10));
-        return ['days' => $d, 'label' => $d === 0 ? 'Sesuai janji' : ($d < 0 ? 'Lebih cepat ' . abs($d) . ' hari' : 'Telat ' . $d . ' hari')];
+        return ['days' => $d, 'label' => $d === 0 ? 'Sesuai plan' : ($d < 0 ? 'Lebih cepat ' . abs($d) . ' hari' : 'Telat ' . $d . ' hari')];
     }
 
     /** Invoice (termasuk yang sudah close) yang plan bayarnya jatuh di $year, urut tanggal plan. Filter $company opsional. */
-    public static function plan_rows($rows, $year, $company, $today)
+    public static function plan_rows($rows, $year, $company, $today, $range = [])
     {
         $out = [];
         foreach ($rows as $r) {
             if (!self::filled($r['plan_bayar'] ?? null) || (int) substr($r['plan_bayar'], 0, 4) !== (int) $year) {
+                continue;
+            }
+            if (!self::in_period($r['plan_bayar'], $range)) {
                 continue;
             }
             if (!self::company_match($r['company'] ?? null, $company)) {
@@ -918,13 +1138,13 @@ class Piutang_aging
      * Semua penerimaan di $year (dari tanggal transaksi bank), termasuk invoice tanpa plan bayar dan yang sudah close.
      * $receipts: id_inv, no_penerimaan, tanggal, nominal. $invById: id => baris invoice.
      */
-    public static function realisasi_rows($receipts, $invById, $year, $company, $today)
+    public static function realisasi_rows($receipts, $invById, $year, $company, $today, $range = [])
     {
         $out = [];
         foreach ($receipts as $p) {
             $inv = $invById[$p['id_inv']] ?? null;
             $tgl = substr((string) ($p['tanggal'] ?? ''), 0, 10);
-            if ($inv === null || !self::is_date($tgl) || (int) substr($tgl, 0, 4) !== (int) $year) {
+            if ($inv === null || !self::is_date($tgl) || (int) substr($tgl, 0, 4) !== (int) $year || !self::in_period($tgl, $range)) {
                 continue;
             }
             if (!self::company_match($inv['company'] ?? null, $company)) {
@@ -968,7 +1188,8 @@ class Piutang_aging
     /** Periode memenuhi batas umum atau berasal dari invoice target. */
     public static function dari_mulai($year, $bulan, $r = [])
     {
-        return self::is_follow_up_target($r) || (int) $year * 100 + (int) $bulan >= (int) substr(self::TANGGAL_MULAI_FOLLOW_UP, 0, 4) * 100 + (int) substr(self::TANGGAL_MULAI_FOLLOW_UP, 5, 2);
+        $mulai = self::tanggal_mulai();
+        return self::is_follow_up_target($r) || (int) $year * 100 + (int) $bulan >= (int) substr($mulai, 0, 4) * 100 + (int) substr($mulai, 5, 2);
     }
 
     /** Saring baris plan/realisasi ke satu bulan (1-12); selain itu semua bulan. */
@@ -986,23 +1207,42 @@ class Piutang_aging
         $status = self::ar_status($r);
         $u = self::umur($r['tgl_terima'] ?? null, $today);
         $extra = [];
+        $last = null;
         foreach (self::fu_list($r) as $f) {
+            if (self::filled($f['aktual'])) {
+                $last = $f;
+            }
             if ($f['ke'] >= 5) {
-                $extra[] = "FU{$f['ke']}: " . ($f['aktual'] ?: ($f['plan'] ? 'jadwal ' . $f['plan'] : '-')) . ($f['ket'] ? " ({$f['ket']})" : '');
+                // mockup: "FU n: tanggal · STATUS · ket" bila dilakukan, "FU n: jadwal tanggal" bila belum
+                $dmy = function ($d) { return self::is_date(substr((string) $d, 0, 10)) ? date('d-m-Y', strtotime(substr($d, 0, 10))) : '-'; };
+                $extra[] = "FU{$f['ke']}: " . (self::filled($f['aktual']) ? $dmy($f['aktual']) . (self::filled($f['status']) ? ' · ' . $f['status'] : '') . (self::filled($f['ket']) ? ' · ' . $f['ket'] : '')
+                    : 'jadwal ' . $dmy($f['plan']));
             }
         }
+        $cur = $status === 'diterima' ? self::fu_current($r) : null;
         return $r + [
             'status' => $status,
             'status_label' => self::status_label($status),
             'umur' => $u,
             'kategori' => self::kategori($u),
+            // nama kategori untuk Excel; hanya bila masih bersisa (mockup: kategori kosong untuk invoice lunas)
+            'kategori_label' => self::cents($r['saldo'] ?? 0) > 0 ? self::kategori_label(self::kategori($u)) : '',
             'fu_stage' => self::fu_stage($r),
             'fu_next_plan' => $status === 'diterima' ? self::fu_next_plan($r) : null,
+            'fu_next_ke' => $cur ? (int) $cur['ke'] : null,
+            // FU terakhir yang dilakukan + statusnya (pill "status FU n" di daftar, mockup lastStTag)
+            'fu_last_ke' => $last ? (int) $last['ke'] : null,
+            'fu_last_status' => $last ? (string) ($last['status'] ?? '') : '',
             'fu_late' => $status === 'diterima' && self::fu_late($r, $today),
             'baru' => self::is_baru($r, $today),
             'baru_from' => self::filled($r['status_from'] ?? null) ? self::status_label($r['status_from']) : '',
             'fu_extra_text' => implode('; ', $extra),
             'close_block' => self::close_block_reason($r),
+            'bermasalah' => self::is_bermasalah($r),
+            'ket_bermasalah' => self::ket_bermasalah($r),
+            'terbayar' => self::cents($r['nilai'] ?? 0) / 100 - self::cents($r['saldo'] ?? 0) / 100,
+            'bukti_text' => implode(', ', array_map(function ($b) { return (string) ($b['nama'] ?: basename((string) $b['path'])); }, self::bukti_list($r))),
+            'bukti_jumlah' => count(self::bukti_list($r)),
         ];
     }
 
