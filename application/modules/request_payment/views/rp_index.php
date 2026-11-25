@@ -505,6 +505,9 @@ $ENABLE_MANAGE = has_permission('Request_Payment.Manage');
 			</thead>
 			<tbody></tbody>
 		</table>
+		<?php if (!empty($rp_transfer_enabled)): ?>
+			<p class="text-muted" style="font-size:12px;margin-top:10px">Kolom <b>ADMIN per dokumen dihapus</b>. Dibayarkan = DPP + PPN &minus; PPh. Admin diisi 1x per transfer di langkah Atur Pembayaran.</p>
+		<?php endif; ?>
 
 		<div class="rp-bulk-bar" id="rp_bulk_bar">
 			<div class="info">

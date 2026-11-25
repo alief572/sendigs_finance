@@ -1,3 +1,59 @@
+## Request Payment → Payment: specs RP-R-36..39 + UI mockup (25 November 2026)
+
+### Context
+Spec `specs/docs/request-payment/` di-update di commit `e5cc29a9` (RP-R-36..39, 24–25 Nov 2026). Kode yang sudah ada (`2298698e`, flag `RP_TRANSFER_ENABLED`, migrasi 012/013) baru mencakup RP-R-01..35. Perubahan RP-R-36..39:
+- RP-R-36/38: **Payment Bank = nominal transfer ke penerima** (bukan total keluar bank). Bank Charge = biaya yang dipotong bank. Jurnal **Cr Bank 2 baris (TRF + BIAYA TRANSFER)**. Administrasi Bank otomatis = Payment Bank + Bank Charge − Total Payment (Dr kalau ditanggung perusahaan, 0 kalau ditanggung penerima, Cr kalau Payment Bank diperkecil padahal bank tidak memotong). Gratis = transfer penuh, charge 0, tanpa baris admin. "Kontrol" dan "Isi otomatis" dihapus.
+- RP-R-37/39: Record Payment mendapat tombol **Voucher** (Bukti Bank Keluar format "BBK (2)", Debit/Kredit, print → PDF) dan **Preview Jurnal** di View.
+Ditambah atas permintaan user: **UI semua halaman disamakan dengan mockup** (selisih RP-R-01..35 hasil perbandingan view vs mockup).
+
+Keputusan user (25-Nov-2026): cakupan UI semua halaman; voucher ikut mockup (logo + TTD Tati Rina / Fikri Darmawan A hanya STM, Sustain/Vuca nama company + TTD kosong); no voucher dihitung saat cetak (tanpa migrasi); catatan "Dipecah otomatis" tidak dibuat.
+
+Yang sudah benar dan **tidak** diubah: `Rp_transfer::totals()` (`bank` = transfer + admin = total keluar bank) sudah sesuai RP-R-36 untuk Atur Pembayaran, Approval, Excel JUMLAH DIBAYARKAN BANK, ringkasan per company. Mode `free` sudah memberi transfer penuh + charge 0.
+
+Langkah awal tiap sesi: catat rencana ini di `docs/implementation-plan.md` dan checkpoint di `docs/task-progress.md` (aturan AGENTS.md). File lain yang sedang dimodifikasi di workspace (voucher repair, piutang, dsb.) tidak disentuh dan tidak ikut commit.
+
+### Fase 1 — Jurnal & Form Payment (RP-R-36/38)
+`application/modules/pembayaran_material/libraries/Rp_transfer_payment.php`
+- `actual()`: input `payment_bank` = transfer (default = transfer rencana sesuai mode aktual dari `Rp_transfer::totals()`), boleh diedit, wajib > 0. `bank` (total keluar) = payment_bank + charge; `adjustment` = payment_bank + charge − net (rumus sama dengan sekarang, jadi tidak ada perubahan skema). Hapus syarat kontrol `payment_bank === received + charge`. Pertahankan: mode `free` → charge harus 0. `difference` = mode beda ∨ charge ≠ default ∨ payment_bank ≠ transfer rencana. Kembalikan juga `transfer` = payment_bank.
+- `journal()`: ganti 1 baris Cr Bank jadi 2: `"{bank} - TRF ke {nama}"` (kredit = payment_bank) dan `"{bank} - BIAYA TRANSFER ke {nama}"` (kredit = charge; dilewati bila 0 lewat `$add`). Label admin: "Biaya Transfer - {no dokumen}" (Dr) / "Admin dipotong dari transfer, bank tidak memotong biaya - {no dokumen}" (Cr).
+- Penyimpanan tetap: `payment_approve.payment_bank` = total keluar bank (`actual['bank']`), sehingga Jurnal All, laporan lama dan `Rp_transfer_record::comparison()` (`received = payment_bank − charge`) tidak berubah.
+
+`application/modules/pembayaran_material/views/transfer_payment.php`
+- Payment Bank default = `planned['transfer']`, hint "nominal transfer ke penerima (baris TRF di jurnal)".
+- Hapus baris Kontrol + tombol Isi otomatis. Tambah baris: Transfer ke penerima (= Payment Bank, tanda oranye bila beda dari pengajuan), Bank Charge (hint default sesuai mode), Total keluar bank (transfer + charge), Administrasi Bank (otomatis + keterangan Dr/0/Cr).
+- JS `refresh()`: tidak lagi memblok pada kontrol; validasi Payment Bank > 0, keterangan wajib bila mode/charge/transfer beda. Saat ganti admin aktual: charge = default mode, payment_bank = transfer mode.
+
+Tes: update `request_payment/tests/Rp_transfer_test.php` (baris 53–63, 116–123): kasus ditanggung penerima (2.000.000 − 2.500), ditanggung perusahaan, gratis, Payment Bank diperkecil → Cr admin, 2 baris Cr bank, balance.
+
+### Fase 2 — Record Payment: Preview Jurnal + Voucher (RP-R-37/39)
+`application/modules/record_request_payment/`
+- `libraries/Rp_transfer_record.php`: fungsi `journalRows($db, $idPayment)` membaca `tr_jurnal WHERE no_transaksi = id_payment` (jurnal yang benar-benar disimpan, bukan dihitung ulang); fungsi `voucherNo($db, $group)` = `YYYY-{COMPANY}/BBK/{romawi}/{urut 2 digit}`, urut berdasarkan `id_payment` di antara transfer paid company + bulan `tgl_bayar` yang sama.
+- `controllers/Record_request_payment.php`: `payment_detail` kirim jurnal; method baru `print_voucher($id)` (permission view yang sama, audit seperti `payment_detail`).
+- `views/payment_detail.php`: samakan isi dengan modal mockup: tabel info (No. Pengajuan/Transfer/company, Tgl Bayar + bank, Transfer ke, Keterangan, Bukti bayar), tabel perbandingan (label "Bank charge (dipotong bank)", baris beda kuning), tabel dokumen (Dokumen, Kategori, Request By, Dibayarkan), **Preview Jurnal** (Company, COA, Nama Account, Keterangan, Debit, Kredit, Balancing; baris bank berlatar), tombol Voucher di bawah.
+- `views/print_voucher.php` baru: HTML mandiri A4 portrait sesuai `vcHtml` mockup (min 7 baris, Total Debit/Kredit, Disetujui/Kasir), `window.print()` saat load. Logo STM: pakai `assets/images/logo_sentral.png` bila sama dengan logo di mockup, kalau tidak, simpan logo base64 mockup sebagai file di `assets/images/`. Nama TTD STM sebagai konstanta di view (shortcut: pindah ke config bila TTD berganti).
+- `views/record_payment.php`: header jadi NO. PAYMENT, NO. PENGAJUAN, PENERIMA, DOKUMEN, REQUEST PAYMENT, PAYMENT, PERBEDAAN, KETERANGAN PEMBAYARAN, ACTION; baris beda diberi tanda; tombol View + Voucher; isi kolom Request Payment/Payment sesuai mockup ("sesuai pengajuan" / "tanpa admin").
+
+### Fase 3 — UI halaman lain (RP-R-01..35, hasil perbandingan)
+Hanya pada cabang transfer (`Rp_transfer::enabled()`), pakai komponen/kelas yang sudah dipakai view sekitarnya.
+1. **Request Payment** `request_payment/views/rp_index.php`: catatan "Kolom ADMIN per dokumen dihapus… Dibayarkan = DPP + PPN − PPh".
+2. **Atur Pembayaran** `atur_pembayaran.php` + `assets/js/request-payment-transfer.js`: hint asal rekening (otomatis dari dokumen / diubah / gabungan isi ulang), datalist bank (dari master bank yang sudah dipakai sistem), cek klien admin ditanggung penerima < dibayarkan + pesan "Rekening tujuan belum lengkap", judul "Penerima dokumen: …" bila nama kosong, kalimat intro, step admin 1.
+3. **Approval** `approval_request_payment/views/detail.php` (+ controller bila perlu data asal rekening): kartu JUMLAH TRANSFER; Rincian Transfer 7 kolom (tambah DOKUMEN, TOTAL DIBAYARKAN) + badge jumlah + kalimat penjelasan; rekening tampil read-only dengan tombol **Edit rekening** → modal, catatan "diubah approver, dari: …" (data asal: rekening saat diajukan; cek apakah sudah tersimpan di `tr_rp_transfer`, kalau tidak, bandingkan dengan rekening dokumen); kolom TRANSFER ke posisi 2; kalimat footer.
+4. **Record Request Payment**: `index.php` kolom JUMLAH TRANSFER, urutan tombol export; `items.php` kolom TANGGAL PENGAJUAN + APPROVER, badge "N lampiran tambahan", urutan kolom mockup; `detail.php` kartu JUMLAH TRANSFER, Rincian Transfer dengan DOKUMEN + TOTAL DIBAYARKAN, "STATUS BAYAR", catatan; `transfer_export.php` jadi modal di halaman Batch yang refresh saat filter berubah (endpoint data JSON dari logika filter yang ada), kolom Diputuskan, "Transfer ikut x dari y", Status PGJ, Dibayarkan, catatan; info Excel memuat status, kategori, daftar PGJ.
+5. **List Request Payment** `pembayaran_material/views/list_request_payment.php`: transfer jadi baris tabel utama (bukan kotak kedua), kolom Tgl Approve + Currency, angka = Jumlah Transfer (`planned['transfer']`), checkbox di kolom terakhir dengan aturan 1 payment = 1 transfer, tombol header Back/Clear/Proses bekerja pada transfer, catatan beda PGJ lengkap.
+
+Setiap sub-langkah = 1 batch kecil, update checkpoint setelah selesai.
+
+### Verifikasi
+- Lint: `docker exec -w /var/www/html sendigs_ss php -l <file>` untuk tiap PHP yang diubah; `node --check assets/js/request-payment-transfer.js`.
+- Tes (container PHP, DB tes terisolasi), flag aktif dan tidak aktif: `request_payment/tests/Rp_transfer_test.php`, Batch1–5, Audit_test; `approval_request_payment/tests/Audit_test.php`; `record_request_payment` Audit, Tabs*, Items_export, `Tabs_client_test.js`; `pembayaran_material` Batch1–2, Selection, Payment_rounding*, Periodic_tax_settlement, View_payment_new, Journal_validator. Tambah tes untuk `journalRows`/`voucherNo` dan perhitungan Fase 1.
+- Uji web tidak dilakukan (instruksi user); `node specs/docs/request-payment/smoke-test.js` hanya sebagai acuan perilaku mockup.
+
+### Risiko / TODO
+- Jurnal transfer yang sudah tersimpan dengan pola lama (1 baris Cr bank) tetap apa adanya; Preview Jurnal & Voucher menampilkan apa yang tersimpan.
+- No voucher dihitung saat cetak: berubah bila ada payment transfer yang dihapus di bulan yang sama.
+- Migrasi 012/013 + flag belum aktif di development/production (di luar cakupan, sama seperti rilis `2298698e`).
+- Commit/push hanya bila diminta user; file workspace lain yang belum di-commit tidak ikut.
+
 ## UMKM Non-PKP + card/ekspor tab Invoiced (INV-R-12 s.d. INV-R-25) — 10 November 2026
 
 Acuan: `specs/docs/mockup-invoicing/` (FR UMKM-FR-01..07, NFR-01..05, mockup, ERD, serah-terima). Temuan awal: docs menyatakan UMKM-FR-01..06 "Ada", tetapi tidak ada kode UMKM di `development` (tidak ada `tax_treatments()`, `pph_final_self`, `PPH_FINAL_*_COA`, `Umkm_receipt_journal_test.php`; `Invoice_consulting::totals()` menolak selain PKP/WAPU/KB). Angka PKP/WAPU/KB mockup = kode asli (615.000 dicek), tidak ada regresi hitung.

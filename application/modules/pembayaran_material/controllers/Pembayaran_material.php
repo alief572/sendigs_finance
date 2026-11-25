@@ -1466,13 +1466,56 @@ class Pembayaran_material extends Admin_Controller
 		echo json_encode($param);
 	}
 
+	public function get_list_rp_transfer()
+	{
+		$this->auth->restrict($this->viewPermission);
+		$this->beginAudit(__FUNCTION__, $this->auditFilters(), array('row_count'));
+		$draw = (int) $this->input->post('draw');
+		try {
+			if (!Rp_transfer::installed($this->db)) {
+				throw new DomainException('Fitur transfer belum tersedia.');
+			}
+			$search = $this->input->post('search');
+			$search = is_array($search) && is_string($search['value'] ?? null) ? trim($search['value']) : '';
+			$order = $this->input->post('order');
+			$start = max(0, (int) $this->input->post('start'));
+			$page = Rp_transfer_payment::queuePage($this->db, $search, $start, (int) $this->input->post('length'),
+				isset($order[0]['column']) ? (int) $order[0]['column'] : null, ($order[0]['dir'] ?? '') === 'desc' ? 'desc' : 'asc');
+			$data = array();
+			foreach ($page['rows'] as $i => $row) {
+				$total = Rp_transfer::totals(Rp_transfer::cents($row['net']), Rp_transfer::cents($row['admin']), $row['bearer']);
+				$data[] = array(
+					'no' => $start + $i + 1,
+					'no_pengajuan' => '<b>' . html_escape($row['no_pengajuan']) . '</b>',
+					'tgl' => $row['decided_at'] ? date('d-M-Y', strtotime($row['decided_at'])) : '-',
+					'company' => html_escape($row['company_nama']),
+					'penerima' => html_escape($row['nama']) . '<br><small>' . html_escape($row['bank'] . ' ' . $row['no_rek']) . '</small>',
+					'dokumen' => implode('<br>', array_map('html_escape', explode(', ', (string) $row['numbers']))) .
+						'<br><small class="text-muted">' . html_escape($row['categories']) . '</small>',
+					'currency' => 'IDR',
+					'admin' => (float) $row['admin'] ? 'Rp ' . number_format($row['admin'], 2, ',', '.') . '<br><small>Ditanggung ' .
+						($row['bearer'] === 'company' ? 'perusahaan' : 'penerima') . '</small>' : '-',
+					'jumlah' => '<span class="rp-amount">Rp ' . number_format($total['transfer'] / 100, 2, ',', '.') . '</span>',
+					'option' => '<input type="checkbox" name="transfer" value="' . (int) $row['id'] . '" data-label="' .
+						html_escape($row['no_pengajuan'] . ' · Rp ' . number_format($total['transfer'] / 100, 2, ',', '.')) . '" aria-label="Pilih ' .
+						html_escape($row['no_pengajuan']) . ' Transfer ' . (int) $row['urutan'] . '">',
+				);
+			}
+			echo json_encode(array('draw' => $draw, 'recordsTotal' => $page['total'], 'recordsFiltered' => $page['filtered'], 'data' => $data));
+			$this->completeAudit('Menyiapkan daftar transfer', 1, array('row_count' => count($data)));
+		} catch (Throwable $e) {
+			echo json_encode(array('draw' => $draw, 'recordsTotal' => 0, 'recordsFiltered' => 0, 'data' => array(), 'error' => 'Daftar transfer gagal dimuat.'));
+			$this->completeAudit('Daftar transfer tidak tersedia', 0, array('reason' => 'transfer_queue_failed'));
+		}
+	}
+
 	public function list_request_payment($jenis_payment)
 	{
 		$this->beginAudit(__FUNCTION__, array('jenis_payment' => $jenis_payment));
 		$reset = $this->Pembayaran_material_model->refresh_list();
 		$this->template->set('jenis_payment', $jenis_payment);
-		$this->template->set('transfers', (string) $jenis_payment === '2' && Rp_transfer::installed($this->db) && has_permission($this->viewPermission)
-			? Rp_transfer_payment::queue($this->db) : []);
+		$this->template->set('rp_transfer_count', (string) $jenis_payment === '2' && Rp_transfer::installed($this->db) && has_permission($this->viewPermission)
+			? Rp_transfer_payment::queuePage($this->db, '', 0, 1)['total'] : 0);
 		$this->template->title('List Request Payment');
 		$this->template->render('list_request_payment');
 		$this->completeAudit('Reset pilihan dan membuka daftar request pembayaran', $reset ? 1 : 0);
@@ -1492,7 +1535,8 @@ class Pembayaran_material extends Admin_Controller
 				'transfer' => $transfer, 'banks' => Rp_transfer_payment::banks($this->db, $refill ? '7' : $transfer['company_id']),
 				'planned' => Rp_transfer_payment::planned($transfer),
 			]);
-			$this->template->title('Form Payment');
+			$this->template->title('Payment List');
+			$this->template->page_icon('fa fa-table');
 			$this->template->render('transfer_payment');
 			$this->completeAudit('Membuka form pembayaran transfer', 1, ['transfer_id' => (int) $id, 'document_count' => count($transfer['docs'])]);
 		} catch (Throwable $e) {

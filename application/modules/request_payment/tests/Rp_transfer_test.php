@@ -56,9 +56,22 @@ $actual = Rp_transfer_payment::actual($transfer, ['actual_bearer' => 'free']);
 check($actual['charge'] === 0 && $actual['transfer'] === 107900000 && $actual['difference'], 'Fee waiver matches mockup');
 $actual = Rp_transfer_payment::actual($transfer, ['actual_bearer' => 'company', 'bank_charge' => '3000.00']);
 check($actual['bank'] === 108200000 && $actual['adjustment'] === 300000, 'Company fee debited once');
-$actual = Rp_transfer_payment::actual($transfer, ['bank_charge' => '2500.00', 'payment_bank' => '1075000.00']);
+$actual = Rp_transfer_payment::actual($transfer, ['bank_charge' => '2500.00', 'payment_bank' => '1072500.00']);
 check($actual['adjustment'] === -400000 && $actual['difference'], 'Recipient fee difference becomes admin credit');
-check(rejected(fn() => Rp_transfer_payment::actual($transfer, ['payment_bank' => '1.00'])), 'Control mismatch rejected');
+check(rejected(fn() => Rp_transfer_payment::actual($transfer, ['payment_bank' => '0.00'])), 'Zero Payment Bank rejected');
+check(rejected(fn() => Rp_transfer_payment::actual($transfer, ['bank_charge' => '-1.00'])), 'Negative bank charge rejected');
+check(rejected(fn() => Rp_transfer_payment::actual($transfer, ['actual_bearer' => 'free', 'bank_charge' => '2500.00'])), 'Free admin cannot carry a bank charge');
+// RP-R-36: Payment Bank = transfer; ditanggung penerima 2.000.000 admin 2.500 -> TRF 1.997.500 + BIAYA 2.500, tanpa admin.
+$single = array_replace($transfer, ['docs' => [array_replace($first, ['dpp' => '2000000.00', 'dibayarkan' => '2000000.00'])], 'admin' => '2500.00']);
+$actual = Rp_transfer_payment::actual($single, []);
+check($actual['transfer'] === 199750000 && $actual['charge'] === 250000 && $actual['bank'] === 200000000 && $actual['adjustment'] === 0, 'Recipient bearer: transfer reduced by admin');
+$actual = Rp_transfer_payment::actual($single, ['actual_bearer' => 'company']);
+check($actual['transfer'] === 200000000 && $actual['bank'] === 200250000 && $actual['adjustment'] === 250000, 'Company bearer: full transfer, admin debited');
+$actual = Rp_transfer_payment::actual($single, ['actual_bearer' => 'free']);
+check($actual['transfer'] === 200000000 && $actual['charge'] === 0 && $actual['adjustment'] === 0, 'Free admin (RP-R-38): full transfer without admin');
+$actual = Rp_transfer_payment::actual($single, ['bank_charge' => '0.00', 'payment_bank' => '1997500.00', 'keterangan_pembayaran' => 'Bank tidak memotong']);
+check($actual['adjustment'] === -250000 && $actual['difference'], 'Reduced transfer without bank charge credits admin');
+$actual = Rp_transfer_payment::actual($transfer, ['bank_charge' => '2500.00', 'payment_bank' => '1072500.00']);
 check(rejected(fn() => Rp_transfer_record::filters(['from' => '2026-02-30'])), 'Malformed calendar date rejected');
 $compare = Rp_transfer_record::comparison($transfer + ['bank_charge' => '0.00', 'payment_bank' => '1079000.00', 'actual_bearer' => 'free']);
 check(count($compare['differences']) === 3 && $compare['actualBank'] === $actual['net'], 'History separates wire amount, fee amount and total bank');
@@ -115,8 +128,13 @@ $transfer['docs'][0] += ['payment_status' => '1', 'payment_approval_id' => 'RPA-
 $transfer['docs'][1] += ['payment_status' => '1', 'payment_approval_id' => 'RPA-2', 'voucher' => null];
 $journal = Rp_transfer_payment::journal($finance, $transfer, ['tgl_bayar' => '2026-11-24', 'bank' => '5', 'bank_charge' => '2500.00']);
 $byCoa = array_column($journal['rows'], null, 'coa');
-check(count($journal['rows']) === 4 && $byCoa['1101-02-09']['kredit'] === '1075000.00', 'Combined transfer uses one bank row');
+$bankRows = array_values(array_filter($journal['rows'], static function ($row) { return $row['coa'] === '1101-02-09'; }));
+check(count($journal['rows']) === 5 && count($bankRows) === 2, 'Combined transfer credits bank twice (TRF + BIAYA TRANSFER)');
+check($bankRows[0]['kredit'] === '1072500.00' && strpos($bankRows[0]['keterangan'], 'TRF ke') !== false, 'TRF row = Payment Bank');
+check($bankRows[1]['kredit'] === '2500.00' && strpos($bankRows[1]['keterangan'], 'BIAYA TRANSFER') !== false, 'BIAYA TRANSFER row = Bank Charge');
 check($byCoa['7201-01-04']['kredit'] === '4000.00', 'Negative admin variance appears on the credit side');
+$free = Rp_transfer_payment::journal($finance, $transfer, ['tgl_bayar' => '2026-11-24', 'bank' => '5', 'actual_bearer' => 'free']);
+check(count($free['rows']) === 3 && !in_array('7201-01-04', array_column($free['rows'], 'coa'), true), 'Free admin journal has no admin or fee row');
 check($journal['rows'][0]['keterangan'] === 'Biaya - RQ-1' && $journal['rows'][1]['keterangan'] === 'Biaya - EXP-1', 'Journal description uses real document numbers');
 Payment_journal_validator::validate(array_map(static function ($row) { return $row + ['no_transaksi' => 'BK--1126-0001']; }, $journal['rows']));
 $transfer['docs'][0]['payment_status'] = '2';
@@ -164,5 +182,40 @@ foreach ([[null, false], [false, false], ['0', false], ['yes', false], [true, tr
     check(Rp_transfer::enabled() === $expected, 'Server config rp_transfer_enabled=' . var_export($value, true));
 }
 $originalFlag === false ? putenv('RP_TRANSFER_ENABLED') : putenv('RP_TRANSFER_ENABLED=' . $originalFlag);
+
+// RP-R-37/39: voucher BBK dan Preview Jurnal membaca jurnal tersimpan.
+$voucherDb = new class {
+    public $calls = [];
+    public function query($sql, $values)
+    {
+        $this->calls[] = [$sql, $values];
+        $rows = strpos($sql, 'tr_jurnal') !== false
+            ? [['nm_company' => 'STM', 'coa' => '1101-02-09', 'nm_coa' => 'Bank', 'keterangan' => 'TRF', 'debit' => '0.00', 'kredit' => '10.00']]
+            : [['id_payment' => 'BK--1126-0003'], ['id_payment' => 'BK--1126-0007'], ['id_payment' => 'BK--1126-0011']];
+        return new JournalResult($rows);
+    }
+};
+$paidGroup = ['id_payment' => 'BK--1126-0007', 'tgl_bayar' => '2026-11-24', 'company_id' => '7', 'company_nama' => 'Stm'];
+check(Rp_transfer_record::voucherNo($voucherDb, $paidGroup) === '2026-STM/BBK/XI/02', 'Voucher number counts per company per month');
+check($voucherDb->calls[0][1] === ['7', '2026-11-01', '2026-11-01'], 'Voucher sequence scoped by company and payment month');
+check(rejected(fn() => Rp_transfer_record::voucherNo($voucherDb, ['id_payment' => 'BK--1126-0099'] + $paidGroup)), 'Unknown payment has no voucher number');
+check(Rp_transfer_record::journalRows($voucherDb, 'BK--1126-0007')[0]['keterangan'] === 'TRF' && end($voucherDb->calls)[1] === ['BK--1126-0007'], 'Preview journal reads stored rows by payment number');
+
+// Modal Export Excel Beberapa PGJ: transfer ikut x dari y, status per transfer, dibayarkan per PGJ.
+$batchRow = static function ($transfer, $batch, $status, $amount) use ($first) {
+    return array_replace($first, ['id' => $transfer, 'id_pengajuan' => $batch, 'no_pengajuan' => 'PGJ-' . $batch, 'company_nama' => 'STM',
+        'decided_at' => '2026-11-20 10:00:00', 'status' => $status, 'admin' => '0.00', 'bearer' => 'recipient', 'dibayarkan' => $amount]);
+};
+$exportDb = new class([$batchRow(1, 9, 'paid', '100.00'), $batchRow(2, 9, 'approved', '50.00'), $batchRow(3, 9, 'approved', '25.00')]) {
+    private $rows;
+    public function __construct($rows) { $this->rows = $rows; }
+    public function table_exists($table) { return true; }
+    public function query($sql, $values) { return new JournalResult($this->rows); }
+};
+$unpaid = Rp_transfer_record::groups($exportDb, null, ['from' => '2026-11-01', 'to' => '2026-11-30']);
+unset($unpaid[1]);
+$batches = Rp_transfer_record::exportBatches($exportDb, ['from' => '2026-11-01', 'to' => '2026-11-30'], $unpaid);
+check(count($batches) === 1 && $batches[0]['count'] === 2 && $batches[0]['all'] === 3 && $batches[0]['paid'] === 1, 'Export list counts filtered transfers of all live transfers');
+check($batches[0]['net'] === 7500, 'Export list sums DIBAYARKAN of included transfers only');
 
 echo "PASS Request Payment transfer: {$checks} checks\n";

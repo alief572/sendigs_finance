@@ -13,6 +13,8 @@
 	#rp-atur .trf-rek, #rp-atur .trf-fields, #rp-atur .trf-sum { display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(195px,1fr)); padding:10px }
 	#rp-atur .trf-rek { background:#fff8e8; border:1px solid #f0dfb2; margin-bottom:8px }
 	#rp-atur .trf-sum { background:#f2f6fa; font-weight:600 }
+	#rp-atur .trf-src { grid-column:1/-1; font-size:11.5px; color:#8a6d3b }
+	#rp-atur .trf-panel.has-error { border-color:#dd4b39 }
 </style>
 <section class="box" id="rp-atur" hidden aria-labelledby="rp-atur-title">
 	<div class="box-body">
@@ -25,10 +27,10 @@
 				<div><small>TOTAL KELUAR BANK</small><strong id="rp-atur-bank"></strong></div>
 			</div>
 		</div>
-		<p class="text-muted">Default <b>1 dokumen = 1 transfer</b>. Centang dokumen yang mau dibayar sekaligus, gabungkan, lalu isi rekening tujuannya.</p>
+		<p class="text-muted">Default <b>1 dokumen = 1 transfer</b>. Untuk membayar beberapa dokumen sekaligus, centang dokumennya lalu klik <b>Gabungkan jadi 1 transfer</b>. Gabung dulu, baru isi rekening tujuan. Kategori, request by, dan penerima dokumen boleh beda (company sudah pasti sama dalam 1 pengajuan). 1 transfer = 1 rekening tujuan (Bank, No. Rekening, Nama Penerima): transfer 1 dokumen terisi otomatis dari rekening di dokumen dan bisa diedit; transfer gabungan dikosongkan dan diisi ulang.</p>
 		<button type="button" class="btn btn-default btn-sm" id="rp-atur-merge"><i class="fa fa-link"></i> Gabungkan jadi 1 transfer</button>
 		<span class="text-muted" id="rp-atur-picked"></span>
-		<form id="rp-atur-form">
+		<form id="rp-atur-form" novalidate>
 			<div id="rp-atur-list"></div>
 			<div class="alert alert-danger" id="rp-atur-error" role="alert" hidden></div>
 			<div class="detail-foot">

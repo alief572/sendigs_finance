@@ -6,34 +6,29 @@
 	<style>
 		body{font-family:Arial,sans-serif;margin:20px} iframe{width:100%;min-height:500px;border:1px solid #ddd}
 		img,canvas{display:block;max-width:100%;height:auto;max-height:91vh;object-fit:contain} .attachment{margin:14px 0}
-		@media print{.print-controls{display:none} .attachment, .print-pdf canvas+canvas{break-before:page} iframe{border:0}}
+		@media print{.attachment, .print-pdf canvas+canvas{break-before:page} iframe{border:0}}
 	</style>
 </head>
 <body>
-	<div class="print-controls"><button type="button" id="rp-print" disabled>Print</button></div>
-	<h1><?= html_escape($doc->no_dokumen) ?></h1>
-	<h2>Dokumen dan lampiran awal</h2>
 	<?php if ($original): ?>
-		<p class="print-controls"><a href="<?= html_escape($original) ?>" target="_blank" rel="noopener">Buka dokumen asli</a></p>
 		<div class="print-pdf" data-document="<?= html_escape($original) ?>" data-original></div>
 	<?php endif; ?>
-	<h2>Lampiran tambahan dari Request Payment</h2>
 	<?php foreach ($files as $file): ?>
 		<?php $url = site_url('record_request_payment/transfer_file/' . $file['id']); ?>
 		<div class="attachment">
-			<h3><a href="<?= html_escape($url) ?>" target="_blank" rel="noopener"><?= html_escape($file['nama']) ?></a></h3>
 			<?php if (strpos($file['mime'], 'image/') === 0): ?>
 				<img alt="<?= html_escape($file['nama']) ?>" src="<?= html_escape($url) ?>">
 			<?php elseif ($file['mime'] === 'application/pdf'): ?>
 				<div class="print-pdf" data-document="<?= html_escape($url) ?>"></div>
+			<?php else: ?>
+				<?php // docx/xlsx tidak bisa ditampilkan browser: sediakan tautan unduh. ?>
+				<p>Lampiran tidak bisa ditampilkan: <a href="<?= html_escape($url) ?>" target="_blank" rel="noopener"><?= html_escape($file['nama']) ?></a></p>
 			<?php endif; ?>
 		</div>
 	<?php endforeach; ?>
 <script src="<?= base_url('assets/js/pdfjs/pdf.min.js') ?>"></script>
 <script>
 (() => {
-	const button = document.getElementById('rp-print');
-	button.onclick = () => window.print();
 	if (window.pdfjsLib) {
 		pdfjsLib.GlobalWorkerOptions.workerSrc = <?= json_encode(base_url('assets/js/pdfjs/pdf.worker.min.js')) ?>;
 	}
@@ -86,9 +81,20 @@
 		if (!wrapper.hasAttribute('data-original') || !type.includes('text/html')) throw new Error('Lampiran perlu dibuka dari tautan.');
 		return embed(wrapper, url, await response.text());
 	}
-	Promise.all(Array.from(document.querySelectorAll('[data-document]'), wrapper => render(wrapper).catch(() => {
-		wrapper.textContent = 'Pratinjau gagal dimuat. Buka dokumen dari tautan di atas.';
-	}))).finally(() => { button.disabled = false; });
+	// Cetak otomatis setelah semua dokumen dan gambar siap; kalau ada yang gagal, jangan cetak setengah jadi.
+	const documents = Array.from(document.querySelectorAll('[data-document]'), wrapper => render(wrapper).then(() => true, () => {
+		const link = document.createElement('a');
+		link.href = wrapper.dataset.document;
+		link.target = '_blank';
+		link.rel = 'noopener';
+		link.textContent = 'Pratinjau gagal dimuat. Buka dokumennya di sini.';
+		wrapper.replaceChildren(link);
+		return false;
+	}));
+	const images = Array.from(document.images, image => image.decode().then(() => true, () => false));
+	Promise.all(documents.concat(images)).then(results => {
+		if (results.every(Boolean)) window.print();
+	});
 })();
 </script>
 </body>

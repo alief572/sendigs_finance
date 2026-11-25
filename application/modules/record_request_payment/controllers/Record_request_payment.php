@@ -483,18 +483,25 @@ class Record_request_payment extends Admin_Controller
 				if (!$groups) {
 					throw new DomainException('Pengajuan yang dipilih sudah tidak cocok dengan filter.');
 				}
+				$status = ['unpaid' => 'Belum dibayar', 'paid' => 'Sudah dibayar', '' => 'Semua'][$filter['status']];
+				$numbers = array_values(array_unique(array_column($groups, 'no_pengajuan')));
 				$this->export_plan_cash_flow($groups, 'Pengajuan Pembayaran (' . $filter['from'] . ' s/d ' . $filter['to'] . ') - Pengajuan',
-					'Tanggal diputuskan: ' . $filter['from'] . ' s/d ' . $filter['to'] . ' | Dicetak pada: ' . date('d-m-Y H:i:s'),
+					'Tanggal diputuskan: ' . $filter['from'] . ' s/d ' . $filter['to'] . ' | Status pembayaran: ' . $status
+					. ' | Kategori: ' . ($filter['category'] ?: 'Semua') . ' | No. Pengajuan: ' . implode(', ', $numbers) . ' | Dicetak pada: ' . date('d-m-Y H:i:s'),
 					'Pengajuan_Pembayaran_' . $filter['from'] . '_sd_' . $filter['to'] . '.xlsx');
 				return;
 			}
-			$this->template->set(['filter' => $filter, 'groups' => $groups]);
-			$this->template->title('Export Excel Beberapa PGJ');
-			$this->template->render('transfer_export');
-			$this->completeAudit('Membaca pilihan pengajuan untuk Excel', 1, ['row_count' => count($groups)]);
+			$batches = Rp_transfer_record::exportBatches($this->db, $filter, $groups);
+			$this->output->set_content_type('application/json')->set_output(json_encode(['status' => 1, 'batches' => $batches]));
+			$this->completeAudit('Membaca pilihan pengajuan untuk Excel', 1, ['row_count' => count($batches)]);
 		} catch (Throwable $e) {
 			$this->completeAudit('Ekspor pengajuan gagal', 0, ['reason' => 'invalid_transfer_export']);
-			show_error($e instanceof DomainException ? $e->getMessage() : 'Gagal memuat ekspor pengajuan.', 400);
+			$message = $e instanceof DomainException ? $e->getMessage() : 'Gagal memuat ekspor pengajuan.';
+			if ($this->input->method() === 'post') {
+				show_error($message, 400);
+				return;
+			}
+			$this->output->set_status_header(400)->set_content_type('application/json')->set_output(json_encode(['status' => 0, 'msg' => $message]));
 		}
 	}
 
@@ -564,6 +571,7 @@ class Record_request_payment extends Admin_Controller
 			}
 			$this->template->set(compact('entries', 'company', 'search', 'tab', 'counts'));
 			$this->template->title('Record Payment');
+			$this->template->page_icon('fa fa-table');
 			$this->template->render('record_payment');
 			$this->completeAudit('Membuka Record Payment', 1, ['row_count' => count($entries)]);
 		} catch (Throwable $e) {
@@ -600,21 +608,52 @@ class Record_request_payment extends Admin_Controller
 		$this->auth->restrict($this->viewPermission);
 		$this->beginAudit(__FUNCTION__, [], ['row_count']);
 		try {
-			$transfer = Rp_transfer_payment::find($this->db, (int) $id);
-			$groups = Rp_transfer_record::groups($this->db, $transfer['id_pengajuan'], ['status' => 'paid']);
-			$group = $groups[$transfer['id']] ?? null;
-			if (!$group) {
-				throw new DomainException('Pembayaran tidak ditemukan.');
-			}
+			$group = $this->paidGroup($id);
 			$proof = array_filter(Rp_transfer::files($this->db, $group['id']), static function ($file) { return $file['id_detail'] === null; });
-			$this->template->set(compact('group', 'proof') + Rp_transfer_record::comparison($group));
-			$this->template->title('Record Payment');
-			$this->template->render('payment_detail');
+			$journal = Rp_transfer_record::journalRows($this->db, $group['id_payment']);
+			$data = compact('group', 'proof', 'journal') + Rp_transfer_record::comparison($group);
+			if ($this->input->get('modal') === '1') {
+				$this->load->view('payment_detail', $data + ['modal' => true]);
+			} else {
+				$this->template->set($data);
+				$this->template->title('Record Payment');
+				$this->template->render('payment_detail');
+			}
 			$this->completeAudit('Membuka detail Record Payment', 1, ['row_count' => count($group['docs'])]);
 		} catch (Throwable $e) {
 			$this->completeAudit('Detail Record Payment tidak tersedia', 0, ['reason' => 'payment_detail_failure']);
 			show_error($e instanceof DomainException ? $e->getMessage() : 'Gagal memuat detail Payment.', 400);
 		}
+	}
+
+	/** Print Voucher / Bukti Bank Keluar format BBK (2) per payment (RP-R-37/39), jurnal lengkap Debit/Kredit. */
+	public function print_voucher($id)
+	{
+		$this->auth->restrict($this->viewPermission);
+		$this->beginAudit(__FUNCTION__, [], ['row_count']);
+		try {
+			$group = $this->paidGroup($id);
+			$journal = Rp_transfer_record::journalRows($this->db, $group['id_payment']);
+			if (!$journal) {
+				throw new DomainException('Jurnal payment belum tersedia.');
+			}
+			$voucherNo = Rp_transfer_record::voucherNo($this->db, $group);
+			$this->load->view('print_voucher', compact('group', 'journal', 'voucherNo'));
+			$this->completeAudit('Mencetak voucher payment', 1, ['row_count' => count($journal)]);
+		} catch (Throwable $e) {
+			$this->completeAudit('Voucher payment tidak tersedia', 0, ['reason' => 'print_voucher_failure']);
+			show_error($e instanceof DomainException ? $e->getMessage() : 'Gagal memuat voucher.', 400);
+		}
+	}
+
+	private function paidGroup($id)
+	{
+		$transfer = Rp_transfer_payment::find($this->db, (int) $id);
+		$group = Rp_transfer_record::groups($this->db, $transfer['id_pengajuan'], ['status' => 'paid'])[$transfer['id']] ?? null;
+		if (!$group) {
+			throw new DomainException('Pembayaran tidak ditemukan.');
+		}
+		return $group;
 	}
 
 	public function print_transfer_document($id)

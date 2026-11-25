@@ -105,8 +105,12 @@ class Approval_request_payment extends Admin_Controller
 
 		$this->template->set('header', $header);
 		$this->template->set('items', $items);
-		$this->template->set('transfers', Rp_transfer::rows($this->db, $id_pengajuan));
-		$this->template->title('Detail Approval - ' . $header->no_pengajuan);
+		$transfers = Rp_transfer::rows($this->db, $id_pengajuan);
+		$this->template->set('transfers', $transfers);
+		$this->template->title($transfers ? 'Approval Request Payment' : 'Detail Approval - ' . $header->no_pengajuan);
+		if ($transfers) {
+			$this->template->page_icon('fa fa-table');
+		}
 		try {
 			$this->template->render('detail');
 		} catch (Throwable $e) {

@@ -10,7 +10,7 @@ let checks = 0;
 for (const active of ['batch', 'items', 'legacy']) {
     const html = render(active);
     const itemHead = html.match(/<table id="table_record_items"[\s\S]*?<thead>([\s\S]*?)<\/thead>/)[1];
-    assert.strictEqual((itemHead.match(/<th>/g) || []).length, 12, 'twelve rendered headers'); checks++;
+    assert.strictEqual((itemHead.match(/<th>/g) || []).length, 15, 'fifteen rendered headers'); checks++;
     const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(match => match[1]).filter(Boolean);
     for (const script of scripts) { new vm.Script(script); checks++; }
     const handlers = new Map();
@@ -67,14 +67,19 @@ for (const active of ['batch', 'items', 'legacy']) {
         assert(tables.has('#table_record_' + kind), 'table loaded when opened'); checks++;
         assert(reloads.some(item => item[0] === '#table_record_' + kind && item[1] === false), 'refresh preserves page'); checks++;
         const options = tables.get('#table_record_' + kind);
-        assert.strictEqual(options.columns.length, 12, 'column/header alignment'); checks++;
-        assert.strictEqual(options.columns.map(column => column.data).join(','), 'no_pengajuan,no_dokumen,request_by,keperluan,dpp,nilai_ppn,nilai_pph,nilai_pph,admin,dibayarkan,decided_at,id_pengajuan', 'HTML reference column order plus existing Action'); checks++;
+        assert.strictEqual(options.columns.length, 15, 'column/header alignment'); checks++;
+        assert.strictEqual(options.columns.map(column => column.data).join(','), 'no_dokumen,no_pengajuan,transfer_number,company_nama,request_by,submitted_at,decided_at,approver,keperluan,dpp,nilai_ppn,nilai_pph,nilai_pph,dibayarkan,id_pengajuan', 'mockup column order'); checks++;
         const malicious = '<img src=x onerror=alert(1)>';
         const columns = options.columns;
-        assert(!columns[1].render(malicious, 'display', {kategori: malicious}).includes('<img'), 'document output escaped'); checks++;
-        assert(!columns[0].render(malicious, 'display', {submitted_at:malicious}).includes('<img'), 'PGJ/submission escaped'); checks++;
-        assert(!columns[2].render(malicious, 'display', {company_nama:malicious}).includes('<img'), 'request/company escaped'); checks++;
-        assert(columns[2].render('Finance', 'display', {company_nama:'STM'}).includes('- STM'), 'company retained within Request By'); checks++;
+        assert(!columns[0].render(malicious, 'display', {kategori: malicious}).includes('<img'), 'document output escaped'); checks++;
+        for (const index of [1, 3, 4, 5, 6, 7]) {
+            assert(!columns[index].render(malicious, 'display', {}).includes('<img'), 'text column escaped ' + index); checks++;
+        }
+        assert(!columns[8].render(malicious, 'display', {keterangan_finance: malicious}).includes('<img'), 'purpose escaped'); checks++;
+        assert(columns[2].render('2', 'display', {}).includes('>Transfer 2<'), 'transfer tag'); checks++;
+        assert.strictEqual(columns[2].render(null, 'display', {}), '-', 'legacy row without transfer'); checks++;
+        assert(columns[0].render('RQ-1', 'display', {kategori: 'Transport', transfer_file_count: '2'}).includes('2 lampiran tambahan'), 'additional attachment badge'); checks++;
+        assert(!columns[0].render('RQ-1', 'display', {kategori: 'Transport', transfer_file_count: '0'}).includes('lampiran'), 'no badge without attachment'); checks++;
         const action = columns[columns.length - 1].render(10, 'display', {print_url: 'http://localhost/print/" onclick="evil'});
         assert(action.includes('?from=items'), 'detail origin stays in Record items'); checks++;
         assert.strictEqual((action.match(/<a /g) || []).length, 2, 'View and document Print actions'); checks++;

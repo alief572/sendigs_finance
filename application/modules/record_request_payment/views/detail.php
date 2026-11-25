@@ -82,6 +82,12 @@ foreach ($records as $r) {
 					<div class="lbl">JUMLAH ITEM</div>
 					<div class="val"><?= count($records); ?></div>
 				</div>
+				<?php if (!empty($rp_transfers)): ?>
+				<div class="text-right">
+					<div class="lbl">JUMLAH TRANSFER</div>
+					<div class="val"><?= count($rp_transfers); ?></div>
+				</div>
+				<?php endif; ?>
 				<div class="text-right">
 					<div class="lbl">TOTAL DIBAYARKAN</div>
 					<div class="val">Rp <?= number_format($total_dibayarkan, 0, ',', '.'); ?></div>
@@ -90,15 +96,17 @@ foreach ($records as $r) {
 		</div>
 
 		<?php if (!empty($rp_transfers)): ?>
-			<h4>Rincian Transfer</h4>
+			<h4>Rincian Transfer <small>&mdash; 1 baris = 1 kali transfer, sama dengan isi Excel Print (Nama, Bank, No. Rek, Jumlah Transfer)</small></h4>
 			<div class="table-responsive"><table class="table table-bordered rec-table">
-				<thead><tr><th>TRANSFER</th><th>REKENING TUJUAN</th><th>ADMIN DITANGGUNG</th><th>JUMLAH TRANSFER</th><th>TOTAL KELUAR BANK</th><th>STATUS</th></tr></thead>
+				<thead><tr><th>TRANSFER</th><th>PENERIMA / REKENING TUJUAN</th><th>DOKUMEN</th><th class="text-right-imp">TOTAL DIBAYARKAN</th><th class="text-center">ADMIN</th><th class="text-right-imp">JUMLAH TRANSFER</th><th class="text-right-imp">TOTAL KELUAR BANK</th><th>STATUS BAYAR</th></tr></thead>
 				<tbody><?php foreach ($rp_transfers as $group): ?>
 					<?php $planned = Rp_transfer_payment::planned($group); ?>
-					<tr><td><b>Transfer <?= (int) $group['urutan'] ?></b><br><?= count($group['docs']) ?> dokumen</td>
-						<td><?= html_escape($group['bank'] . ' ' . $group['no_rek'] . ' a/n ' . $group['nama']) ?></td>
-						<td><?= (float) $group['admin'] ? html_escape(Rp_transfer_record::bearer($group['bearer']) . ' (Rp ' . number_format($group['admin'], 2, ',', '.') . ')') : 'Tanpa admin' ?></td>
-						<td>Rp <?= number_format($planned['transfer'] / 100, 2, ',', '.') ?></td><td>Rp <?= number_format($planned['bank'] / 100, 2, ',', '.') ?></td>
+					<tr><td><b>Transfer <?= (int) $group['urutan'] ?></b></td>
+						<td><b><?= html_escape($group['nama']) ?></b><br><small><?= html_escape($group['bank'] . ' ' . $group['no_rek']) ?></small></td>
+						<td><?= implode('<br>', array_map('html_escape', array_column($group['docs'], 'no_dokumen'))) ?></td>
+						<td class="text-right-imp">Rp <?= number_format($planned['net'] / 100, 2, ',', '.') ?></td>
+						<td class="text-center"><?= (float) $group['admin'] ? 'Rp ' . number_format($group['admin'], 2, ',', '.') . '<br><small>Ditanggung ' . html_escape(strtolower(Rp_transfer_record::bearer($group['bearer']))) . '</small>' : '-' ?></td>
+						<td class="text-right-imp">Rp <?= number_format($planned['transfer'] / 100, 2, ',', '.') ?></td><td class="text-right-imp">Rp <?= number_format($planned['bank'] / 100, 2, ',', '.') ?></td>
 						<td><?= $group['status'] === 'paid' ? 'Sudah dibayar<br>' . html_escape($group['id_payment']) : 'Belum dibayar' ?></td>
 					</tr>
 				<?php endforeach; ?></tbody>
@@ -109,13 +117,14 @@ foreach ($records as $r) {
 				<thead>
 					<tr>
 						<th>NO. DOKUMEN / KATEGORI</th>
+						<?php if (!empty($rp_transfers)): ?><th class="text-center">TRANSFER</th><?php endif; ?>
 						<th>REQUEST BY</th>
 						<th>KEPERLUAN</th>
 						<th class="text-right-imp">DPP</th>
 						<th class="text-center">PPN</th>
 						<th class="text-center">PPH23</th>
 						<th class="text-center">PPH21</th>
-						<th class="text-center"><?= !empty($rp_transfers) ? 'TRANSFER' : 'ADMIN' ?></th>
+						<?php if (empty($rp_transfers)): ?><th class="text-center">ADMIN</th><?php endif; ?>
 						<th class="text-right-imp">DIBAYARKAN</th>
 						<th class="text-center" style="width:60px;">AKSI</th>
 					</tr>
@@ -128,6 +137,7 @@ foreach ($records as $r) {
 								<span class="rp-kategori-badge"><?= html_escape($r->kategori); ?></span><br>
 								<b><?= html_escape($r->no_dokumen); ?></b>
 							</td>
+							<?php if (!empty($rp_transfers)): ?><td class="text-center"><?= $rpDoc ? 'Transfer ' . (int) $rpDoc['group']['urutan'] : '-' ?></td><?php endif; ?>
 							<td><?= html_escape($r->request_by); ?><?= $r->company_nama ? ' - ' . html_escape($r->company_nama) : ''; ?></td>
 							<td><?= html_escape($rpDoc['keterangan_finance'] ?? $r->keperluan); ?>
 								<?php if (!empty($rpDoc['keterangan_finance'])): ?><div class="text-muted">Keterangan asli: <?= html_escape($r->keperluan) ?></div><?php endif; ?>
@@ -136,7 +146,7 @@ foreach ($records as $r) {
 							<td class="text-center"><?= ((int) $r->flag_ppn) ? number_format($r->nilai_ppn, 0, ',', '.') : '-'; ?></td>
 							<td class="text-center"><?= ((int) $r->flag_pph23) ? number_format($r->nilai_pph, 0, ',', '.') : '-'; ?></td>
 							<td class="text-center"><?= ((int) $r->flag_pph21) ? number_format($r->nilai_pph, 0, ',', '.') : '-'; ?></td>
-							<td class="text-center"><?= $rpDoc ? 'Transfer ' . (int) $rpDoc['group']['urutan'] : (((int) $r->admin) ? number_format($r->admin, 0, ',', '.') : '-'); ?></td>
+							<?php if (empty($rp_transfers)): ?><td class="text-center"><?= ((int) $r->admin) ? number_format($r->admin, 0, ',', '.') : '-'; ?></td><?php endif; ?>
 							<td class="text-right-imp"><?= number_format($r->dibayarkan, 0, ',', '.'); ?></td>
 							<td class="text-center">
 								<?php if (!empty($rpDoc['has_files']) || !empty($r->print_url)): ?>

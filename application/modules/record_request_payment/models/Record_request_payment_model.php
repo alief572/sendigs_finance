@@ -67,7 +67,8 @@ class Record_request_payment_model extends BF_Model
 		$this->db->select('r.*, h.submitted_at, h.decided_at, h.approver, (SELECT d.id_dokumen FROM tr_rp_pengajuan_d d WHERE d.id_pengajuan = r.id_pengajuan AND d.no_dokumen = r.no_dokumen ORDER BY d.id ASC LIMIT 1) AS id_dokumen', false);
 		if ($transfers) {
 			$this->db->select('rd.id AS transfer_detail_id, rt.urutan AS transfer_number, rd.keterangan_finance,
-				EXISTS(SELECT 1 FROM tr_rp_transfer_file rf WHERE rf.id_detail=rd.id) AS has_transfer_file', false);
+				EXISTS(SELECT 1 FROM tr_rp_transfer_file rf WHERE rf.id_detail=rd.id) AS has_transfer_file,
+				(SELECT COUNT(*) FROM tr_rp_transfer_file rf WHERE rf.id_detail=rd.id) AS transfer_file_count', false);
 		}
 		$this->db->order_by('h.decided_at', 'desc');
 		$this->db->order_by('r.id', 'desc');

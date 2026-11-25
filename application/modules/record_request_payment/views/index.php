@@ -112,6 +112,19 @@ if (!is_string($record_tab) || !in_array($record_tab, ['batch', 'items', 'legacy
 		margin-bottom: 4px;
 	}
 
+	#table_record_items td.rec-keperluan { min-width: 200px; }
+
+	#table_record_items .rec-trf-tag {
+		display: inline-block;
+		background: #605ca8;
+		color: #fff;
+		font-size: 10.5px;
+		font-weight: 700;
+		padding: 2px 8px;
+		border-radius: 10px;
+		white-space: nowrap;
+	}
+
 	.nav-tabs-custom {
 		box-shadow: none;
 		margin-bottom: 0;
@@ -155,10 +168,12 @@ if (!is_string($record_tab) || !in_array($record_tab, ['batch', 'items', 'legacy
 				<div class="tab-pane<?= $record_tab === 'batch' ? ' active' : ''; ?>" id="tab_baru">
 					<div class="rec-toolbar">
 						<div class="text-muted">Riwayat seluruh batch pengajuan yang sudah diputuskan (final).</div>
-						<?php if (!empty($rp_transfer_available)): ?>
-							<a class="btn btn-success btn-sm" href="<?= site_url('record_request_payment/export_transfer_batches') ?>"><i class="fa fa-file-excel-o"></i> Export Excel Beberapa PGJ</a>
-						<?php endif; ?>
-						<input type="text" id="rec_search" placeholder="Cari company atau no. pengajuan...">
+						<div style="display:flex;gap:8px;flex-wrap:wrap">
+							<input type="text" id="rec_search" placeholder="Cari company atau no. pengajuan...">
+							<?php if (!empty($rp_transfer_available)): ?>
+								<button type="button" class="btn btn-success btn-sm" id="rp-export-open" data-toggle="modal" data-target="#rp-export-modal"><i class="fa fa-file-excel-o"></i> Export Excel Beberapa PGJ</button>
+							<?php endif; ?>
+						</div>
 					</div>
 
 					<div style="overflow-x:auto;border:1px solid #ddd;">
@@ -169,6 +184,7 @@ if (!is_string($record_tab) || !in_array($record_tab, ['batch', 'items', 'legacy
 									<th>COMPANY</th>
 									<th>TANGGAL PENGAJUAN</th>
 									<th>TANGGAL DIPUTUSKAN</th>
+									<?php if (!empty($rp_transfer_available)): ?><th>JUMLAH TRANSFER</th><?php endif; ?>
 									<th style="width:150px;">TOTAL DIBAYARKAN</th>
 									<th style="width:140px;">STATUS</th>
 									<?php if (!empty($rp_transfer_available)): ?><th>STATUS PEMBAYARAN</th><?php endif; ?>
@@ -179,6 +195,90 @@ if (!is_string($record_tab) || !in_array($record_tab, ['batch', 'items', 'legacy
 						</table>
 					</div>
 				</div>
+
+				<?php if (!empty($rp_transfer_available)): ?>
+				<div class="modal fade" id="rp-export-modal" tabindex="-1" role="dialog" aria-labelledby="rp-export-title">
+					<div class="modal-dialog modal-lg" role="document"><form class="modal-content" id="rp-export-form" method="post">
+						<div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-label="Tutup"><span aria-hidden="true">&times;</span></button>
+							<h4 class="modal-title" id="rp-export-title"><i class="fa fa-file-excel-o"></i> Export Excel Beberapa PGJ</h4></div>
+						<div class="modal-body">
+							<p class="text-muted" style="font-size:12px;margin-top:0">Hanya PGJ yang sudah diputuskan. Semua company ikut, berurutan STM, Sustain, lalu Vuca (tidak tercampur). Format mengikuti Plan Cash Flow (sama dengan Print per PGJ): STM, Sustain, Vuca dipisah baris kosong, kolom NO. PENGAJUAN di kanan, ringkasan per company (Pengajuan, Saldo, Sisa Saldo) di bawah. Status pembayaran dihitung per transfer: transfer yang tidak sesuai filter tidak ikut.</p>
+							<div class="row"><div class="col-md-6 form-group"><label for="rp-export-status">Status Pembayaran</label>
+								<select id="rp-export-status" name="status" class="form-control input-sm"><option value="unpaid">Belum dibayar</option><option value="paid">Sudah dibayar</option><option value="">Semua</option></select></div></div>
+							<div class="row">
+								<div class="col-md-4 form-group"><label for="rp-export-from">Diputuskan dari *</label><input type="date" id="rp-export-from" name="from" class="form-control input-sm" required value="<?= date('Y-m-01') ?>"></div>
+								<div class="col-md-4 form-group"><label for="rp-export-to">Sampai *</label><input type="date" id="rp-export-to" name="to" class="form-control input-sm" required value="<?= date('Y-m-d') ?>"></div>
+								<div class="col-md-4 form-group"><label for="rp-export-category">Kategori</label><select id="rp-export-category" name="category" class="form-control input-sm">
+									<option value="">Semua</option>
+									<?php foreach (Rp_transfer_record::CATEGORIES as $category): ?><option value="<?= html_escape($category) ?>"><?= html_escape($category) ?></option><?php endforeach; ?>
+								</select></div>
+							</div>
+							<div id="rp-export-list" role="status" aria-live="polite"></div>
+							<div class="text-danger" id="rp-export-error" role="alert"></div>
+						</div>
+						<div class="modal-footer"><button type="button" class="btn btn-default" data-dismiss="modal">Batal</button>
+							<button type="submit" class="btn btn-success"><i class="fa fa-file-excel-o"></i> Export Excel</button></div>
+					</form></div>
+				</div>
+				<script>
+				$(function () {
+					var endpoint = <?= json_encode(site_url('record_request_payment/export_transfer_batches')); ?>;
+					var form = $('#rp-export-form'), list = $('#rp-export-list'), off = {}, rows = [], sequence = 0;
+					function esc(value) { return $('<div>').text(value == null ? '' : String(value)).html(); }
+					function rupiah(cents) { return (cents / 100).toLocaleString('id-ID', {maximumFractionDigits: 2}); }
+					function filter() { return {status: $('#rp-export-status').val(), from: $('#rp-export-from').val(), to: $('#rp-export-to').val(), category: $('#rp-export-category').val()}; }
+					function status(row) {
+						if (!row.paid) return '<span class="appr-status-pending">Belum dibayar</span>';
+						if (row.paid === row.all) return '<span class="rec-status-done">Sudah dibayar</span>';
+						return '<span class="appr-status-pending">Sebagian</span><br><small class="text-muted">' + row.paid + ' dari ' + row.all + ' transfer dibayar</small>';
+					}
+					function draw() {
+						var on = rows.filter(function (row) { return !off[row.id]; });
+						list.html(rows.length ? '<div style="max-height:260px;overflow:auto;border:1px solid #ddd"><table class="table table-bordered" style="margin:0;font-size:12.5px"><thead><tr>' +
+							'<th style="width:30px"></th><th>Company</th><th>No. Pengajuan</th><th>Diputuskan</th><th>Transfer ikut</th><th>Status PGJ</th><th class="text-right">Dibayarkan</th></tr></thead><tbody>' +
+							rows.map(function (row) {
+								return '<tr><td class="text-center"><input type="checkbox" data-batch="' + row.id + '" aria-label="Pilih ' + esc(row.no) + '"' + (off[row.id] ? '' : ' checked') + '></td><td>' +
+									esc(row.company) + '</td><td><b>' + esc(row.no) + '</b></td><td>' + esc(row.decided_at) + '</td><td class="text-center">' + row.count + ' dari ' + row.all +
+									'</td><td class="text-center">' + status(row) + '</td><td class="text-right">' + rupiah(row.net) + '</td></tr>';
+							}).join('') + '</tbody></table></div><div style="margin-top:8px;font-size:12.5px"><b>' + on.length + ' PGJ</b> &middot; ' +
+							on.reduce(function (sum, row) { return sum + row.count; }, 0) + ' transfer &middot; Total dibayarkan <b>Rp ' +
+							rupiah(on.reduce(function (sum, row) { return sum + row.net; }, 0)) + '</b></div>'
+							: '<p class="text-muted" style="font-size:12px;margin:0">Tidak ada PGJ yang sesuai filter.</p>');
+						form.find('[type=submit]').prop('disabled', !on.length);
+					}
+					function load() {
+						var f = filter(), token = ++sequence;
+						off = {}; rows = [];
+						$('#rp-export-error').text('');
+						if (!f.from || !f.to || f.from > f.to) {
+							list.html('<p class="text-muted" style="font-size:12px;margin:0">Isi periode tanggal diputuskan untuk melihat PGJ yang akan diekspor.</p>');
+							form.find('[type=submit]').prop('disabled', true);
+							return;
+						}
+						$.getJSON(endpoint, f).done(function (res) {
+							if (token !== sequence) return;
+							rows = res.batches || [];
+							draw();
+						}).fail(function (xhr) {
+							if (token !== sequence) return;
+							list.empty();
+							$('#rp-export-error').text((xhr.responseJSON && xhr.responseJSON.msg) || 'Gagal memuat daftar PGJ.');
+							form.find('[type=submit]').prop('disabled', true);
+						});
+					}
+					$('#rp-export-modal').on('show.bs.modal', load);
+					form.on('change', 'select, input[type=date]', load);
+					list.on('change', '[data-batch]', function () { off[this.dataset.batch] = !this.checked; draw(); });
+					form.on('submit', function () {
+						form.attr('action', endpoint + '?' + $.param(filter()));
+						form.find('input[name="batches[]"]').remove();
+						rows.filter(function (row) { return !off[row.id]; }).forEach(function (row) {
+							form.append($('<input type="hidden" name="batches[]">').val(String(row.id)));
+						});
+					});
+				});
+				</script>
+				<?php endif; ?>
 
 				<div class="tab-pane<?= $record_tab === 'items' ? ' active' : ''; ?>" id="tab_items">
 					<?php $this->load->view('items'); ?>
@@ -248,6 +348,14 @@ if (!is_string($record_tab) || !in_array($record_tab, ['batch', 'items', 'legacy
 				{
 					data: 'decided_at'
 				},
+				<?php if (!empty($rp_transfer_available)): ?>
+				{
+					data: 'transfer_count',
+					orderable: false,
+					className: 'text-center',
+					render: function(count) { return Number(count) || '-'; }
+				},
+				<?php endif; ?>
 				{
 					data: 'total_dibayarkan',
 					className: 'text-right',

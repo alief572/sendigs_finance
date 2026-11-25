@@ -3,16 +3,26 @@
     const list = el('list');
     const esc = value => $('<span>').text(value == null ? '' : String(value)).html().replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     const rupiah = value => 'Rp ' + value.toLocaleString('id-ID', { maximumFractionDigits: 2 });
+    // Tampilan "16.500"; state dan payload tetap digit polos. Bagian desimal (setelah koma) dibuang.
+    const digits = value => String(value).split(',')[0].replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+    const thousands = value => digits(value).replace(/\B(?=(\d{3})+$)/g, '.');
     const endpoint = name => siteurl + 'request_payment/' + name;
     const shell = document.getElementById('rp-atur');
     const page = document.getElementById('rp_bulk_bar').closest('.box');
     const selection = new Set();
     let documents, groups, done;
+    const BANKS = ['BCA', 'Mandiri', 'BNI', 'BRI', 'BSI', 'CIMB Niaga', 'Permata', 'Danamon', 'BTN'];
     const draft = (docs, previous) => {
-        const account = docs.length === 1 ? documents[docs[0]].account : {};
+        const account = docs.length === 1 ? documents[docs[0]].account || {} : {};
         return { docs, bank: account.bank || '', no_rek: account.no_rek || '', nama: account.nama || '',
-            admin: previous ? previous.admin : '', bearer: previous ? previous.bearer : 'recipient' };
+            admin: previous ? previous.admin : '', bearer: previous ? previous.bearer : 'recipient',
+            source: account.bank || account.no_rek || account.nama ? 'doc' : '' };
     };
+    const sourceText = group => group.source === 'doc' ? 'Terisi otomatis dari rekening di dokumen, bisa diedit.'
+        : group.source === 'edit' ? 'Diubah dari rekening di dokumen.'
+        : group.docs.length > 1 ? 'Transfer gabungan: isi ulang rekening tujuan.' : 'Dokumen tidak membawa rekening: isi rekening tujuan.';
+    const heading = group => group.nama.trim() ? 'Transfer ke ' + group.nama.trim()
+        : (group.docs.length > 1 ? 'Penerima dokumen: ' : '') + [...new Set(group.docs.map(no => documents[no].request_by))].join(', ');
     function tax(doc) {
         const dpp = Math.round(Number(doc.nilai_pengajuan) * 100);
         const ppn = doc.flags.ppn ? Math.ceil(dpp * 11 / 10000) : 0;
@@ -32,7 +42,7 @@
                 '</div><div class="text-success"><small class="trf-label">JUMLAH TRANSFER KE PENERIMA</small>' + rupiah(transfer) +
                 '</div><div><small class="trf-label">TOTAL KELUAR BANK</small>' + rupiah(bank) + '</div>';
             const panel = el('sum-' + i).closest('.trf-panel');
-            panel.querySelector('.trf-recipient').textContent = group.nama ? 'Transfer ke ' + group.nama : '';
+            panel.querySelector('.trf-recipient').textContent = heading(group);
             panel.querySelectorAll('input[type=radio]').forEach(input => input.disabled = !admin);
         });
         bankTotal += Object.values(documents).filter(doc => doc.group_type === 'debt').reduce((sum, doc) => sum + tax(doc).net, 0);
@@ -60,26 +70,38 @@
             }).join('');
             const field = (name, label, placeholder, width) => '<label><span class="trf-label">' + label +
                 ' <span class="text-danger">*</span></span><input class="form-control input-sm" data-field="' + name + '" value="' + esc(group[name]) +
-                '" required maxlength="' + width + '" placeholder="' + placeholder + '"></label>';
+                '" required maxlength="' + width + '" placeholder="' + placeholder + '"' + (name === 'bank' ? ' list="rp-atur-banks"' : '') + '></label>';
             return '<div class="trf-panel" data-group="' + i + '"><div class="trf-head"><span class="rp-transfer-tag">Transfer ' + (i + 1) +
                 '</span><b class="trf-recipient"></b><span class="text-muted">' + (group.docs.length > 1 ? 'Gabungan ' : '') + group.docs.length +
                 ' dokumen &middot; ' + esc([...new Set(group.docs.map(no => documents[no].kategori))].join(' + ')) + '</span>' +
                 (group.docs.length > 1 ? '<button type="button" class="btn btn-default btn-xs" data-split="' + i + '"><i class="fa fa-scissors"></i> Pisahkan</button>' : '') +
                 '</div><div class="trf-body"><div class="table-responsive"><table class="table table-bordered"><thead><tr>' +
                 '<th>PILIH</th><th>NO. DOKUMEN / KATEGORI</th><th>REQUEST BY</th><th>KEPERLUAN</th><th>DPP</th><th>PPN</th><th>PPH23</th><th>PPH21</th><th>DIBAYARKAN</th><th>LAMPIRAN TAMBAHAN (opsional)</th>' +
-                '</tr></thead><tbody>' + rows + '</tbody></table></div><div class="trf-rek">' +
+                '</tr></thead><tbody>' + rows + '</tbody></table></div><div class="trf-rek"><div class="trf-src">' + sourceText(group) + '</div>' +
                 field('bank', 'BANK TUJUAN', 'mis. BCA', 100) + field('no_rek', 'NO. REKENING', 'angka, titik atau strip', 80) +
                 field('nama', 'NAMA PENERIMA (A/N REKENING)', 'sesuai buku tabungan', 160) + '</div><div class="trf-fields">' +
-                '<label><span class="trf-label">NOMINAL ADMIN (1x per transfer)</span><input class="form-control input-sm text-right" type="number" min="0" step="0.01" ' +
-                'data-field="admin" placeholder="0" value="' + esc(group.admin) + '"><small class="text-muted">Isi nominal sesuai bank. Kosong = tanpa admin.</small></label>' +
+                '<label><span class="trf-label">NOMINAL ADMIN (1x per transfer)</span><input class="form-control input-sm text-right" type="text" inputmode="numeric" maxlength="19" ' +
+                'data-field="admin" placeholder="0" value="' + thousands(group.admin) + '"><small class="text-muted">Isi nominal sesuai bank, mis. 2.500 / 3.000 / 6.500 / 16.500. Kosong = tanpa admin.</small></label>' +
                 '<div><span class="trf-label">ADMIN DITANGGUNG</span>' + ['recipient', 'company'].map(type => '<label class="radio-inline"><input type="radio" name="bear-' + i +
                 '" data-field="bearer" value="' + type + '"' + (group.bearer === type ? ' checked' : '') + '> ' +
                 (type === 'recipient' ? 'Penerima' : 'Perusahaan') + '</label>').join('') +
                 '</div></div><div class="trf-sum" id="rp-atur-sum-' + i + '"></div></div></div>';
-        }).join('');
+        }).join('') + '<datalist id="rp-atur-banks">' + BANKS.map(bank => '<option value="' + esc(bank) + '">').join('') + '</datalist>';
         const debt = Object.values(documents).filter(doc => doc.group_type === 'debt');
         if (debt.length) {
-            list.insertAdjacentHTML('beforeend', '<div class="well well-sm">Hutang Petty Cash &mdash; ' + esc(debt.map(doc => doc.no_dokumen).join(', ')) + '</div>');
+            // Di luar transfer (server menolak rekening, admin dan lampiran untuk hutang): rincian baca saja.
+            const money = value => value ? rupiah(value) : '-';
+            const rows = debt.map(doc => {
+                const t = tax(doc);
+                return '<tr><td><span class="rp-transfer-tag">' + esc(doc.kategori) + '</span><br><b>' + esc(doc.no_dokumen) + '</b></td><td>' +
+                    esc(doc.request_by) + '</td><td>' + esc(doc.keperluan) + '</td><td>' + rupiah(Number(doc.nilai_pengajuan)) + '</td><td>' +
+                    money(t.ppn) + '</td><td>' + money(t.pph23) + '</td><td>' + money(t.pph21) + '</td><td>' + rupiah(t.net) + '</td></tr>';
+            }).join('');
+            list.insertAdjacentHTML('beforeend', '<div class="trf-panel"><div class="trf-head"><b>Hutang Petty Cash</b><span class="text-muted">' +
+                debt.length + ' dokumen &middot; tidak masuk transfer, jadi tanpa rekening tujuan dan admin</span></div>' +
+                '<div class="trf-body"><div class="table-responsive"><table class="table table-bordered"><thead><tr>' +
+                '<th>NO. DOKUMEN / KATEGORI</th><th>REQUEST BY</th><th>KEPERLUAN</th><th>DPP</th><th>PPN</th><th>PPH23</th><th>PPH21</th><th>DIBAYARKAN</th>' +
+                '</tr></thead><tbody>' + rows + '</tbody></table></div></div></div>');
         }
         updateTotals();
     }
@@ -127,7 +149,21 @@
             documents[input.dataset.note].note = input.value;
         }
         if (input.dataset.field && input.type !== 'radio') {
-            groups[Number(input.closest('[data-group]').dataset.group)][input.dataset.field] = input.value;
+            const panel = input.closest('[data-group]');
+            const group = groups[Number(panel.dataset.group)];
+            if (input.dataset.field === 'admin') {
+                // Kursor tetap setelah digit ke-n, jadi tidak pernah berhenti tepat setelah titik.
+                let left = input.value.slice(0, input.selectionEnd).replace(/\D/g, '').length;
+                input.value = thousands(input.value);
+                let caret = 0;
+                while (left && caret < input.value.length) if (/\d/.test(input.value[caret++])) left--;
+                input.setSelectionRange(caret, caret);
+            }
+            group[input.dataset.field] = input.dataset.field === 'admin' ? digits(input.value) : input.value;
+            if (group.source === 'doc' && ['bank', 'no_rek', 'nama'].includes(input.dataset.field)) {
+                group.source = 'edit';
+                panel.querySelector('.trf-src').textContent = sourceText(group);
+            }
             updateTotals();
         }
     });
@@ -173,7 +209,23 @@
     };
     el('form').onsubmit = event => {
         event.preventDefault();
-        if (!confirm('Ajukan pembayaran untuk approval?')) return;
+        const fail = msg => { el('error').textContent = msg; el('error').hidden = false; };
+        // Validasi klien seperti mockup; server tetap memvalidasi ulang.
+        const panels = [...list.querySelectorAll('[data-group]')];
+        const incomplete = groups.map((group, i) => !group.bank.trim() || !group.nama.trim() || !/^[0-9][0-9.\- ]{4,}$/.test(group.no_rek.trim()) ? i : -1).filter(i => i >= 0);
+        const overAdmin = groups.map((group, i) => {
+            const net = group.docs.reduce((sum, no) => sum + tax(documents[no]).net, 0);
+            return group.bearer === 'recipient' && Number(group.admin) > 0 && Number(group.admin) >= net ? i : -1;
+        }).filter(i => i >= 0);
+        panels.forEach((panel, i) => panel.classList.toggle('has-error', incomplete.includes(i) || overAdmin.includes(i)));
+        if (incomplete.length) {
+            return fail('Rekening tujuan belum lengkap: isi Bank, No. Rekening (angka) dan Nama Penerima untuk Transfer ' + incomplete.map(i => i + 1).join(', ') + '.');
+        }
+        if (overAdmin.length) {
+            return fail('Admin terlalu besar: admin ditanggung penerima tidak boleh sama atau lebih besar dari jumlah yang dibayarkan (Transfer ' + overAdmin.map(i => i + 1).join(', ') + ').');
+        }
+        el('error').hidden = true;
+        if (!confirm('Ajukan ' + Object.keys(documents).length + ' dokumen (' + groups.length + ' transfer) untuk approval?')) return;
         const payload = new FormData();
         payload.append('transfers', JSON.stringify(groups.map(group => ({ ...group, admin: group.admin || '0' }))));
         let files = 0;
@@ -186,7 +238,6 @@
             });
         });
         const button = el('form').querySelector('button[type=submit]');
-        const fail = msg => { el('error').textContent = msg; el('error').hidden = false; };
         if (files > 10 || Object.values(documents).some(doc => doc.files.some(file => file.size > 5242880))) {
             fail('Unggah maksimal 10 file, masing-masing maksimal 5 MB.');
             return;

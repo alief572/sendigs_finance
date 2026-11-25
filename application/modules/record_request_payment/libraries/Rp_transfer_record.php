@@ -6,7 +6,7 @@ final class Rp_transfer_record
 {
     private const COMPANIES = ['7' => 'STM', '3' => 'Sustain', '4' => 'Vuca'];
     public const CATEGORIES = ['Kasbon', 'Direct Payment', 'Cash', 'Periodik', 'Transport', 'Expense', 'Petty Cash'];
-    private const NOTE = 'Catatan: semua angka positif seperti di sistem. DIBAYARKAN = DPP + PPN - PPh per dokumen. ADMIN dihitung 1x per transfer, penanggungnya di kolom ADMIN DITANGGUNG. JUMLAH DIBAYARKAN BANK = uang keluar bank per transfer (= Payment Bank di Form Payment = kredit Bank di jurnal): total DIBAYARKAN dokumen dalam transfer itu, ditambah ADMIN bila ditanggung perusahaan.';
+    private const NOTE = 'Catatan: semua angka positif seperti di sistem. DIBAYARKAN = DPP + PPN - PPh per dokumen. ADMIN dihitung 1x per transfer, penanggungnya di kolom ADMIN DITANGGUNG. JUMLAH DIBAYARKAN BANK = uang keluar bank per transfer (= Payment Bank di Form Payment = kredit Bank di jurnal): total DIBAYARKAN dokumen dalam transfer itu, ditambah ADMIN bila ditanggung perusahaan (ditanggung penerima: transfer dikurangi admin, biaya bank tetap keluar, totalnya sama dengan DIBAYARKAN).';
 
     public static function filters(array $input)
     {
@@ -37,7 +37,7 @@ final class Rp_transfer_record
             d.id AS detail_id, d.no_dokumen, d.kategori, d.request_by, d.keperluan, d.keterangan_finance, d.dpp,
             d.flag_pph23, d.flag_pph21, d.nilai_ppn, d.nilai_pph, d.dibayarkan,
             EXISTS(SELECT 1 FROM tr_rp_transfer_file f WHERE f.id_detail=d.id) AS has_files,
-            paid.bank_charge, pa.tgl_bayar, pa.payment_bank, pa.keterangan_pembayaran
+            paid.bank_charge, pa.tgl_bayar, pa.payment_bank, pa.keterangan_pembayaran, pa.coa_bank, pa.nm_coa_bank
             FROM tr_rp_transfer t JOIN tr_rp_pengajuan_h h ON h.id=t.id_pengajuan
             JOIN tr_rp_pengajuan_d d ON d.id_transfer=t.id AND d.decision='approved'
             LEFT JOIN tr_payment_paid paid ON BINARY paid.id=BINARY t.id_payment
@@ -82,6 +82,27 @@ final class Rp_transfer_record
         return $groups;
     }
 
+    /** Daftar PGJ untuk modal Export Excel Beberapa PGJ: transfer ikut x dari y, status PGJ per transfer, dibayarkan. */
+    public static function exportBatches($db, array $filter, array $groups)
+    {
+        $live = [];
+        foreach (self::groups($db, null, ['from' => $filter['from'], 'to' => $filter['to']]) as $group) {
+            $id = $group['id_pengajuan'];
+            $live[$id] = $live[$id] ?? ['all' => 0, 'paid' => 0];
+            $live[$id]['all']++;
+            $live[$id]['paid'] += $group['status'] === 'paid' ? 1 : 0;
+        }
+        $batches = [];
+        foreach ($groups as $group) {
+            $id = $group['id_pengajuan'];
+            $batches[$id] = $batches[$id] ?? ['id' => (int) $id, 'no' => $group['no_pengajuan'], 'company' => $group['company_nama'],
+                'decided_at' => $group['decided_at'], 'count' => 0, 'net' => 0] + ($live[$id] ?? ['all' => 0, 'paid' => 0]);
+            $batches[$id]['count']++;
+            $batches[$id]['net'] += Rp_transfer_payment::planned($group)['net'];
+        }
+        return array_values($batches);
+    }
+
     public static function category($value)
     {
         return $value === 'refill_pettycash' ? 'Refill Pettycash' : $value;
@@ -102,15 +123,47 @@ final class Rp_transfer_record
         $plannedBearer = $admin ? self::bearer($group['bearer']) : 'Tanpa admin';
         $actualBearer = $group['actual_bearer'] === 'free' ? 'Gratis' : ($charge || $admin ? self::bearer($group['actual_bearer']) : 'Tanpa admin');
         $differences = [];
+        $diffRows = [];
         if ($plannedBearer !== $actualBearer) {
             $differences[] = 'Penanggung admin: ' . $plannedBearer . ' → ' . $actualBearer;
+            $diffRows[] = ['Penanggung admin', $plannedBearer, $actualBearer];
         }
         foreach (['Bank Charge' => [$admin, $charge], 'Transfer diterima penerima' => [$planned['transfer'], $received], 'Total keluar bank' => [$planned['bank'], $actualBank]] as $label => $pair) {
             if ($pair[0] !== $pair[1]) {
                 $differences[] = $label . ': ' . Rp_transfer::money($pair[0]) . ' → ' . Rp_transfer::money($pair[1]) . ' (' . Rp_transfer::money($pair[1] - $pair[0]) . ')';
+                $diffRows[] = [$label === 'Bank Charge' ? 'Bank charge' : $label, $pair[0], $pair[1]];
             }
         }
-        return compact('planned', 'admin', 'charge', 'actualBank', 'received', 'plannedBearer', 'actualBearer', 'differences');
+        return compact('planned', 'admin', 'charge', 'actualBank', 'received', 'plannedBearer', 'actualBearer', 'differences', 'diffRows');
+    }
+
+    /** Jurnal Payment yang tersimpan (RP-R-39): sumber Preview Jurnal dan Voucher, bukan dihitung ulang. */
+    public static function journalRows($db, $payment)
+    {
+        return Rp_transfer::write($db->query(
+            'SELECT nm_company, coa, nm_coa, keterangan, debit, kredit FROM tr_jurnal WHERE no_transaksi=? ORDER BY id', [(string) $payment]
+        ))->result_array();
+    }
+
+    /** No voucher BBK (RP-R-37): YYYY-COMPANY/BBK/bulan romawi/urut per company per bulan bayar, urut nomor BK. */
+    public static function voucherNo($db, array $group)
+    {
+        $date = new DateTimeImmutable($group['tgl_bayar']);
+        $start = $date->format('Y-m-01');
+        // shortcut: nomor dihitung saat cetak, bergeser bila payment transfer di bulan yang sama dihapus; simpan permanen bila itu terjadi.
+        $ids = array_column(Rp_transfer::write($db->query(
+            "SELECT DISTINCT t.id_payment FROM tr_rp_transfer t JOIN tr_rp_pengajuan_h h ON h.id=t.id_pengajuan
+             JOIN tr_rp_pengajuan_d d ON d.id_transfer=t.id AND d.decision='approved'
+             JOIN payment_approve pa ON BINARY pa.id=BINARY d.payment_approval_id
+             WHERE t.status='paid' AND h.deleted=0 AND h.company_id=? AND pa.tgl_bayar>=? AND pa.tgl_bayar<DATE_ADD(?, INTERVAL 1 MONTH)
+             ORDER BY t.id_payment", [(string) $group['company_id'], $start, $start]
+        ))->result_array(), 'id_payment');
+        $position = array_search($group['id_payment'], $ids, true);
+        if ($position === false) {
+            throw new DomainException('Payment tidak ditemukan untuk nomor voucher.');
+        }
+        $roman = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'][(int) $date->format('n') - 1];
+        return $date->format('Y') . '-' . strtoupper($group['company_nama']) . '/BBK/' . $roman . '/' . str_pad((string) ($position + 1), 2, '0', STR_PAD_LEFT);
     }
 
     public static function exportPlan($sheet, array $groups, $title, $subtitle, $single = false)

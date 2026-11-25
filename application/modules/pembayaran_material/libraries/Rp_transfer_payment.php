@@ -51,18 +51,39 @@ final class Rp_transfer_payment
         return $transfer;
     }
 
-    public static function queue($db)
+    /** Antrean transfer siap bayar untuk DataTables server-side. $orderColumn = indeks kolom di view. */
+    public static function queuePage($db, $search = '', $start = 0, $length = 10, $orderColumn = null, $direction = 'asc')
     {
-        return Rp_transfer::write($db->query(
-            "SELECT t.id, h.no_pengajuan, h.company_nama, t.urutan, t.bank, t.no_rek, t.nama, t.admin, t.bearer,
+        $from = " FROM tr_rp_transfer t JOIN tr_rp_pengajuan_h h ON h.id=t.id_pengajuan
+             JOIN tr_rp_pengajuan_d d ON d.id_transfer=t.id AND d.decision='approved'
+             WHERE t.status='approved' AND h.status='done' AND h.deleted=0";
+        $count = static function ($where, $values) use ($db) {
+            return (int) (Rp_transfer::write($db->query('SELECT COUNT(DISTINCT t.id) AS total' . $where, $values))->row_array()['total'] ?? 0);
+        };
+        $total = $count($from, []);
+        $filtered = $total;
+        $values = [];
+        if ($search !== '') {
+            // EXISTS agar pencarian nomor dokumen tidak mengurangi dokumen yang dijumlahkan.
+            $from .= " AND (h.no_pengajuan LIKE ? OR h.company_nama LIKE ? OR t.nama LIKE ? OR t.bank LIKE ? OR t.no_rek LIKE ?
+                 OR EXISTS (SELECT 1 FROM tr_rp_pengajuan_d s WHERE s.id_transfer=t.id AND s.decision='approved'
+                     AND (s.no_dokumen LIKE ? OR s.kategori LIKE ?)))";
+            $values = array_fill(0, 7, '%' . addcslashes($search, '%_\\') . '%');
+            $filtered = $count($from, $values);
+        }
+        $columns = [1 => 'h.no_pengajuan', 2 => 'h.decided_at', 3 => 'h.company_nama', 4 => 't.nama',
+            8 => "SUM(d.dibayarkan) - CASE WHEN t.bearer='recipient' THEN t.admin ELSE 0 END"];
+        $order = isset($columns[$orderColumn])
+            ? $columns[$orderColumn] . ($direction === 'desc' ? ' DESC' : ' ASC') . ', t.id' : 'h.no_pengajuan, t.urutan';
+        $rows = Rp_transfer::write($db->query(
+            "SELECT t.id, h.no_pengajuan, h.company_nama, h.decided_at, t.urutan, t.bank, t.no_rek, t.nama, t.admin, t.bearer,
                     GROUP_CONCAT(d.no_dokumen ORDER BY d.id SEPARATOR ', ') AS numbers,
                     GROUP_CONCAT(DISTINCT d.kategori ORDER BY d.kategori SEPARATOR ' + ') AS categories,
-                    SUM(d.dibayarkan) AS net
-             FROM tr_rp_transfer t JOIN tr_rp_pengajuan_h h ON h.id=t.id_pengajuan
-             JOIN tr_rp_pengajuan_d d ON d.id_transfer=t.id AND d.decision='approved'
-             WHERE t.status='approved' AND h.status='done' AND h.deleted=0
-             GROUP BY t.id, h.no_pengajuan, h.company_nama ORDER BY h.no_pengajuan, t.urutan"
+                    SUM(d.dibayarkan) AS net" . $from . "
+             GROUP BY t.id, h.no_pengajuan, h.company_nama, h.decided_at ORDER BY " . $order .
+            ' LIMIT ' . max(0, (int) $start) . ', ' . min(100, max(1, (int) $length)), $values
         ))->result_array();
+        return ['total' => $total, 'filtered' => $filtered, 'rows' => $rows];
     }
 
     public static function banks($db, $company)
@@ -102,17 +123,24 @@ final class Rp_transfer_payment
         $mode = $mode ?: $transfer['bearer'];
         $defaultCharge = $mode === 'free' ? 0 : Rp_transfer::cents($transfer['admin']);
         $charge = Rp_transfer::cents(($input['bank_charge'] ?? '') === '' ? Rp_transfer::money($defaultCharge) : $input['bank_charge'], true);
-        $received = Rp_transfer::totals($planned['net'], $defaultCharge, $mode)['transfer'];
-        $bank = $received + $charge;
-        if ($bank <= 0 || ($mode === 'free' && $charge !== 0)
-            || (($input['payment_bank'] ?? '') !== '' && Rp_transfer::cents($input['payment_bank']) !== $bank)) {
-            throw new DomainException('Payment Bank, transfer penerima dan Bank Charge belum sesuai. Kontrol harus 0.');
+        // RP-R-36: Payment Bank = nominal transfer ke penerima (baris TRF); total keluar bank = Payment Bank + Bank Charge.
+        $plannedTransfer = Rp_transfer::totals($planned['net'], $defaultCharge, $mode)['transfer'];
+        $received = ($input['payment_bank'] ?? '') === '' ? $plannedTransfer : Rp_transfer::cents($input['payment_bank']);
+        if ($received <= 0) {
+            throw new DomainException('Payment Bank harus lebih dari 0.');
         }
+        if ($charge < 0) {
+            throw new DomainException('Bank Charge tidak boleh minus.');
+        }
+        if ($mode === 'free' && $charge !== 0) {
+            throw new DomainException('Admin aktual Gratis: Bank Charge harus 0.');
+        }
+        $bank = $received + $charge;
         $note = $input['keterangan_pembayaran'] ?? '';
         if (!is_string($note) || strlen($note) > 2000) {
             throw new DomainException('Keterangan Pembayaran tidak valid.');
         }
-        $difference = $mode !== $transfer['bearer'] || $charge !== Rp_transfer::cents($transfer['admin']) || $bank !== $planned['bank'];
+        $difference = $mode !== $transfer['bearer'] || $charge !== Rp_transfer::cents($transfer['admin']) || $received !== $planned['transfer'];
         return [
             'mode' => $mode, 'charge' => $charge, 'bank' => $bank, 'transfer' => $received,
             'net' => $planned['net'], 'adjustment' => $bank - $planned['net'], 'note' => trim($note), 'difference' => $difference,
@@ -197,8 +225,14 @@ final class Rp_transfer_payment
             $add($is21 ? '2104-01-02' : '2104-01-03', 'PPh ' . ($is21 ? '21' : '23') . ' - ' . $doc['no_dokumen'], 0, Rp_transfer::cents($doc['nilai_pph']), $divisions[$id]);
         }
         $first = reset($divisions);
-        $add('7201-01-04', 'Administrasi Bank', max(0, $actual['adjustment']), max(0, -$actual['adjustment']), $first);
-        $add($bank['coa_bank'] ?? '(pilih bank)', ($bank['nama_bank'] ?? 'Bank belum dipilih') . ' - Transfer ke ' . $transfer['nama'], 0, $actual['bank'], $first);
+        $refs = implode(', ', array_column($docs, 'no_dokumen'));
+        $add('7201-01-04', $actual['adjustment'] >= 0 ? 'Biaya Transfer - ' . $refs : 'Admin dipotong dari transfer, bank tidak memotong biaya - ' . $refs,
+            max(0, $actual['adjustment']), max(0, -$actual['adjustment']), $first);
+        // RP-R-36: Cr Bank 2 baris sesuai jurnal aktual, TRF (Payment Bank) dan BIAYA TRANSFER (Bank Charge).
+        $bankCoa = $bank['coa_bank'] ?? '(pilih bank)';
+        $bankName = $bank['nama_bank'] ?? 'Bank belum dipilih';
+        $add($bankCoa, $bankName . ' - TRF ke ' . $transfer['nama'], 0, $actual['transfer'], $first);
+        $add($bankCoa, $bankName . ' - BIAYA TRANSFER ke ' . $transfer['nama'], 0, $actual['charge'], $first);
         $accounting = $controller->load->database($target, true);
         $names = array_column(Rp_transfer::write($accounting->select('no_perkiraan, nama')->where_in('no_perkiraan', array_keys($coa))->get('coa_master'))->result_array(), 'nama', 'no_perkiraan');
         foreach ($journal as &$row) {
