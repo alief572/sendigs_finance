@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockup – Request Payment → Grup Pembayaran → Payment (SENDIGS)</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Source Sans Pro","Segoe UI",Arial,sans-serif;font-size:13px;color:#333;background:#ecf0f5}
+  a{color:#3c8dbc;text-decoration:none}
+  /* ---------- shell ---------- */
+  .top{position:sticky;top:0;z-index:5;display:flex;height:50px}
+  .brand{width:230px;background:#367fa9;color:#fff;font-weight:700;font-size:18px;display:flex;align-items:center;justify-content:center}
+  .bar{flex:1;background:#3c8dbc;color:#fff;display:flex;align-items:center;padding:0 18px;gap:22px}
+  .bar .sp{flex:1}
+  .layout{display:flex;min-height:calc(100vh - 50px)}
+  .side{width:230px;background:#222d32;color:#b8c7ce;flex-shrink:0;font-size:13px}
+  .side .search{padding:10px}
+  .side .search div{border:1px solid #374850;border-radius:3px;padding:7px 10px;color:#8aa4af}
+  .side .m{padding:9px 16px;display:flex;justify-content:space-between}
+  .side .m.open{color:#fff}
+  .side .s{padding:6px 16px 6px 30px;cursor:pointer;color:#8aa4af}
+  .side .s:hover{color:#fff}
+  .side .s.on{color:#fff}
+  .side .s::before{content:"› ";}
+  .main{flex:1;padding:14px 18px;min-width:0}
+  .ttl{font-size:22px;font-weight:400;margin:0 0 10px;display:flex;align-items:center;gap:8px}
+  .card{background:#fff;border-top:3px solid #d2d6de;border-radius:3px;padding:14px 16px;margin-bottom:16px;box-shadow:0 1px 1px rgba(0,0,0,.1)}
+  .crumb{font-size:11px;color:#999}
+  /* ---------- mockup helper ---------- */
+  .mock{background:#fffbe6;border:1px dashed #e0b84a;border-radius:4px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:#6b5513}
+  .mock b{color:#4d3c08}
+  .tabs{display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap}
+  .tabs button{border:1px solid #c9d3dc;background:#fff;padding:7px 14px;border-radius:3px;cursor:pointer;font:inherit}
+  .tabs button.on{background:#3c8dbc;color:#fff;border-color:#3c8dbc}
+  .page{display:none}.page.on{display:block}
+  .new{outline:2px dashed #f39c12;outline-offset:-2px}
+  .newtag{display:inline-block;background:#f39c12;color:#fff;font-size:9px;font-weight:700;border-radius:2px;padding:1px 4px;margin-left:4px;vertical-align:middle;letter-spacing:.3px}
+  /* ---------- tables ---------- */
+  table{border-collapse:collapse;width:100%}
+  .dt th{background:#3c8dbc;color:#fff;font-size:11px;font-weight:700;text-transform:uppercase;padding:9px 8px;border-right:1px solid #5a9fc8;text-align:center;white-space:nowrap}
+  .dt td{padding:9px 8px;border-bottom:1px solid #f0f0f0;vertical-align:middle}
+  .dt tbody tr:nth-child(even) td{background:#fafafa}
+  .r{text-align:right;font-variant-numeric:tabular-nums}
+  .c{text-align:center}
+  .tag{display:inline-block;background:#333;color:#fff;border-radius:10px;font-size:10px;font-weight:600;padding:2px 9px;margin-bottom:4px}
+  .docno{display:flex;align-items:center;gap:6px;font-weight:700}
+  .docno i{display:inline-block;width:22px;height:22px;border-radius:3px;background:#17a2b8;color:#fff;font-style:normal;font-size:11px;text-align:center;line-height:22px}
+  .lbl{font-size:9px;color:#999;font-weight:700;letter-spacing:.4px;margin-right:6px;display:inline-block;width:56px}
+  .green{color:#00a65a;font-weight:700}
+  .orange{color:#e08e0b}
+  .sm{font-size:11px;color:#888}
+  select,input[type=text],input[type=number],input[type=date],textarea{font:inherit;border:1px solid #d2d6de;border-radius:3px;padding:5px 8px;background:#fff;color:#333}
+  .admsel{width:72px;font-size:11px;padding:3px 4px}
+  .bearer{width:96px;font-size:10.5px;padding:2px 3px;margin-top:4px}
+  /* ---------- summary cards ---------- */
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+  .kc{background:#fff;border:1px solid #e5e5e5;border-left:4px solid #3c8dbc;border-radius:3px;padding:10px 14px}
+  .kc .k{font-size:9.5px;font-weight:700;color:#888;letter-spacing:.4px}
+  .kc .v{font-size:17px;font-weight:700;margin-top:5px}
+  /* ---------- sticky submit bar ---------- */
+  .submitbar{background:#222d32;color:#fff;border-radius:4px;padding:10px 14px;margin-top:12px;display:flex;align-items:center;gap:10px}
+  .btn{border:none;border-radius:3px;padding:6px 13px;cursor:pointer;font:inherit;color:#fff;background:#3c8dbc}
+  .btn.g{background:#00a65a}.btn.o{background:#f39c12}.btn.rd{background:#dd4b39}.btn.gr{background:#888}.btn.w{background:#fff;color:#333;border:1px solid #ccc}
+  .btn:disabled{background:#bbb;cursor:not-allowed}
+  /* ---------- approval ---------- */
+  .apvhead{display:flex;justify-content:space-between;border-bottom:1px solid #eee;padding-bottom:10px;margin-bottom:12px}
+  .apvhead h2{margin:4px 0;font-weight:400;font-size:20px}
+  .pill{display:inline-block;background:#eee;border-radius:10px;font-size:10px;padding:1px 7px;margin:0 4px}
+  /* ---------- payment form ---------- */
+  .banner{background:#f39c12;color:#fff;font-weight:700;padding:13px 16px;border-radius:3px;margin-bottom:14px}
+  .banner.blue{background:#3c8dbc}
+  .banner.red{background:#dd4b39}
+  .fgrid{display:grid;grid-template-columns:200px 20px 1fr 200px 20px 1fr;gap:10px 6px;align-items:center;margin-bottom:22px}
+  .fgrid input,.fgrid select,.fgrid textarea{width:100%}
+  .ptbl td{padding:9px 8px;border-bottom:1px solid #eee;vertical-align:middle}
+  .ptbl .sumrow td{background:#f9f9f9}
+  .ro{background:#eee;border:1px solid #d2d6de;border-radius:3px;padding:6px 10px;text-align:right}
+  .upload{border:2px dashed #3c8dbc;border-radius:6px;padding:26px;text-align:center;width:560px;max-width:100%;background:#f7fbfe;margin:6px 0 20px}
+  .badge{display:inline-block;font-size:10px;border-radius:3px;padding:1px 6px;margin-left:4px;color:#fff}
+  .badge.diff{background:#f39c12}.badge.err{background:#dd4b39}.badge.ok{background:#00a65a}
+  .jt th{background:#337ab7}
+  .jt tfoot td{background:#337ab7;color:#fff;font-weight:700;padding:9px 8px}
+  .msg{font-size:12px;margin:8px 0;text-align:right}
+  ul.chg{margin:6px 0 0 18px;padding:0}ul.chg li{margin-bottom:6px}
+  .two{display:flex;gap:16px;flex-wrap:wrap}.two>div{flex:1;min-width:340px}
+</style>
+</head>
+<body>
+<style>
+  .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-start;justify-content:center;z-index:20;padding-top:60px}
+  .modal{background:#fff;border-radius:4px;width:760px;max-width:95vw;box-shadow:0 5px 20px rgba(0,0,0,.3)}
+  .modal .mh{background:#3c8dbc;color:#fff;padding:12px 16px;font-size:16px;display:flex;justify-content:space-between}
+  .modal .mb{padding:16px}
+  .modal .mf{padding:12px 16px;border-top:1px solid #eee;text-align:right}
+  .grow{display:grid;grid-template-columns:190px 1fr;gap:10px;align-items:center;margin-bottom:10px}
+  .radio{display:flex;gap:16px}
+  .grpbox{border:1px solid #d2d6de;border-left:4px solid #3c8dbc;border-radius:3px;padding:10px 14px;background:#f7fbfe;margin-bottom:12px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .grpbox .k{font-size:9.5px;font-weight:700;color:#888;letter-spacing:.4px}
+  .grpbox .v{font-weight:700;margin-top:3px}
+  tr.rej td{opacity:.45;text-decoration:line-through}
+  .lock{color:#999;font-size:11px}
+</style>
+<div class="top"><div class="brand">SENDIGS SS</div><div class="bar">☰<span class="sp"></span><span>Helpdesk</span><span>Manual Book</span><span>👤 Admin</span></div></div>
+<div class="layout">
+  <div class="side">
+    <div class="search"><div>🔍 Cari menu…</div></div>
+    <div class="m">Dashboard</div>
+    <div class="m">Master Data <span>‹</span></div>
+    <div class="m open">Pengeluaran Non Pembelian <span>⌄</span></div>
+    <div class="s" data-go="p1">Request Payment</div>
+    <div class="s" data-go="p2">Approval Request Payment</div>
+    <div class="s">Record Request Payment</div>
+    <div class="s" data-go="p3">Payment</div>
+    <div class="s" data-go="p5">Ringkasan Perubahan</div>
+    <div class="m">Approval <span>‹</span></div>
+    <div class="m">Finance <span>‹</span></div>
+  </div>
+
+  <div class="main">
+    <div class="mock"><b>Mockup to-be (alur hasil diskusi).</b> ① Request Payment: pilih PPN / PPh per dokumen. ② Centang dokumen yang dibayar bersamaan → <b>Atur Pembayaran</b>: admin (nominal + tanggungan) dan rekening tujuan, 1x per grup. ③ Payment tinggal mengikuti. Garis putus oranye / <span class="newtag">BARU</span> = yang berubah.<br>
+    <b>Asumsi:</b> langkah ② terjadi saat <b>Ajukan untuk Approval</b> (1 pengajuan = 1 transfer); transaksi tunggal juga lewat langkah ini; 1 grup = company sama dan penerima sama.</div>
+    <div class="tabs">
+      <button data-go="p1" class="on">1. Request Payment</button>
+      <button data-go="p2">2. Detail Approval</button>
+      <button data-go="p3">3. Payment List</button>
+      <button data-go="p4">4. Form Payment</button>
+      <button data-go="p5">5. Ringkasan Perubahan</button>
+    </div>
+
+    <!-- ===== 1 ===== -->
+    <div class="page on" id="p1">
+      <div class="ttl">💳 Request Payment</div>
+      <div class="card">
+        <div class="crumb">Finance / Request Payment</div>
+        <h3 style="font-weight:400;margin:4px 0 14px;font-size:18px">Dokumen Menunggu Diajukan Approval <span class="tag" style="background:#f39c12">5</span></h3>
+        <div class="cards">
+          <div class="kc"><div class="k">TOTAL PENGAJUAN</div><div class="v">5 <span class="sm">item</span></div></div>
+          <div class="kc"><div class="k">TOTAL NILAI</div><div class="v" style="color:#3c8dbc" id="kTotal"></div></div>
+          <div class="kc" style="border-left-color:#f39c12"><div class="k">KASBON</div><div class="v orange" id="kKasbon"></div></div>
+          <div class="kc" style="border-left-color:#605ca8"><div class="k">PERIODIK</div><div class="v" style="color:#605ca8" id="kPeriodik"></div></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px"><span>Tampilkan <select><option>25</option></select> entri per halaman</span><input type="text" placeholder="Cari dokumen, pemohon…" style="width:220px"></div>
+        <div style="overflow-x:auto">
+        <table class="dt" id="reqT">
+          <thead><tr><th><input type="checkbox"></th><th>No</th><th>No. Dokumen / Kategori</th><th>Request By</th><th>Tanggal</th><th>Keperluan</th>
+          <th>DPP (Rp)</th><th>PPN</th><th>PPH 23</th><th>PPH 21</th><th>Dibayarkan</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        </div>
+        <p class="sm" style="margin-top:8px">PPN = 11% × DPP · PPh 23 = 2% × DPP · PPh 21 = 2,5% × DPP. Kolom Admin per baris <b>dihapus</b>, pindah ke langkah <b>Atur Pembayaran</b> (1x per grup). Dibayarkan per baris = DPP + PPN − PPh.</p>
+        <div class="submitbar"><span id="selInfo"></span><span style="flex:1"></span><button class="btn gr" id="btnClear">Batal</button><button class="btn new" id="btnAtur">⚙ Atur Pembayaran &amp; Ajukan<span class="newtag">BARU</span></button></div>
+      </div>
+    </div>
+
+    <!-- ===== 2 ===== -->
+    <div class="page" id="p2">
+      <div class="ttl">☑ Detail Approval - <span class="pgj"></span></div>
+      <div class="card">
+        <div class="apvhead">
+          <div><a>← Kembali ke daftar pengajuan</a><h2>Pengajuan <span class="pgj"></span></h2><div class="sm">Company: <span id="aCo"></span> — diajukan 17-Nov-2026 10:55</div></div>
+          <div style="text-align:right;display:flex;gap:22px;align-items:flex-end">
+            <div><div class="lbl" style="width:auto">JUMLAH ITEM</div><div style="font-weight:700;font-size:15px" id="aCnt"></div></div>
+            <div><div class="lbl" style="width:auto">TOTAL DIBAYARKAN</div><div style="font-weight:700;font-size:15px" id="aTot"></div></div>
+          </div>
+        </div>
+        <div class="grpbox new" id="aGrp"></div>
+        <div style="margin-bottom:8px"><b>Akan Disetujui</b> <span class="sm">— klik Reject untuk mengeluarkan item dari pengajuan</span></div>
+        <table class="dt" id="apvT">
+          <thead><tr><th style="text-align:left">No. Dokumen / Kategori</th><th>Request By</th><th style="text-align:left">Keperluan</th><th class="r">DPP</th><th class="r">PPN</th><th class="r">PPH23</th><th class="r">PPH21</th><th class="r">Dibayarkan</th><th>Aksi</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div id="aNote" class="sm" style="margin-top:8px"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:18px;border-top:1px solid #eee;padding-top:12px">
+          <span class="sm">Item yang di-reject kembali ke Request Payment dengan alasan reject. Admin tetap 1x untuk item yang tersisa.</span>
+          <button class="btn" data-go="p3">💾 Simpan Keputusan</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 3 ===== -->
+    <div class="page" id="p3">
+      <div class="ttl">Payment List | Pembayaran Non PR</div>
+      <div class="card">
+        <div style="display:flex;gap:6px;margin-bottom:12px"><button class="btn rd">← Back</button><button class="btn g" data-go="p4">✔ Proses</button></div>
+        <div class="mock" style="margin-bottom:10px">Yang dipilih di sini <b>per pengajuan (= 1 transfer)</b>, bukan per dokumen <span class="newtag">BARU</span>. Admin dan rekening tujuan sudah ditentukan di Request Payment.</div>
+        <table class="dt" id="plT">
+          <thead><tr><th></th><th>No. Pengajuan</th><th>Tgl Approve</th><th>Company</th><th>Penerima / Rekening Tujuan</th><th>Dokumen</th><th>Admin</th><th class="r">Total Transfer</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ===== 4 ===== -->
+    <div class="page" id="p4">
+      <div class="ttl">Payment List | Pembayaran Non PR</div>
+      <div class="card" style="border-top-color:#3c8dbc">
+        <div class="banner" id="pBanner"></div>
+        <div class="fgrid">
+          <div>Tgl Bayar</div><div>:</div><div><input type="date" value="2026-11-17"></div>
+          <div>Supplier</div><div>:</div><div><div class="ro" style="text-align:left" id="pSupp"></div></div>
+          <div>Keterangan Pembayaran</div><div>:</div><div><textarea id="pKet" rows="2"></textarea></div>
+          <div>Transfer ke <span class="newtag">BARU</span></div><div>:</div><div><div class="ro new" style="text-align:left" id="pRek"></div></div>
+          <div></div><div></div><div></div>
+          <div>Pilih Bank</div><div>:</div><div><select><option>(436.300.5287 a/n PT. Sentral Tehnologi Managemen) - Bank Central Asia</option></select></div>
+          <div></div><div></div><div></div>
+          <div>Payment Bank</div><div>:</div><div class="new"><input type="number" id="pBank" style="text-align:right"><div class="sm" style="margin-top:3px">Terisi otomatis = total uang keluar dari rekening. Ubah hanya kalau bukti bayar beda.</div></div>
+        </div>
+        <table class="dt ptbl" id="pT">
+          <thead><tr><th>Supplier</th><th>Nomor Dokumen</th><th class="r">Request Payment</th><th colspan="2">PPH <span class="lock">🔒 dari request</span></th><th>PPN <span class="lock">🔒</span></th><th class="r">DPP</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="msg" id="pMsg"></div>
+        <div style="margin-top:18px"><b>Upload Bukti Bayar</b> <span style="color:#dd4b39">*</span></div>
+        <label class="upload" style="display:block;cursor:pointer">
+          <div style="font-size:30px;color:#3c8dbc">☁</div>
+          <div><b>Tarik &amp; letakkan file bukti bayar di sini, atau <u style="color:#3c8dbc">pilih file</u></b></div>
+          <div class="sm">Mendukung JPG, JPEG, PNG, PDF, DOC, DOCX, XLS, XLSX (Bisa pilih lebih dari 1 file)</div>
+          <input type="file" id="pFile" style="display:none" multiple><div id="pFileName" class="green" style="margin-top:6px"></div>
+        </label>
+        <h3 style="font-weight:400;font-size:22px;margin:6px 0 10px">Jurnal</h3>
+        <table class="dt jt">
+          <thead><tr><th>Tanggal Jurnal</th><th>Nama Company</th><th>Department</th><th>COA</th><th>Nama Account</th><th>Keterangan</th><th class="r">Debit</th><th class="r">Kredit</th></tr></thead>
+          <tbody id="jT"></tbody>
+          <tfoot><tr><td colspan="6" style="text-align:center">Balancing</td><td class="r" id="jD"></td><td class="r" id="jK"></td></tr></tfoot>
+        </table>
+        <p class="sm">* COA Beban Admin Bank masih contoh, perlu dikonfirmasi ke akuntansi. Baris bernilai 0 tidak diposting.</p>
+        <div style="margin-top:14px;padding-top:12px;border-top:1px solid #eee"><button class="btn g" id="pSave">💾 Submit</button> <button class="btn o" data-go="p3">↩ Kembali</button></div>
+      </div>
+    </div>
+
+    <!-- ===== 5 ===== -->
+    <div class="page" id="p5">
+      <div class="ttl">Ringkasan Perubahan</div>
+      <div class="two">
+        <div class="card"><b>Request Payment</b><ul class="chg">
+          <li>Per dokumen hanya pilih PPN, PPh 23, PPh 21 (2,5% × DPP). Kolom Admin per baris dihapus.</li>
+          <li>PPh 23 = 2% × DPP (bukan DPP + PPN).</li>
+          <li>Tombol <b>Atur Pembayaran &amp; Ajukan</b>: untuk dokumen yang dicentang, isi admin (nominal + ditanggung perusahaan/penerima) dan rekening tujuan, 1x per grup. Transaksi tunggal juga lewat sini.</li>
+          <li>Syarat 1 grup: jenis pengajuan, company, dan penerima sama.</li>
+        </ul></div>
+        <div class="card"><b>Approval</b><ul class="chg">
+          <li>Menampilkan info grup: admin, tanggungan, rekening tujuan, total transfer.</li>
+          <li>Kalau ada item di-reject, total transfer dihitung ulang dari item yang tersisa; admin tetap 1x.</li>
+        </ul></div>
+        <div class="card"><b>Payment</b><ul class="chg">
+          <li>Payment List memilih per pengajuan (= 1 transfer).</li>
+          <li>Form Payment mengikuti request: supplier, rekening tujuan, PPh, PPN, admin terkunci 🔒.</li>
+          <li>Payment Bank terisi otomatis; kalau bukti bayar beda, selisih masuk ke <b>Bank Charge (boleh minus)</b> → akun Beban Admin Bank.</li>
+          <li>Kontrol = Payment Bank − Total Payment − Bank Charge, harus 0.</li>
+        </ul></div>
+        <div class="card"><b>Perlu dikonfirmasi</b><ul class="chg">
+          <li>Langkah Atur Pembayaran sebelum approval (asumsi mockup) atau sesudah approval?</li>
+          <li>Boleh 1 grup berisi beberapa penerima (mis. kasbon beberapa karyawan ke 1 koordinator)?</li>
+          <li>Rekening tujuan diambil dari master supplier / karyawan, atau bisa input bebas?</li>
+          <li>Batas maksimal selisih di Bank Charge (mockup: ±Rp1.000). COA Beban Admin Bank.</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL ATUR PEMBAYARAN ===== -->
+<div class="modal-bg" id="mdl"><div class="modal">
+  <div class="mh"><span>⚙ Atur Pembayaran</span><span style="cursor:pointer" id="mClose">✕</span></div>
+  <div class="mb">
+    <div id="mErr"></div>
+    <table class="dt" style="margin-bottom:14px"><thead><tr><th style="text-align:left">Dokumen</th><th>Company</th><th style="text-align:left">Penerima</th><th class="r">Dibayarkan</th></tr></thead><tbody id="mDocs"></tbody></table>
+    <div class="grow"><div>Nominal Admin</div><div><select id="mAdm"><option value="0">- (tanpa admin)</option><option value="2500" selected>2.500 (BI-FAST)</option><option value="6500">6.500 (SKN)</option></select> <span class="sm">dihitung 1x untuk semua dokumen di atas</span></div></div>
+    <div class="grow"><div>Admin ditanggung</div><div class="radio"><label><input type="radio" name="mBearer" value="penerima" checked> Penerima</label><label><input type="radio" name="mBearer" value="perusahaan"> Perusahaan</label></div></div>
+    <div class="grow"><div>Transfer ke</div><div><select id="mRek" style="width:100%"></select></div></div>
+    <div class="grpbox" id="mSum" style="grid-template-columns:repeat(3,1fr)"></div>
+  </div>
+  <div class="mf"><button class="btn gr" id="mCancel">Batal</button> <button class="btn g" id="mOk">✈ Ajukan untuk Approval</button></div>
+</div></div>
+
+<script>
+const fmt=n=>(n<0?'-':'')+Math.abs(Math.round(n)).toLocaleString('id-ID');
+const fmt2=n=>(n<0?'-':'')+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const TOL=1000;
+const REK={
+ 'PT Leasing Mobil Sejahtera':['BCA 801.234.5678 a/n PT Leasing Mobil Sejahtera','Mandiri 123.00.0987654.3 a/n PT Leasing Mobil Sejahtera'],
+ 'PT Polytron':['BCA 555.666.7777 a/n PT Polytron'],
+ 'Cahyadi':['BCA 012.345.6789 a/n Cahyadi'],
+ 'Dhywa':['BRI 0021.01.123456.50.1 a/n Dhywa'],
+};
+const docs=[
+ {no:'PI-2026-00024',kat:'Periodik',by:'Admin',div:'',aju:'17-Nov-2026',kep:'Pembayaran ke-11 dari 12 - testing (Batch BP-2611-006)',dpp:1200000,ppn:true,pph23:true,pph21:false,co:'Calibration',dept:'Teknis',supp:'PT Leasing Mobil Sejahtera',coa:'1303-01-01',acc:'Kendaraan',ket:'Cicilan Mobil Pick Up',sel:true},
+ {no:'PI-2026-00028',kat:'Periodik',by:'Admin',div:'',aju:'10-Nov-2026',kep:'testing (Batch BP-2611-007)',dpp:5000000,ppn:true,pph23:true,pph21:false,co:'Calibration',dept:'Teknis',supp:'PT Leasing Mobil Sejahtera',coa:'1303-01-01',acc:'Kendaraan',ket:'Cicilan Mobil Pick Up',sel:true},
+ {no:'PI-2026-00004',kat:'Periodik',by:'Finance',div:'',aju:'10-Nov-2026',kep:'Pembayaran Sewa Baterai Mobil Polytron Oktober 2026',dpp:1200000,ppn:true,pph23:false,pph21:false,co:'STM',dept:'Finance & Accounting',supp:'PT Polytron',coa:'6202-01-05',acc:'Bahan dan Onderdil Kendaraan - Operasional',ket:'Sewa Baterai Mobil Polytron',sel:false},
+ {no:'KS-2026-00356',kat:'Kasbon',by:'Cahyadi',div:'Sustain',aju:'16-Nov-2026',kep:'Konsultasi Persiapan Audit SMAP dan Tindaklanjut temuan audit (25 - 27 Nov 2026)',dpp:1659000,ppn:false,pph23:false,pph21:false,co:'Sustain',dept:'Konsultan',supp:'Cahyadi',coa:'1104-01-01',acc:'Uang Muka Kasbon',ket:'Kasbon',sel:false},
+ {no:'KS-2026-00357',kat:'Kasbon',by:'Dhywa',div:'Sustain',aju:'16-Nov-2026',kep:'Budget visit ke tegal dan cirebon tanggal 16 - 20 november 2026 konsultan Dhywa dan Pak hasiholan',dpp:15100000,ppn:false,pph23:false,pph21:false,co:'Sustain',dept:'Konsultan',supp:'Dhywa',coa:'1104-01-01',acc:'Uang Muka Kasbon',ket:'Kasbon',sel:false},
+];
+function calc(d){const ppn=d.ppn?Math.round(d.dpp*.11):0,pph23=d.pph23?Math.round(d.dpp*.02):0,pph21=d.pph21?Math.round(d.dpp*.025):0;return {ppn,pph23,pph21,net:d.dpp+ppn-pph23-pph21};}
+const bTxt=b=>b==='penerima'?'Ditanggung penerima':'Ditanggung perusahaan';
+// group created by modal
+let G={pgj:'PGJ-0077',items:[],adm:2500,bearer:'penerima',rek:'',rej:{}};
+const other={pgj:'PGJ-0075',co:'STM',supp:'PT Polytron',rek:REK['PT Polytron'][0],docs:['PI-2026-00009'],adm:2500,bearer:'perusahaan',tot:1332000};
+function gItems(){return G.items.filter(d=>!G.rej[d.no]);}
+function gTotals(){const L=gItems();const net=L.reduce((a,d)=>a+calc(d).net,0);const adm=G.adm;return {net,adm,trf:G.bearer==='penerima'?net-adm:net,out:G.bearer==='penerima'?net:net+adm};}
+
+/* ---------- 1 ---------- */
+function rReq(){
+  const tb=document.querySelector('#reqT tbody');tb.innerHTML='';let tot=0,ks=0,pr=0;
+  docs.forEach((d,i)=>{const c=calc(d);tot+=c.net;if(d.kat==='Kasbon')ks+=c.net;else pr+=c.net;
+   tb.insertAdjacentHTML('beforeend',`<tr>
+    <td class="c"><input type="checkbox" data-sel="${i}" ${d.sel?'checked':''}></td><td class="c">${i+1}</td>
+    <td><span class="tag">${d.kat}</span><div class="docno"><i>🖶</i>${d.no}</div></td>
+    <td>${d.by}${d.div?` <span class="sm">- ${d.div}</span>`:''}</td>
+    <td style="white-space:nowrap"><span class="lbl">DIAJUKAN</span>${d.aju}<br><span class="lbl">DISETUJUI</span>-</td>
+    <td style="min-width:240px">${d.kep}</td><td class="r"><b>${fmt(d.dpp)}</b></td>
+    ${['ppn','pph23','pph21'].map(f=>`<td class="c"><input type="checkbox" data-i="${i}" data-f="${f}" ${d[f]?'checked':''}>${d[f]?`<div class="sm">${fmt(c[f])}</div>`:''}</td>`).join('')}
+    <td class="r green">${fmt(c.net)}</td></tr>`);});
+  kTotal.textContent='Rp '+fmt(tot);kKasbon.textContent='Rp '+fmt(ks);kPeriodik.textContent='Rp '+fmt(pr);
+  tb.querySelectorAll('[data-f]').forEach(el=>el.onchange=e=>{docs[+e.target.dataset.i][e.target.dataset.f]=e.target.checked;renderAll();});
+  tb.querySelectorAll('[data-sel]').forEach(el=>el.onchange=e=>{docs[+e.target.dataset.sel].sel=e.target.checked;rReq();});
+  const n=docs.filter(d=>d.sel).length;selInfo.textContent=n?`${n} dokumen dipilih — akan dibayar bersamaan (1 transfer)`:'Belum ada dokumen dipilih';btnAtur.disabled=!n;
+}
+btnClear.onclick=()=>{docs.forEach(d=>d.sel=false);rReq();};
+/* ---------- modal ---------- */
+function check(S){const same=k=>S.every(d=>d[k]===S[0][k]);
+  if(!same('kat'))return 'Jenis pengajuan berbeda.';
+  if(!same('co'))return 'Company berbeda — tidak bisa dibayar dalam 1 transfer tanpa jurnal antar perusahaan.';
+  if(!same('supp'))return 'Penerima berbeda — artinya transfer terpisah. Ajukan sebagai pembayaran terpisah.';
+  return '';}
+function rModal(){
+  const S=docs.filter(d=>d.sel);const err=check(S);
+  mErr.innerHTML=err?`<div class="banner red" style="padding:9px 12px;font-weight:400">⚠ ${err}</div>`:'';
+  mDocs.innerHTML=S.map(d=>`<tr><td><b>${d.no}</b></td><td class="c">${d.co}</td><td>${d.supp}</td><td class="r">${fmt(calc(d).net)}</td></tr>`).join('');
+  const reks=err?[]:REK[S[0].supp]||[];
+  if(mRek.dataset.for!==(S[0]&&S[0].supp)){mRek.innerHTML=reks.map(r=>`<option>${r}</option>`).join('')||'<option>-</option>';mRek.dataset.for=S[0]&&S[0].supp;}
+  const adm=+mAdm.value,bearer=document.querySelector('[name=mBearer]:checked').value;
+  document.querySelectorAll('[name=mBearer]').forEach(r=>r.disabled=!adm);
+  const net=S.reduce((a,d)=>a+calc(d).net,0);
+  const trf=adm&&bearer==='penerima'?net-adm:net,out=adm&&bearer==='perusahaan'?net+adm:net;
+  mSum.innerHTML=`<div><div class="k">TOTAL DIBAYARKAN (${S.length} DOK.)</div><div class="v">Rp ${fmt(net)}</div></div>
+   <div><div class="k">TRANSFER KE PENERIMA</div><div class="v green">Rp ${fmt(trf)}</div></div>
+   <div><div class="k">TOTAL KELUAR BANK</div><div class="v ${out>net?'orange':''}">Rp ${fmt(out)}</div></div>`;
+  mOk.disabled=!!err;
+}
+btnAtur.onclick=()=>{mdl.style.display='flex';rModal();};
+[mClose,mCancel].forEach(b=>b.onclick=()=>mdl.style.display='none');
+mAdm.onchange=rModal;document.querySelectorAll('[name=mBearer]').forEach(r=>r.onchange=rModal);
+mOk.onclick=()=>{const S=docs.filter(d=>d.sel);G={pgj:'PGJ-0077',items:S,adm:+mAdm.value,bearer:+mAdm.value?document.querySelector('[name=mBearer]:checked').value:'-',rek:mRek.value,rej:{}};mdl.style.display='none';P=null;renderAll();go('p2');};
+/* ---------- 2 ---------- */
+function rApv(){
+  document.querySelectorAll('.pgj').forEach(e=>e.textContent=G.pgj);
+  const tb=document.querySelector('#apvT tbody');tb.innerHTML='';
+  if(!G.items.length){aGrp.innerHTML='<div class="sm">Belum ada pengajuan — buat dari tab Request Payment.</div>';return;}
+  aCo.textContent=G.items[0].co;
+  G.items.forEach(d=>{const c=calc(d),r=G.rej[d.no];tb.insertAdjacentHTML('beforeend',`<tr class="${r?'rej':''}">
+    <td><span class="tag">${d.kat}</span><br><b>${d.no}</b></td><td>${d.by}</td><td>${d.kep}</td>
+    <td class="r">${fmt(d.dpp)}</td><td class="r">${c.ppn?fmt(c.ppn):'-'}</td><td class="r">${c.pph23?fmt(c.pph23):'-'}</td><td class="r">${c.pph21?fmt(c.pph21):'-'}</td>
+    <td class="r">${fmt(c.net)}</td><td class="c"><button class="btn ${r?'rd':'w'}" style="padding:2px 8px;${r?'':'color:#dd4b39'}" data-rej="${d.no}">${r?'Batal Reject':'Reject'}</button></td></tr>`);});
+  tb.querySelectorAll('[data-rej]').forEach(b=>b.onclick=()=>{const k=b.dataset.rej;G.rej[k]=!G.rej[k];P=null;renderAll();});
+  const t=gTotals(),L=gItems();
+  aCnt.textContent=L.length;aTot.textContent='Rp '+fmt(t.trf);
+  aGrp.innerHTML=`<div><div class="k">ADMIN <span class="newtag">BARU</span></div><div class="v">${G.adm?'Rp '+fmt(G.adm)+' · '+bTxt(G.bearer):'Tanpa admin'}</div></div>
+   <div><div class="k">TRANSFER KE</div><div class="v" style="font-size:12px">${G.rek}</div></div>
+   <div><div class="k">TRANSFER KE PENERIMA</div><div class="v green">Rp ${fmt(t.trf)}</div></div>
+   <div><div class="k">TOTAL KELUAR BANK</div><div class="v ${t.out>t.net?'orange':''}">Rp ${fmt(t.out)}</div></div>`;
+  aNote.innerHTML=Object.values(G.rej).some(x=>x)?'ⓘ Ada item di-reject: total transfer dihitung ulang dari item yang tersisa. Admin tetap 1x.':'';
+}
+/* ---------- 3 ---------- */
+function rPL(){
+  const tb=document.querySelector('#plT tbody');const t=gTotals();
+  tb.innerHTML=(G.items.length&&gItems().length?`<tr><td class="c"><input type="radio" name="pl" checked></td><td><a>${G.pgj}</a></td><td>17-Nov-2026</td><td>${G.items[0].co}</td><td>${G.items[0].supp}<div class="sm">${G.rek}</div></td><td>${gItems().map(d=>d.no).join('<br>')}</td><td>${G.adm?fmt(G.adm)+'<div class="sm">'+bTxt(G.bearer)+'</div>':'-'}</td><td class="r green">${fmt2(t.trf)}</td></tr>`:'')+
+   `<tr><td class="c"><input type="radio" name="pl" disabled></td><td><a>${other.pgj}</a></td><td>16-Nov-2026</td><td>${other.co}</td><td>${other.supp}<div class="sm">${other.rek}</div></td><td>${other.docs.join('<br>')}</td><td>${fmt(other.adm)}<div class="sm">${bTxt(other.bearer)}</div></td><td class="r green">${fmt2(other.tot)}</td></tr>`;
+}
+/* ---------- 4 ---------- */
+let P=null;
+function rPay(){
+  const L=gItems();if(!L.length){pBanner.textContent='Belum ada pengajuan yang disetujui.';return;}
+  const t=gTotals();const fee=G.adm;
+  const defCharge=G.bearer==='perusahaan'?fee:0;
+  if(!P)P={charge:defCharge,bank:t.net+defCharge,touched:false};
+  pBanner.className='banner'+(G.adm?'':' blue');
+  pBanner.innerHTML='ⓘ '+(G.adm?`Admin charge ${bTxt(G.bearer).toLowerCase()} – Rp ${fmt(fee)}${L.length>1?' (1x untuk '+L.length+' dokumen)':''}`:'Tanpa admin charge')+` <span style="font-weight:400;font-size:11px">· dari pengajuan ${G.pgj}</span>`;
+  pSupp.textContent=L[0].supp;pRek.textContent=G.rek;
+  if(document.activeElement!==pBank)pBank.value=P.bank;
+  const tb=document.querySelector('#pT tbody');tb.innerHTML='';let pph=0,ppn=0;
+  L.forEach(d=>{const c=calc(d);const pa=c.pph23+c.pph21;pph+=pa;ppn+=c.ppn;
+   tb.insertAdjacentHTML('beforeend',`<tr><td>${d.supp}</td><td class="c">${d.no}</td><td class="r">${fmt2(d.dpp)}</td>
+    <td><div class="ro" style="text-align:left;min-width:120px">${c.pph23?'PPH 23':c.pph21?'PPH 21':'-'}</div></td><td><div class="ro" style="min-width:130px">${fmt2(pa)}</div></td>
+    <td><div class="ro" style="min-width:130px">${fmt2(c.ppn)}</div></td><td class="r">${fmt2(c.net)}</td></tr>`);});
+  const ctl=P.bank-t.net-P.charge,diff=P.charge-defCharge,over=Math.abs(diff)>TOL;
+  const add=(l,v)=>tb.insertAdjacentHTML('beforeend',`<tr class="sumrow"><td colspan="5"></td><td>${l}</td><td class="r">${v}</td></tr>`);
+  add('Total Payment',fmt2(t.net));
+  if(G.adm&&G.bearer==='penerima')add('Admin dipotong dari transfer <span class="sm">(ditanggung penerima)</span>',fmt2(fee));
+  tb.insertAdjacentHTML('beforeend',`<tr class="sumrow"><td colspan="5"></td><td class="new">Bank Charge <span class="sm">(beban perusahaan · boleh minus)</span>
+   <div class="sm" style="margin-top:3px">Default ${fmt(defCharge)}. Selisih transfer dimasukkan ke sini.${ctl!==0?` <a href="#" id="fix">Isi otomatis ${fmt(P.charge+ctl)}</a>`:''}</div></td>
+   <td class="r new"><input type="number" id="pCharge" value="${P.charge}" style="width:150px;text-align:right">${diff?`<div class="sm ${over?'':'orange'}">${over?'<span class="badge err">melebihi ±'+fmt(TOL)+'</span>':'selisih '+fmt(diff)}</div>`:''}</td></tr>`);
+  add('PPh',fmt2(pph));add('PPn',fmt2(ppn));
+  add('Kontrol <span class="sm">(Payment Bank − Total Payment − Bank Charge)</span>',`<b style="color:${ctl===0?'#00a65a':'#dd4b39'}">${fmt2(ctl)}</b>`);
+  pCharge.onchange=e=>{P.charge=+e.target.value||0;rPay();};
+  const fx=document.getElementById('fix');if(fx)fx.onclick=e=>{e.preventDefault();P.charge+=ctl;rPay();};
+  // jurnal
+  const J=[],co=L[0].co,dept=L[0].dept,bp='BK--1126-0005';
+  L.forEach(d=>{const c=calc(d);J.push([d.co,d.dept,d.coa,d.acc,`${d.ket} - ${bp}`,d.dpp,0]);
+   if(c.ppn)J.push([d.co,d.dept,'1106-01-06','PPN DN Disetor',`PPN - ${bp}`,c.ppn,0]);
+   if(c.pph23)J.push([d.co,d.dept,'2104-01-03','Hutang PPh 23',`PPh 23 - ${bp}`,0,c.pph23]);
+   if(c.pph21)J.push([d.co,d.dept,'2104-01-02','Hutang PPh 21',`PPh 21 - ${bp}`,0,c.pph21]);});
+  if(P.charge>0)J.push([co,dept,'6xxx-xx-xx *','Beban Admin Bank',`Bank charge - ${bp}`,P.charge,0,1]);
+  if(P.charge<0)J.push([co,dept,'6xxx-xx-xx *','Beban Admin Bank',`Bank charge (minus) - ${bp}`,0,-P.charge,1]);
+  const ba='436.300.5287 - Bank Central Asia (BCA) - PT. Sentral Tehnologi Managemen';
+  if(fee){J.push([co,dept,'1101-02-01','Bank BCA',ba+' → '+G.rek,0,P.bank-fee]);J.push([co,dept,'1101-02-01','Bank BCA',ba+' (biaya admin)',0,fee]);}
+  else J.push([co,dept,'1101-02-01','Bank BCA',ba+' → '+G.rek,0,P.bank]);
+  let D=0,K=0;jT.innerHTML='';
+  J.filter(j=>j[5]||j[6]).forEach(j=>{D+=j[5];K+=j[6];jT.insertAdjacentHTML('beforeend',`<tr class="${j[7]?'new':''}"><td>17 November 2026</td><td>${j[0]}</td><td>${j[1]}</td><td>${j[2]}</td><td>${j[3]}</td><td>${j[4]}</td><td class="r">${fmt2(j[5])}</td><td class="r">${fmt2(j[6])}</td></tr>`);});
+  jD.textContent=fmt2(D);jK.textContent=fmt2(K);
+  const m=[];if(ctl!==0)m.push('Kontrol belum 0.');if(over)m.push('Bank charge melebihi batas selisih ±'+fmt(TOL)+'.');
+  if(diff&&!pKet.value.trim())m.push('Keterangan wajib diisi karena ada selisih.');if(!pFile.files.length)m.push('Bukti bayar belum diupload.');
+  pSave.disabled=m.length>0;pMsg.innerHTML=m.length?'<span style="color:#dd4b39">⚠ '+m.join(' ')+'</span>':'<span class="green">✔ Siap disubmit.</span>';
+}
+pBank.oninput=e=>{P.bank=+e.target.value||0;rPay();};
+pKet.oninput=()=>rPay();
+pFile.onchange=()=>{pFileName.textContent=[...pFile.files].map(f=>f.name).join(', ');rPay();};
+pSave.onclick=()=>alert('Payment tersimpan (mockup).');
+/* ---------- nav ---------- */
+function go(id){document.querySelectorAll('.page').forEach(p=>p.classList.toggle('on',p.id===id));
+  document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.go===id));
+  document.querySelectorAll('.side .s').forEach(b=>b.classList.toggle('on',b.dataset.go===id||(id==='p4'&&b.dataset.go==='p3')));
+  if(id==='p4')rPay();window.scrollTo(0,0);}
+document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go)));
+function renderAll(){rReq();rApv();rPL();rPay();}
+// default group so tabs 2-4 have data
+G.items=docs.filter(d=>d.sel);G.rek=REK[G.items[0].supp][0];
+renderAll();
+</script>
+</body>
+</html>
