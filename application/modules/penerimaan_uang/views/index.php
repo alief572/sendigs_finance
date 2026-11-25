@@ -36,13 +36,13 @@ $monthsId = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli'
     <div id="pane_report" style="display:none">
         <div class="filters">
             <div class="f"><label for="rep_year">Tahun</label>
-                <select id="rep_year"><option value="">Semua</option><?php foreach ($list_years as $yr) : ?><option><?= $yr ?></option><?php endforeach; ?></select></div>
+                <select id="rep_year" style="width:110px"><option value="">Semua</option><?php foreach ($list_years as $yr) : ?><option><?= $yr ?></option><?php endforeach; ?></select></div>
             <div class="f"><label for="rep_month">Bulan</label>
-                <select id="rep_month"><option value="">Semua</option><?php foreach ($monthsId as $i => $mn) : ?><option value="<?= $i + 1 ?>"><?= $mn ?></option><?php endforeach; ?></select></div>
+                <select id="rep_month" style="width:140px"><option value="">Semua</option><?php foreach ($monthsId as $i => $mn) : ?><option value="<?= $i + 1 ?>"><?= $mn ?></option><?php endforeach; ?></select></div>
             <div class="f"><label for="rep_company">Company</label>
-                <select id="rep_company" multiple data-placeholder="Semua"><?php foreach ($list_companies as $cmp) : ?><option><?= $cmp ?></option><?php endforeach; ?></select></div>
+                <select id="rep_company" style="width:240px" multiple data-placeholder="Semua"><?php foreach ($list_companies as $cmp) : ?><option><?= $cmp ?></option><?php endforeach; ?></select></div>
             <div class="f"><label for="rep_kind">Jenis</label>
-                <select id="rep_kind"><option value="">Semua</option><option value="invoice">Penerimaan Piutang Invoice</option><option value="deposit">Penerimaan Piutang Kwitansi Deposit</option></select></div>
+                <select id="rep_kind" style="width:280px"><option value="">Semua</option><option value="invoice">Penerimaan Piutang Invoice</option><option value="deposit">Penerimaan Piutang Kwitansi Deposit</option></select></div>
             <div class="f" style="margin-left:auto"><button class="btn btn-success" id="btn_export_excel" disabled>Export to Excel</button></div>
         </div>
         <div class="scroll" style="margin-top:12px">
@@ -57,10 +57,12 @@ $monthsId = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli'
 </div>
 
 <script src="https://cdn.datatables.net/2.3.2/js/dataTables.min.js"></script>
+<script src="<?= base_url('assets/js/company-multi.js') ?>"></script>
 <script>
 (function () {
     var U = MockupUI, esc = U.esc, en = U.en, fdate = U.fdate, jq = window.jQuery;
     if (jq.fn.select2) jq('.mk select').not('[name="table_report_length"]').select2({width: 'resolve', placeholder: 'Semua', allowClear: false});
+    CompanyMulti.init('#rep_company', {width: '240px', placeholder: 'Semua'});
     var URL_ADD = <?= json_encode(base_url('penerimaan_uang/add_penerimaan_uang/')) ?>;
     var URL_DRAFT = <?= json_encode(site_url('penerimaan_uang/draft_rows')) ?>;
     var URL_REPORT = <?= json_encode(site_url('penerimaan_uang/get_report_penerimaan')) ?>;

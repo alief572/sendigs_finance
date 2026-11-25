@@ -10,6 +10,11 @@
 .mk .filters { display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: center; }
 .mk .filters label { font-weight: 600; margin: 0; }
 .mk .f { display: flex; align-items: center; gap: 8px; }
+/* Select2 multiple: input carinya jangan ikut gaya input .mk; min-width agar placeholder tampil walau diinisialisasi di tab tersembunyi. */
+.mk .select2-search--inline .select2-search__field { border: 0; padding: 0; min-height: 0; min-width: 80px; }
+/* Chip pilihan: tema memberi teks putih, CSS Select2 cdnjs memberi latar abu muda; tetapkan keduanya di sini. */
+.mk .select2-container--default .select2-selection--multiple .select2-selection__choice { background: #367fa9; border-color: #2e6d90; color: #fff; font-weight: 600; }
+.mk .select2-container--default .select2-selection--multiple .select2-selection__choice__remove { color: #fff; }
 .mk input[type=text], .mk input[type=date], .mk input[type=search], .mk select { background: var(--input); border: 1px solid #c9ced3; border-radius: 2px; padding: 6px 8px; min-height: 32px; font: inherit; color: inherit; height: auto; box-shadow: none; }
 .mk input[readonly] { background: var(--readonly); }
 .mk input.num { text-align: right; font-variant-numeric: tabular-nums; }
