@@ -1,6 +1,7 @@
 <?php
 // Standalone regression test; no application bootstrap or real database writes.
 define('BASEPATH', __DIR__);
+#[\AllowDynamicProperties]
 class Admin_Controller {}
 require dirname(__DIR__) . '/controllers/Expense.php';
 

@@ -1,6 +1,7 @@
 <?php
 // Run standalone with PHP 7.4+: fixture persistence only, no application DB.
 define('BASEPATH', __DIR__);
+#[\AllowDynamicProperties]
 class BF_Model {}
 function &get_instance() { return $GLOBALS['ci']; }
 function check($condition, $message) { if (!$condition) { throw new RuntimeException($message); } }

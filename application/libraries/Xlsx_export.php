@@ -1,5 +1,5 @@
 <?php
-// Shared .xlsx writer for the Penerimaan / Kwitansi / Deposit exports (bundled PHPExcel).
+// Shared .xlsx writer for the Penerimaan / Kwitansi / Deposit exports.
 // Spec: sheet, title, subtitle (optional), head[], rows[][], total[] (optional), numfmt (default '#,##0').
 // Cell values: int/float -> number, array('date'=>'Y-m-d') -> date, array('formula'=>'=SUM(A1:A2)') -> formula (hanya dari kode, bukan input user), anything else -> explicit string.
 if (!class_exists('PHPExcel')) {
@@ -67,8 +67,8 @@ class Xlsx_export
             if ($bold) $ws->getStyle('A' . $r . ':' . PHPExcel_Cell::stringFromColumnIndex($ncol - 1) . $r)->getFont()->setBold(true);
         }
         for ($i = 0; $i < $ncol; $i++) {
-            if (!empty($spec['widths'][$i])) { $ws->getColumnDimensionByColumn($i)->setWidth($spec['widths'][$i]); }
-            else { $ws->getColumnDimensionByColumn($i)->setAutoSize(true); }
+            if (!empty($spec['widths'][$i])) { $ws->getColumnDimensionByColumn($i + 1)->setWidth($spec['widths'][$i]); }
+            else { $ws->getColumnDimensionByColumn($i + 1)->setAutoSize(true); }
         }
         return $book;
     }
@@ -202,8 +202,9 @@ class Xlsx_export
         }
         // Seperti mockup: sheet = nama customer (maks 31 karakter; karakter terlarang Excel diganti), file = Deposit_<nama dengan spasi jadi _>.
         $sheet = trim(mb_substr(preg_replace('/[\\/?*\[\]:]/', ' ', (string)$nmCustomer), 0, 31));
+        $filename = str_replace(['/', '\\'], '_', preg_replace('/\s+/', '_', trim((string)$nmCustomer)));
         return array('sheet' => $sheet !== '' ? $sheet : 'Mutasi Deposit', 'title' => 'Mutasi Deposit - ' . $nmCustomer, 'plain' => true, 'widths' => array(5, 12, 22, 34, 60, 14, 14, 14),
             'head' => array('No', 'Tanggal', 'No Penerimaan Piutang', 'Sumber', 'Keterangan', 'Masuk', 'Keluar', 'Saldo'),
-            'rows' => $rows, 'filename' => 'Deposit_' . preg_replace('/\s+/', '_', trim((string)$nmCustomer)) . '.xlsx');
+            'rows' => $rows, 'filename' => 'Deposit_' . $filename . '.xlsx');
     }
 }

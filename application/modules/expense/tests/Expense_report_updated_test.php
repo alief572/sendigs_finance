@@ -22,6 +22,7 @@ if (!defined('FCPATH')) {
 }
 
 if (!class_exists('Admin_Controller')) {
+    #[\AllowDynamicProperties]
     class Admin_Controller {}
 }
 
@@ -543,7 +544,7 @@ testCheck($mockDb->tables['tr_expense'][21]['verif_reject_reason'] === 'Bukti tr
 echo "\n--- TEST 5: Render Status Badge Helper ---\n";
 
 $m_badge = new ReflectionMethod('Expense', '_render_expense_status_badge');
-$m_badge->setAccessible(true);
+if (PHP_VERSION_ID < 80100) { $m_badge->setAccessible(true); }
 
 $b0 = $m_badge->invoke($exp, ['status' => 0, 'sts_finance' => '0']);
 testCheck(strpos($b0, 'Menunggu Approval Finance') !== false, "Badge status 0: Menunggu Approval Finance");

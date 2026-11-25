@@ -6,6 +6,7 @@ set_error_handler(function ($severity, $message) { throw new ErrorException($mes
 function log_message($level, $message) {}
 function show_error($message) { throw new RuntimeException($message); }
 function load_class($name, $directory) { return null; }
+#[\AllowDynamicProperties]
 class BF_Model {}
 $checks = 0;
 function check($ok, $message) { global $checks; $checks++; if (!$ok) throw new RuntimeException($message); }

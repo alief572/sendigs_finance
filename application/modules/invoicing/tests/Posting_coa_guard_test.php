@@ -26,7 +26,7 @@ class StubService extends Invoice_consulting_service {
 function guardRun($rows) {
     $posting = new Consulting_posting(new StubCi);
     $service = new StubService; $service->journalRows = $rows;
-    $ref = new ReflectionProperty('Consulting_posting', 'service'); $ref->setAccessible(true); $ref->setValue($posting, $service);
+    $ref = new ReflectionProperty('Consulting_posting', 'service'); if (PHP_VERSION_ID < 80100) { $ref->setAccessible(true); } $ref->setValue($posting, $service);
     return $posting->receipt(1);
 }
 $line = function ($coa, $name) { return array('id' => 1, 'coa' => $coa, 'nm_coa' => $name, 'sts' => '0', 'debit' => '10.00', 'kredit' => '0.00', 'id_company' => 7); };

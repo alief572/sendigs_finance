@@ -15,6 +15,7 @@ function int_to_roman($n){return array(1=>'I',2=>'II',3=>'III',4=>'IV',5=>'V',6=
 function &get_instance(){return $GLOBALS['test_ci'];}
 function audit_log($message,$status,$event){$GLOBALS['audit'][]=array($message,$status,$event);if(!empty($GLOBALS['audit_failure']))throw new RuntimeException('Writer unavailable');return true;}
 if(!function_exists('mb_strlen')){function mb_strlen($s,$enc=null){return strlen($s);}}
+#[\AllowDynamicProperties]
 class Admin_Controller {} class BF_Model {}
 require BASEPATH.'database/DB.php';
 require APPPATH.'libraries/Module_audit_recorder.php';

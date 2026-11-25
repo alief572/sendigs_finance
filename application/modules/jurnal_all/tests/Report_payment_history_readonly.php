@@ -7,6 +7,7 @@ function log_message($level,$message) {}
 function show_error($message) { throw new RuntimeException('Database query failed'); }
 function load_class($name,$directory) { return null; }
 function is_php($version) { return version_compare(PHP_VERSION,$version,'>='); }
+#[\AllowDynamicProperties]
 class BF_Model {}
 require APPPATH.'config/constants.php';
 require APPPATH.'config/development/database.php';

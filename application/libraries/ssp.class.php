@@ -372,7 +372,7 @@ class SSP {
 		);
 	}
 	
-	static function complexJoin($request, $conn, $table, $primaryKey, $columns, $whereResult = null, $whereAll = null, $qjoin) {
+	static function complexJoin($request, $conn, $table, $primaryKey, $columns, $whereResult, $whereAll, $qjoin) {
 //        var_dump($primaryKey);exit();
         $bindings = array();
         $db = self::db($conn);

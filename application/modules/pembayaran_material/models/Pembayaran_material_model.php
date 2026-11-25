@@ -48,7 +48,7 @@ class Pembayaran_material_model extends BF_Model
 		return $query->result();
 	}
 
-	public function generate_id_payment_paid($kode_bank = null, $tanggal)
+	public function generate_id_payment_paid($kode_bank, $tanggal)
 	{
 		$generate_id = $this->db->query("SELECT MAX(id) AS max_id FROM tr_payment_paid WHERE id LIKE '%BK-" . $kode_bank . "-" . date('my-', strtotime($tanggal)) . "%'")->row();
 		$kodeBarang = $generate_id->max_id;

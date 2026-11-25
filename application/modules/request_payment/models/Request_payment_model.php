@@ -232,7 +232,7 @@ class Request_payment_model extends BF_Model
     function generate_id_detail($no = null)
     {
         $generate_id = $this->db->query("SELECT MAX(id) AS max_id FROM payment_approve_details WHERE id LIKE '%PAY1-" . date('m-y') . "%'")->row();
-        $kodeBarang = $generate_id->max_id;
+        $kodeBarang = (string) $generate_id->max_id;
 
         if ($no !== null) {
             $urutan = (int) substr($kodeBarang, 11, 5);

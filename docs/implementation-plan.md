@@ -216,3 +216,9 @@ Kriteria: request 1.000.028 + PPN 0, PPh 23 20.001, payment 980.027 sebelum admi
 Status: fase 1–3 selesai. PPh form/preview/simpan dan jurnal tersinkron; konfigurasi serta jurnal pembulatan bank dilepas. Tidak perlu pengisian COA pembulatan untuk memakai aturan PPh ini. Bukti tes dan keterbatasan: checkpoint bagian Pembulatan PPh per item.
 
 Publikasi atas permintaan user: siapkan commit terisolasi dari tip terbaru development dan main, sertakan hanya kode/tes/dokumen PPh dan fixture yang dibutuhkan; jangan ikutkan konfigurasi DB lokal atau perubahan task lain. Verifikasi paket masing-masing branch, lalu push fast-forward tanpa force dan cek hash remote.
+## PHP 8.5 dengan CodeIgniter 3
+
+1. Buat worktree upgrade dari SHA `origin/development` yang dikonfirmasi di remote dan ukur perilaku PHP 7.4 dengan fixture terisolasi.
+2. Bangun runtime PHP 8.5.13, ukur error dengan `E_ALL`, lalu perbaiki kompatibilitas bootstrap, HMVC, database dan sesi pada core CI3 yang ada.
+3. Kunci dependensi di Composer root. Migrasikan jalur aktif mPDF dan PHPExcel dengan membandingkan hasil dokumen dan regresi transaksi terhadap baseline.
+4. Verifikasi kandidat dari build bersih, uji setup setara server existing dan siapkan rollback. Keputusan rilis produksi terpisah dari implementasi branch.

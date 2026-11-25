@@ -24,9 +24,9 @@ defined('BASEPATH') or exit('No direct script access allowed');
 |
 */
 //$config['base_url'] = 'http://localhost/labgit/dms';
-$root = "https://" . $_SERVER['HTTP_HOST'];
-$root .= str_replace(basename($_SERVER['SCRIPT_NAME']), "", $_SERVER['SCRIPT_NAME']);
-$config['base_url'] = $root;
+$config['base_url'] = isset($_SERVER['HTTP_HOST'])
+	? 'https://' . $_SERVER['HTTP_HOST'] . str_replace(basename($_SERVER['SCRIPT_NAME']), '', $_SERVER['SCRIPT_NAME'])
+	: '';
 // $config['base_url'] = 'http://localhost:8080/';
 
 
@@ -144,9 +144,7 @@ $config['subclass_prefix'] = 'MY_';
 | Note: This will NOT disable or override the CodeIgniter-specific
 |	autoloading (application/config/autoload.php)
 */
-// $composer = FCPATH . 'vendor/autoload.php';         // root/vendor
-$composer = APPPATH . 'vendor/autoload.php';     // kalau vendor di application/
-$config['composer_autoload'] = file_exists($composer) ? $composer : FALSE;
+$config['composer_autoload'] = FCPATH . 'vendor/autoload.php';
 
 /*
 |--------------------------------------------------------------------------

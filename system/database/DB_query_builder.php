@@ -2715,15 +2715,7 @@ abstract class CI_DB_query_builder extends CI_DB_driver {
 			return TRUE;
 		}
 
-		static $_str;
-
-		if (empty($_str))
-		{
-			$_str = ($this->_escape_char !== '"')
-				? array('"', "'") : array("'");
-		}
-
-		return in_array($str[0], $_str, TRUE);
+		return $str[0] === "'" OR ($this->_escape_char !== '"' && $str[0] === '"');
 	}
 
 	// --------------------------------------------------------------------

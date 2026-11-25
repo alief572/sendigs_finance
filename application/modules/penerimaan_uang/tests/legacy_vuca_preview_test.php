@@ -143,7 +143,7 @@ class LegacyWriterDb extends LegacyDb {
 function log_message($level,$message) { $GLOBALS['legacy_logs'][]=$message; }
 $writer->db = new LegacyWriterDb;
 $writer->load=new class {function library($name){throw new RuntimeException('Fixture audit service unavailable');}};
-$p = new ReflectionProperty('Invoicing', 'accounting_vuca'); $p->setAccessible(true); $p->setValue($writer, $writer->db);
+$p = new ReflectionProperty('Invoicing', 'accounting_vuca'); if (PHP_VERSION_ID < 80100) { $p->setAccessible(true); } $p->setValue($writer, $writer->db);
 $writer->input->values = array('id'=>'PLAN','tanggal_invoice'=>'2026-09-15','nomor_po'=>'PO','nomor_faktur'=>'FAKTUR','sales_role'=>'sales_consulting','total_nominal'=>'15000000.00','dpp_nilai_lain'=>'13750000.00','pajak'=>'0','total_akhir'=>'15000000.00','total_nominal_jurnal'=>'15000000.00','dpp_lain_lain'=>'13750000.00','pph_jurnal'=>'75000.00','total_akhir_jurnal'=>'14925000.00');
 ob_start(); $writer->save_invoice_vuca(); $response = json_decode(ob_get_clean(), true);
 expectLegacy($response['status'] === 1, 'Writer succeeds');
@@ -153,7 +153,7 @@ expectLegacy($writer->db->inserted['saldo_piutang'] == 14925000, 'Writer keeps n
 $db->invoice['tipe_invoice'] = '1'; $db->invoice['tagihan_ppn_jurnal'] = '0.00';
 $db->invoice['created_date'] = '2026-09-15';
 $c->auth = new LegacyAuth; $c->session = new LegacySession;
-$p = new ReflectionProperty('Penerimaan_uang', 'accounting'); $p->setAccessible(true); $p->setValue($c, new LegacyWriterDb);
+$p = new ReflectionProperty('Penerimaan_uang', 'accounting'); if (PHP_VERSION_ID < 80100) { $p->setAccessible(true); } $p->setValue($c, new LegacyWriterDb);
 $c->input->values = array('nm_customer'=>'Customer','id_alokasi'=>5258,'ppn_dipotong'=>'Y','pph23_dipotong'=>'Y','nominal_penerimaan_bank'=>'4.000.000,00','no_inv'=>1,'id_inv_1'=>'038','penerimaan_1'=>'4.075.000,00','biaya_admin_1'=>'0','sisa_piutang_1'=>'0');
 ob_start(); $c->save_penerimaan_piutang(); $saved = json_decode(ob_get_clean(), true);
 expectLegacy($saved['status'] === 1, 'Receipt fixture saves');
@@ -164,7 +164,7 @@ $lebihInvoice = array_replace($originalInvoice, array('id'=>'189','no_invoice'=>
 $db->invoice = $lebihInvoice; $db->history = array(array('id_header'=>'OLD')); $db->historyChoice = 'N';
 $db->journals = array(array('coa'=>'1106-01-02','nm_coa'=>'PPh 23 Disetor','keterangan'=>'PPh 23 Disetor - 189/STM/2026','debit'=>'0.00','kredit'=>'468180.00'));
 $c->auth = new LegacyAuth; $c->session = new LegacySession;
-$p = new ReflectionProperty('Penerimaan_uang', 'accounting'); $p->setAccessible(true); $p->setValue($c, $db);
+$p = new ReflectionProperty('Penerimaan_uang', 'accounting'); if (PHP_VERSION_ID < 80100) { $p->setAccessible(true); } $p->setValue($c, $db);
 $previewPost = array('choose_inv'=>array('189'),'id_alokasi'=>5102,'pph23_dipotong'=>'N','ppn_dipotong'=>'Y','nominal_penerimaan_bank'=>'15,000,000');
 $c->input->values = $previewPost; $c->process_alokasi();
 expectLegacy($c->template->data['lebih_eligible'] === true, 'Lebih Bayar is enabled for a journal-owner company');
@@ -223,7 +223,7 @@ $db->companyId = '7';
 $db->batches = array(); $db->inserts = array(); $plain = $saveLebih(array('lebih_bayar_1'=>'', 'penerimaan_1'=>'2.574.990,00'));
 expectLegacy($plain['status'] === 1 && !isset($db->inserts['tr_customer_deposit']) && empty((json_decode($db->batches['tr_penerimaan_piutang_detail'][0]['consulting_snapshot'], true) ?: array())['legacy']) && $db->batches['tr_jurnal'][0]['debit'] === '2574990.00', 'Without Lebih Bayar nothing deposit-related is written');
 // Rollback invoice lama: voucher Lebih Bayar dihapus bila belum terpakai, ditolak bila sudah terpakai.
-$rollback = function () use ($c) { $c->input->values = array('id_penerimaan'=>'H1'); $m = new ReflectionMethod('Penerimaan_uang', 'rollback_legacy_penerimaan'); $m->setAccessible(true); ob_start(); $m->invoke($c); return json_decode(ob_get_clean(), true); };
+$rollback = function () use ($c) { $c->input->values = array('id_penerimaan'=>'H1'); $m = new ReflectionMethod('Penerimaan_uang', 'rollback_legacy_penerimaan'); if (PHP_VERSION_ID < 80100) { $m->setAccessible(true); } ob_start(); $m->invoke($c); return json_decode(ob_get_clean(), true); };
 $db->journals = array(); $db->history = array(array('id_inv'=>'189','penerimaan'=>'2574990.00','biaya_admin'=>'0.00','pph23'=>'0.00'));
 $db->voucher = array('id'=>77,'status'=>'AKTIF','nominal_terpakai'=>'0.00'); $db->voucherMutations = array(array('jenis_mutasi'=>'IN'));
 $db->deletes = array(); $rb = $rollback();

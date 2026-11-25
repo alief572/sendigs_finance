@@ -118,7 +118,7 @@ function expense_b9_run($method, $options = array(), $post = array(), $args = ar
     $ci->template = new B9Template();
     $ci->load = new B9Load();
     $ps = new ReflectionProperty('Expense', 'status');
-    $ps->setAccessible(true);
+    if (PHP_VERSION_ID < 80100) { $ps->setAccessible(true); }
     $ps->setValue($ci, array());
     $ci->input->query = $query;
     $ci->input->values = array_merge(array('draw' => 1, 'length' => 10, 'start' => 0, 'search' => array('value' => ''),

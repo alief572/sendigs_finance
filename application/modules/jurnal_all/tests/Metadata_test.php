@@ -16,7 +16,7 @@ check($stored['posted_by']==='7'&&$stored['posted_by_name']==='Finance','authent
 $now=(new DateTimeImmutable('now',new DateTimeZone('Asia/Jakarta')))->getTimestamp();
 check(abs($now-(new DateTimeImmutable($stored['posted_at'],new DateTimeZone('Asia/Jakarta')))->getTimestamp())<10,'timestamp recorded in Jakarta after handler completion');
 check(json_decode($stored['accounting_numbers'],true)===[['company'=>'7','number'=>'FINAL-JV-1']],'actual final number stored without staging substitute');
-$reader=new ReflectionMethod($model,'postingMetadata');$reader->setAccessible(true);
+$reader=new ReflectionMethod($model,'postingMetadata');if (PHP_VERSION_ID < 80100) { $reader->setAccessible(true); }
 $rows=[array_merge($header,['companies'=>[['id'=>'7','name'=>'STM']],'posted_at'=>null,'posted_by'=>null,'source_numbers'=>null]),['source'=>'INV','no_transaksi'=>'OLD','jenis_transaksi'=>'Invoicing','id_company'=>'7','companies'=>[],'posted_at'=>null,'posted_by'=>null,'source_numbers'=>null]];
 $reader->invokeArgs($model,[&$rows]);
 check($rows[0]['source_numbers']==='FINAL-JV-1'&&$rows[0]['posted_by']==='Finance','report enrichment reads confirmed accounting number and actor');

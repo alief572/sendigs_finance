@@ -2869,7 +2869,7 @@ class Expense extends Admin_Controller
 
 			$data =  array(
 				'no_doc' 				=> $no_doc,
-				'tgl_doc' 				=> date('Y-m-d', strtotime($tgl_doc)),
+				'tgl_doc' 				=> date('Y-m-d', strtotime($tgl_doc ?? '')),
 				'departement' 			=> $departement,
 				'nama' 					=> $nama,
 				'informasi' 			=> $informasi,

@@ -389,6 +389,13 @@ class CI_Session {
 	 */
 	protected function _configure_sid_length()
 	{
+		if (PHP_VERSION_ID >= 80400)
+		{
+			// Let PHP generate IDs and keep accepting IDs from existing session stores.
+			$this->_sid_regexp = '[0-9a-zA-Z,-]{22,256}';
+			return;
+		}
+
 		if (PHP_VERSION_ID < 70100)
 		{
 			$hash_function = ini_get('session.hash_function');

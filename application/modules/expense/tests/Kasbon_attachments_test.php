@@ -16,6 +16,7 @@ mkdir($root . '/assets/expense');
 define('FCPATH', $root . '/');
 define('DBACC', 'test_accounting');
 function base_url($path) { return 'https://test.local/' . $path; }
+#[\AllowDynamicProperties]
 class Admin_Controller {}
 require dirname(__DIR__) . '/controllers/Expense.php';
 class AttachmentDbResult {

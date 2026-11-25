@@ -54,7 +54,7 @@ try{
     check(is_file($path.'.backup.json'),'dry-run writes the before-image backup');
     // SQLite silently treats a missing "id" as a string literal while MySQL raises 1054, so assert on the SQL itself:
     // japh has no id column and must never be ordered or filtered by it.
-    $prop=new ReflectionProperty('PaymentFixtureDb','db');$prop->setAccessible(true);$sent=0;
+    $prop=new ReflectionProperty('PaymentFixtureDb','db');if (PHP_VERSION_ID < 80100) { $prop->setAccessible(true); }$sent=0;
     foreach(['accounting_stm','accounting_vuca','accounting_sustain'] as $n){
         foreach($prop->getValue($ci->load->dbs[$n])->queries as $sql){
             if(stripos($sql,'FROM "japh"')===false&&stripos($sql,'FROM `japh`')===false)continue;
@@ -181,7 +181,7 @@ function refillFixture($sts)
 function reasonOf($manifest,$old){foreach($manifest['items'] as $i)if($i['old']===$old)return (string)($i['reason'] ?? '');return null;}
 function assertNoJaphOrderById($ci)
 {
-    $prop=new ReflectionProperty('PaymentFixtureDb','db');$prop->setAccessible(true);$sent=0;
+    $prop=new ReflectionProperty('PaymentFixtureDb','db');if (PHP_VERSION_ID < 80100) { $prop->setAccessible(true); }$sent=0;
     foreach(['accounting_stm','accounting_vuca','accounting_sustain'] as $n){
         foreach($prop->getValue($ci->load->dbs[$n])->queries as $sql){
             if(stripos($sql,'FROM "japh"')===false&&stripos($sql,'FROM `japh`')===false)continue;

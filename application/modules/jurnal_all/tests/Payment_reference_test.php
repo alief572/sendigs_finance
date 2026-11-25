@@ -7,7 +7,10 @@ function log_message($level,$message) {if(!empty($GLOBALS['paymentLogFails']))th
 function show_error($message) { throw new RuntimeException($message); }
 function load_class($name,$directory) { return null; }
 function has_permission($permission) { return true; }
-class BF_Model {} class Admin_Controller {}
+#[\AllowDynamicProperties]
+class BF_Model { public $db; }
+#[\AllowDynamicProperties]
+class Admin_Controller {}
 require BASEPATH.'database/DB.php';
 require dirname(__DIR__).'/libraries/Payment_patch.php';
 require dirname(__DIR__).'/libraries/Payment_posting.php';

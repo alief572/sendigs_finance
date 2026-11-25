@@ -1,6 +1,7 @@
 <?php
 
-	class database_ORI extends mysqli {
+	class database_ORI {
+		private $_conn;
 		private $DB_HOST 		= '103.228.117.98';
 		private $DB_DATABASE 	= 'origa_live2';
         private $DB_USER 		= 'root';

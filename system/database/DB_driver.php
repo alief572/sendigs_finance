@@ -1414,7 +1414,10 @@ abstract class CI_DB_driver {
 			return $item;
 		}
 
-		static $preg_ec = array();
+		// PHP 8.1+ shares inherited method statics between drivers.
+		static $patterns = array();
+		$key = is_array($this->_escape_char) ? implode("\0", $this->_escape_char) : $this->_escape_char;
+		$preg_ec =& $patterns[$key];
 
 		if (empty($preg_ec))
 		{

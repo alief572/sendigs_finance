@@ -18,7 +18,7 @@ $other=function(){$d=DB(['dbdriver'=>'pdo','subdriver'=>'sqlite','dsn'=>'sqlite:
 $ci=(object)['load'=>new Gl_loader()];$ci->load->dbs=['accounting_stm'=>$gl,'accounting_vuca'=>$other(),'accounting_sustain'=>$other()];
 function &get_instance(){global $ci;return $ci;}
 $model=new Jurnal_all_model();
-$reader=new ReflectionMethod($model,'resolveGlMetadata');$reader->setAccessible(true);
+$reader=new ReflectionMethod($model,'resolveGlMetadata');if (PHP_VERSION_ID < 80100) { $reader->setAccessible(true); }
 $row=function($type,$no,$ref='')use($long){return ['source'=>$type==='Payment'?'PAY':'PCS','jenis_transaksi'=>$type,'no_transaksi'=>$no,'no_referensi'=>$ref,'id_company'=>'7','source_numbers'=>null,'posted_at'=>null,'posted_by_id'=>null,'posted_by'=>null];};
 $rows=[$row('Payment',$long),$row('Refill Pettycash',$long,'RPC-2026-0029'),$row('Refill Pettycash','BK--1026-0074','RPC-2026-0033'),$row('Payment','BK--0926-0011')];
 $reader->invokeArgs($model,[&$rows]);

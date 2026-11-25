@@ -23,7 +23,7 @@ class Report_actual_plan_tagih_model extends Admin_Controller
         return array_map(function ($g) { return (object) ['id_company' => $g['id'], 'nm_company' => $g['nm_company']]; }, Piutang_aging::company_options());
     }
 
-    public function list_report_filterable($client = null, $company = null, $tahun)
+    public function list_report_filterable($client, $company, $tahun)
     {
         $this->db->select("a.id_spk_penawaran, a.id_customer, a.nm_customer, a.nm_konsultan_1, a.nm_konsultan_2, a.nm_sales, a.nilai_kontrak, a.id_company, a.nm_company, a.nm_paket, a.sts_spk, a.nominal_invoice, a.nominal_uninvoice, a.macet, MAX(CASE WHEN a.tahun_data = " . $this->db->escape($tahun) . " THEN a.tahun_data ELSE a.tahun_data END) AS tahun_data", FALSE);
 

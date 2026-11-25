@@ -121,7 +121,7 @@ function expense_b8_run($method, $options = array(), $post = array()) {
     $ci->load = new B8Load();
     $ci->Expense_model = new B8Model();
     $ps = new ReflectionProperty('Expense', 'status');
-    $ps->setAccessible(true);
+    if (PHP_VERSION_ID < 80100) { $ps->setAccessible(true); }
     $ps->setValue($ci, array());
     $ci->input->values = array_merge(array('draw' => 1, 'length' => 10, 'start' => 0, 'search' => array('value' => ''),
         'password' => 'PRIVATE_PASSWORD', 'nama' => 'John Doe'), $post);

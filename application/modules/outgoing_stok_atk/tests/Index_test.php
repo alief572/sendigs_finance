@@ -1,6 +1,7 @@
 <?php
 define('BASEPATH', __DIR__);
 set_error_handler(function ($severity, $message, $file, $line) { throw new ErrorException($message, 0, $severity, $file, $line); });
+#[\AllowDynamicProperties]
 class BF_Model {}
 function get_list_user() { return array(7 => array('nama' => 'Finance')); }
 function base_url($path = '') { return '/fixture/' . $path; }

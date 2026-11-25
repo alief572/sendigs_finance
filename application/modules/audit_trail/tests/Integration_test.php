@@ -14,6 +14,7 @@ function is_php($version) { return version_compare(PHP_VERSION, $version, '>=');
 require BASEPATH . 'database/DB.php';
 require APPPATH . 'libraries/Audit_logger.php';
 require APPPATH . 'helpers/audit_trail_helper.php';
+#[\AllowDynamicProperties]
 class CI_Model { public function __construct() {} }
 require dirname(__DIR__) . '/models/Audit_trail_model.php';
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);

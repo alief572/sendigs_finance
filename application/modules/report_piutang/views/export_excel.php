@@ -1,21 +1,6 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
 
-// Register PhpSpreadsheet autoloader
-spl_autoload_register(function ($class) {
-    $prefix = 'PhpOffice\\PhpSpreadsheet\\';
-    $base_dir = APPPATH . 'libraries/PhpSpreadsheet/src/PhpSpreadsheet/';
-
-    if (strncmp($prefix, $class, strlen($prefix)) === 0) {
-        $relative_class = substr($class, strlen($prefix));
-        $file = $base_dir . str_replace('\\', '/', $relative_class) . '.php';
-
-        if (file_exists($file)) {
-            require $file;
-        }
-    }
-});
-
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 

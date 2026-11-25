@@ -1,6 +1,8 @@
 <?php
 define('BASEPATH', __DIR__);
+#[\AllowDynamicProperties]
 class Admin_Controller {}
+#[\AllowDynamicProperties]
 class CI_Model { public function __construct() {} }
 require dirname(__DIR__) . '/models/Audit_trail_model.php';
 require dirname(__DIR__) . '/controllers/Audit_trail.php';

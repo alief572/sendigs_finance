@@ -13,7 +13,7 @@ class ReceiptAddDb {
 class ReceiptAddAuth {function restrict($permission){if($permission!=='Penerimaan_Uang.View')throw new RuntimeException('Unexpected permission');}}
 class ReceiptAddTemplate extends Template {
  public $html,$viewData;function __construct(){}function title($title=null){return $this;}
- function render($view,$data=array(),$return=false){$property=new ReflectionProperty('Template','_data');$property->setAccessible(true);$this->viewData=$property->getValue($this);extract($this->viewData);ob_start();try{include dirname(__DIR__).'/views/'.$view.'.php';$this->html=ob_get_contents();}finally{ob_end_clean();}}
+ function render($view,$data=array(),$return=false){$property=new ReflectionProperty('Template','_data');if (PHP_VERSION_ID < 80100) { $property->setAccessible(true); }$this->viewData=$property->getValue($this);extract($this->viewData);ob_start();try{include dirname(__DIR__).'/views/'.$view.'.php';$this->html=ob_get_contents();}finally{ob_end_clean();}}
 }
 $c=(new ReflectionClass('Penerimaan_uang'))->newInstanceWithoutConstructor();$c->db=new ReceiptAddDb;$c->auth=new ReceiptAddAuth;
 foreach(array(1=>'invoice',8=>'deposit')as $allocationKind=>$receiptKind){

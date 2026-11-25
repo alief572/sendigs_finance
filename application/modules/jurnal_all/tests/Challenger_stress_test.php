@@ -15,7 +15,9 @@ define('DBACC_VUCA', 'acc_vuca');
 define('DBACC_SUST', 'acc_sustain');
 define('DBCNL', 'consultant');
 
+#[\AllowDynamicProperties]
 class Admin_Controller {}
+#[\AllowDynamicProperties]
 class BF_Model {}
 
 $permissions = ['Jurnal_All.Manage'];
@@ -413,16 +415,16 @@ echo "\n[3] Testing Multi-Company Boundary Cases & Branch Counter Isolation...\n
 // Invoicing routing:
 $invModel = (new ReflectionClass('Jurnal_invoicing_model'))->newInstanceWithoutConstructor();
 $getInvDbMethod = new ReflectionMethod('Jurnal_invoicing_model', '_get_accounting_db');
-$getInvDbMethod->setAccessible(true);
+if (PHP_VERSION_ID < 80100) { $getInvDbMethod->setAccessible(true); }
 
 // Mock accounting connections on invModel
 $accStm = new stdClass(); $accStm->name = 'accounting_stm';
 $accVuca = new stdClass(); $accVuca->name = 'accounting_vuca';
 $accSust = new stdClass(); $accSust->name = 'accounting_sustain';
 
-$propStm = new ReflectionProperty('Jurnal_invoicing_model', 'accounting_stm'); $propStm->setAccessible(true); $propStm->setValue($invModel, $accStm);
-$propVuca = new ReflectionProperty('Jurnal_invoicing_model', 'accounting_vuca'); $propVuca->setAccessible(true); $propVuca->setValue($invModel, $accVuca);
-$propSust = new ReflectionProperty('Jurnal_invoicing_model', 'accounting_sustain'); $propSust->setAccessible(true); $propSust->setValue($invModel, $accSust);
+$propStm = new ReflectionProperty('Jurnal_invoicing_model', 'accounting_stm'); if (PHP_VERSION_ID < 80100) { $propStm->setAccessible(true); } $propStm->setValue($invModel, $accStm);
+$propVuca = new ReflectionProperty('Jurnal_invoicing_model', 'accounting_vuca'); if (PHP_VERSION_ID < 80100) { $propVuca->setAccessible(true); } $propVuca->setValue($invModel, $accVuca);
+$propSust = new ReflectionProperty('Jurnal_invoicing_model', 'accounting_sustain'); if (PHP_VERSION_ID < 80100) { $propSust->setAccessible(true); } $propSust->setValue($invModel, $accSust);
 
 // STM: 1, 6, 7
 check($getInvDbMethod->invoke($invModel, '1')->name === 'accounting_stm', 'Invoicing company 1 -> accounting_stm');
@@ -438,11 +440,11 @@ foreach (['2', '3', '5', '8', '99', ''] as $cid) {
 // Penerimaan routing:
 $rcvCtrl = (new ReflectionClass('Jurnal_penerimaan'))->newInstanceWithoutConstructor();
 $getRcvDbMethod = new ReflectionMethod('Jurnal_penerimaan', '_get_accounting_db');
-$getRcvDbMethod->setAccessible(true);
+if (PHP_VERSION_ID < 80100) { $getRcvDbMethod->setAccessible(true); }
 
-$propStm2 = new ReflectionProperty('Jurnal_penerimaan', 'accounting_stm'); $propStm2->setAccessible(true); $propStm2->setValue($rcvCtrl, $accStm);
-$propVuca2 = new ReflectionProperty('Jurnal_penerimaan', 'accounting_vuca'); $propVuca2->setAccessible(true); $propVuca2->setValue($rcvCtrl, $accVuca);
-$propSust2 = new ReflectionProperty('Jurnal_penerimaan', 'accounting_sustain'); $propSust2->setAccessible(true); $propSust2->setValue($rcvCtrl, $accSust);
+$propStm2 = new ReflectionProperty('Jurnal_penerimaan', 'accounting_stm'); if (PHP_VERSION_ID < 80100) { $propStm2->setAccessible(true); } $propStm2->setValue($rcvCtrl, $accStm);
+$propVuca2 = new ReflectionProperty('Jurnal_penerimaan', 'accounting_vuca'); if (PHP_VERSION_ID < 80100) { $propVuca2->setAccessible(true); } $propVuca2->setValue($rcvCtrl, $accVuca);
+$propSust2 = new ReflectionProperty('Jurnal_penerimaan', 'accounting_sustain'); if (PHP_VERSION_ID < 80100) { $propSust2->setAccessible(true); } $propSust2->setValue($rcvCtrl, $accSust);
 
 check($getRcvDbMethod->invoke($rcvCtrl, '1')->name === 'accounting_stm', 'Penerimaan company 1 -> accounting_stm');
 check($getRcvDbMethod->invoke($rcvCtrl, '6')->name === 'accounting_stm', 'Penerimaan company 6 -> accounting_stm');
@@ -650,7 +652,7 @@ $invFailModel->db = $counterFailDb;
 $invFailModel->auth = new TestAuth();
 $invFailModel->input = new MockPettyInput();
 $propConsultant = new ReflectionProperty('Jurnal_invoicing_model', 'consultant');
-$propConsultant->setAccessible(true);
+if (PHP_VERSION_ID < 80100) { $propConsultant->setAccessible(true); }
 $propConsultant->setValue($invFailModel, new class {
     public function get_where($table, $where) {
         return new class { public function row() { return (object)['company' => '7', 'id_company' => '7', 'nm_company' => 'STM']; } };
@@ -660,7 +662,7 @@ $invFailModel->Jurnal_invoicing_nomor_model = new class {
     public function get_Nomor_Jurnal_Sales($cab, $tgl, $cid) { return 'JV-FAIL-TEST'; }
 };
 $propStmFail = new ReflectionProperty('Jurnal_invoicing_model', 'accounting_stm');
-$propStmFail->setAccessible(true);
+if (PHP_VERSION_ID < 80100) { $propStmFail->setAccessible(true); }
 $propStmFail->setValue($invFailModel, $counterFailDb);
 
 $_POST = ['id' => 1];

@@ -7,6 +7,7 @@ function load_class($name,$directory) { return null; }
 function is_php($version) { return version_compare(PHP_VERSION,$version,'>='); }
 function has_permission($permission) { return true; }
 function int_to_roman($n) { return ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'][$n-1]; }
+#[\AllowDynamicProperties]
 class Admin_Controller {} class BF_Model {} class CI_Model {}
 require BASEPATH.'database/DB.php';
 $worker=($argv[1] ?? '')==='--worker';

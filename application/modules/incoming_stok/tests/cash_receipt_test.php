@@ -8,6 +8,7 @@ function is_php($version) { return version_compare(PHP_VERSION, $version, '>=');
 function show_error($message) { throw new RuntimeException($message); }
 require BASEPATH . 'core/Model.php';
 require APPPATH . 'core/BF_Model.php';
+#[\AllowDynamicProperties]
 class Admin_Controller {}
 class TestAuth { function user_id() { return 42; } }
 class TestInput { public $values=[]; function post($key=null) { return $key===null ? $this->values : ($this->values[$key] ?? null); } }
@@ -178,7 +179,7 @@ try {
     $controller->auth=new TestAuth;$controller->session=new TestSession;
     $controller->load=new TestLoader($controller);$controller->incoming_cash_model=$model;
     foreach (['id_user'=>42,'datetime'=>date('Y-m-d H:i:s')] as $field=>$value) {
-        $property=new ReflectionProperty('Incoming_stok',$field);$property->setAccessible(true);$property->setValue($controller,$value);
+        $property=new ReflectionProperty('Incoming_stok',$field);if (PHP_VERSION_ID < 80100) { $property->setAccessible(true); }$property->setValue($controller,$value);
     }
     $legacy=(new ReflectionClass('Incoming_stok_model'))->newInstanceWithoutConstructor();
     $legacy->db=$db;$legacy->uri=$controller->uri;$legacy->load=new TestLoader($legacy);

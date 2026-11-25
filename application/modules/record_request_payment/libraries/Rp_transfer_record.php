@@ -177,7 +177,7 @@ final class Rp_transfer_record
             'DIBAYARKAN','JUMLAH DIBAYARKAN BANK','NAMA','NO. REK','NO. PENGAJUAN','TRANSFER','ADMIN DITANGGUNG','KETERANGAN PEMBAYARAN']);
         self::headline($sheet, 'A3:' . $last . '3');
         foreach ([5,19,16,25,12,42,14,12,12,12,10,15,28,26,24,16,14,22,65] as $index => $width) {
-            $sheet->getColumnDimensionByColumn($index)->setWidth($width);
+            $sheet->getColumnDimensionByColumn($index + 1)->setWidth($width);
         }
         $row = 4;
         $number = 0;
@@ -257,7 +257,7 @@ final class Rp_transfer_record
     public static function row($sheet, $row, array $values)
     {
         foreach ($values as $i => $value) {
-            $sheet->setCellValueExplicitByColumnAndRow($i, $row, $value ?? '',
+            $sheet->setCellValueExplicit([$i + 1, $row], $value ?? '',
                 is_int($value) || is_float($value) ? PHPExcel_Cell_DataType::TYPE_NUMERIC : PHPExcel_Cell_DataType::TYPE_STRING);
         }
     }

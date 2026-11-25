@@ -3,6 +3,7 @@
 define('BASEPATH',__DIR__);class Admin_Controller{}
 require dirname(__DIR__).'/controllers/Deposit_customer.php';
 require dirname(__DIR__).'/models/Deposit_customer_model.php';
+#[\AllowDynamicProperties]
 class BF_Model{}
 require dirname(__DIR__,3).'/helpers/mockup_format_helper.php';
 require dirname(__DIR__,2).'/penerimaan_uang/libraries/Penerimaan_calculation.php';

@@ -12,6 +12,7 @@ function audit_log($message, $status = null, $context = array()) {
 }
 function redirect($uri) { throw new AuthRedirect($uri); }
 class AuthRedirect extends RuntimeException {}
+#[\AllowDynamicProperties]
 class Front_Controller {}
 class AuthLoader { public function library($name) {} public function model($name) {} }
 class AuthLanguage { public function load($name) {} }

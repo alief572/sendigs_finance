@@ -21,7 +21,7 @@ function print_po($Nama_APP, $no_po, $koneksi, $printby){
 	$conn = mysqli_connect($KONN['host'],$KONN['user'],$KONN['pass']);
 	mysqli_select_db($conn, $KONN['db']);
 
-	include "application/libraries/MPDF572/mpdf.php"; 
+	require_once APPPATH . 'libraries/Mpdf.php';
 	$mpdf=new mPDF('utf-8','A4');
 	// $mpdf=new mPDF('utf-8','A4-L');
 
