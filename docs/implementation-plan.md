@@ -1,3 +1,7 @@
+## Perbaikan keamanan request_payment: upload dan SQL injection (25 November 2026)
+
+Fase: (1) whitelist upload + `.htaccess`; (2) escape/binding SQL; (3) blokir `request_payment_backup`; (4) test dan dokumentasi. Kriteria: input normal berperilaku sama, input berkutip tidak mengubah SQL, script tidak bisa diunggah atau diakses dari `assets/expense/`. Di luar cakupan: temuan audit lain dan modul lain yang memakai `allowed_types = '*'`.
+
 ## Request Payment → Payment: specs RP-R-36..39 + UI mockup (25 November 2026)
 
 ### Context

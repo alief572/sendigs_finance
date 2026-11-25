@@ -102,7 +102,7 @@ $ENABLE_DELETE  = has_permission('Payment.Delete');
 													echo '<a href="'.base_url('assets/expense/' . $record->doc_file).'" class="btn btn-sm btn-info"><i class="fa fa-download"></i></a>';
 												}
 											}else{
-												echo '<input type="file" name="doc_file_'.$record->id.'" id="doc_file'.$numb.'" '.$disabled.'/>';
+												echo '<input type="file" name="doc_file_'.$record->id.'" id="doc_file'.$numb.'" accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx" '.$disabled.'/>';
 											}
 										?>
 									</td>

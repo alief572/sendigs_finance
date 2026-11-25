@@ -1,3 +1,11 @@
+# Perbaikan keamanan request_payment: upload dan SQL injection (25 November 2026)
+
+- Selesai: (1) upload `save_request`/`save_payment` dibatasi `pdf|jpg|jpeg|png|webp|doc|docx|xls|xlsx` + `accept` di 4 input; `assets/expense/.htaccess` menolak script; (2) SQL injection di `GetListDataRequest`, `search_payment_list` (escape) dan 2 query `save_payment` (binding); (3) modul `request_payment_backup` diblokir `show_404()` di constructor (keputusan user).
+- Keputusan: perilaku saat upload ditolak tidak diubah (data tersimpan tanpa lampiran, tercatat `upload_failed_count`).
+- File: controller/model/view `list_payment` request_payment, view `list_payment` approval_request_payment, controller backup, `assets/expense/.htaccess`, `tests/Security_test.php` (baru), `tests/Batch3_test.php` (fixture escape).
+- Validasi: lint PASS; Security, Batch1(Audit)-5, Company_case, Rp_transfer, Approval Audit PASS; probe lokal: file `.php` dan `.PHP.jpg` = 403, PDF lama = 200, probe sudah dihapus. Tidak diuji klik di web.
+- Sisa: cek produksi (nginx/FPM tidak membaca `.htaccess`; cari file `.php` yang sudah ada di `assets/expense/`). Temuan audit lain belum dikerjakan: hak akses endpoint, integritas nominal/status, XSS, CSRF/cookie.
+
 # Request Payment → Payment RP-R-36..39 + UI mockup (25 November 2026)
 
 - Rencana: `docs/implementation-plan.md` bagian teratas. Spec `e5cc29a9`; kode dasar `2298698e`.

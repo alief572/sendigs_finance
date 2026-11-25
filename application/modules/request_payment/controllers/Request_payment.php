@@ -505,7 +505,7 @@ class Request_payment extends Admin_Controller
 				// exit;
 
 				$config['upload_path'] = './assets/expense/';
-				$config['allowed_types'] = '*';
+				$config['allowed_types'] = 'pdf|jpg|jpeg|png|webp|doc|docx|xls|xlsx';
 				$config['remove_spaces'] = TRUE;
 				$config['encrypt_name'] = TRUE;
 
@@ -1872,7 +1872,7 @@ class Request_payment extends Admin_Controller
 		$det_Jurnaltes1 = array();
 		$ix = 0;
 		$config['upload_path'] = './assets/expense/';
-		$config['allowed_types'] = '*';
+		$config['allowed_types'] = 'pdf|jpg|jpeg|png|webp|doc|docx|xls|xlsx';
 		$config['remove_spaces'] = TRUE;
 		$config['encrypt_name'] = TRUE;
 
@@ -1994,7 +1994,7 @@ class Request_payment extends Admin_Controller
 					}
 
 					if ($tipe[$keys] == 'expense') {
-						$rec = $this->db->query("select * from tr_expense_detail where no_doc='" . $no_doc[$keys] . "' and status IN ('1', '2')")->result();
+						$rec = $this->db->query("select * from tr_expense_detail where no_doc=? and status IN ('1', '2')", array($no_doc[$keys]))->result();
 						$auditQueriesOk = $this->auditReadStatus() === 1 && $auditQueriesOk;
 						// $rec = $this->db->get_where('payment_approve_details', ['payment_id' => $val])->result();
 						$writesOk = $this->db->update('tr_expense_detail', ['status' => '2'], ['no_doc' => $no_doc[$keys]]) !== false && $writesOk;
@@ -2099,7 +2099,7 @@ class Request_payment extends Admin_Controller
 
 					if ($tipe[$keys] == 'periodik') {
 						$coa = '';
-						$rec = $this->db->query("select coa from tr_pengajuan_rutin_detail where id='" . $ids[$keys] . "' and no_doc='" . $no_doc[$keys] . "'")->row();
+						$rec = $this->db->query("select coa from tr_pengajuan_rutin_detail where id=? and no_doc=?", array($ids[$keys], $no_doc[$keys]))->row();
 						$auditQueriesOk = $this->auditReadStatus() === 1 && $auditQueriesOk;
 						if (!empty($rec)) {
 							$coa = $rec->coa;
@@ -3015,7 +3015,7 @@ class Request_payment extends Admin_Controller
 						<td>Upload Dokumen</td>
 						<td>:</td>
 						<td>
-							<input type="file" name="upload_doc_' . $numb . '" id="" class="form-control form-control-sm">
+							<input type="file" name="upload_doc_' . $numb . '" id="" class="form-control form-control-sm" accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx">
 						</td>
 					</tr>
 				</table>
@@ -3311,7 +3311,7 @@ class Request_payment extends Admin_Controller
 						<td>Upload Dokumen</td>
 						<td>:</td>
 						<td>
-							<input type="file" name="upload_doc_' . $numb . '" id="" class="form-control form-control-sm">
+							<input type="file" name="upload_doc_' . $numb . '" id="" class="form-control form-control-sm" accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx">
 						</td>
 					</tr>
 				</table>

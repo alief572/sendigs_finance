@@ -82,9 +82,11 @@ class Request_payment_model extends BF_Model
         $where_date2 = '';
         $where_date3 = '';
         if ($from_date !== null && $to_date !== null) {
-            $where_date1 = " AND a.tgl_doc BETWEEN '" . $from_date . "' AND '" . $to_date . "'";
-            $where_date2 = " AND tgl_doc BETWEEN '" . $from_date . "' AND '" . $to_date . "'";
-            $where_date3 = " AND a.tanggal_doc BETWEEN '" . $from_date . "' AND '" . $to_date . "'";
+            $from = $this->db->escape((string) $from_date);
+            $to = $this->db->escape((string) $to_date);
+            $where_date1 = " AND a.tgl_doc BETWEEN " . $from . " AND " . $to;
+            $where_date2 = " AND tgl_doc BETWEEN " . $from . " AND " . $to;
+            $where_date3 = " AND a.tanggal_doc BETWEEN " . $from . " AND " . $to;
         }
 
         if ($tab !== null) {
@@ -270,31 +272,34 @@ class Request_payment_model extends BF_Model
         $filter_bank1 = '';
         $filter_bank2 = '';
 
+        $from = $this->db->escape((string) $tgl_from);
+        $to = $this->db->escape((string) $tgl_to);
+
         if ($tgl_from !== '' && $tgl_to !== '') {
-            $filter_tgl1 = " AND a.tgl_doc BETWEEN '" . $tgl_from . "' AND '" . $tgl_to . "'";
-            $filter_tgl2 = " AND a.tgl_doc BETWEEN '" . $tgl_from . "' AND '" . $tgl_to . "'";
-            $filter_tgl3 = " AND a.tgl_doc BETWEEN '" . $tgl_from . "' AND '" . $tgl_to . "'";
-            $filter_tgl4 = " AND a.tanggal_doc BETWEEN '" . $tgl_from . "' AND '" . $tgl_to . "'";
-            $filter_tgl5 = " AND a.tanggal_doc BETWEEN '" . $tgl_from . "' AND '" . $tgl_to . "'";
+            $filter_tgl1 = " AND a.tgl_doc BETWEEN " . $from . " AND " . $to;
+            $filter_tgl2 = " AND a.tgl_doc BETWEEN " . $from . " AND " . $to;
+            $filter_tgl3 = " AND a.tgl_doc BETWEEN " . $from . " AND " . $to;
+            $filter_tgl4 = " AND a.tanggal_doc BETWEEN " . $from . " AND " . $to;
+            $filter_tgl5 = " AND a.tanggal_doc BETWEEN " . $from . " AND " . $to;
         } else {
             if ($tgl_from !== '' && $tgl_to == '') {
-                $filter_tgl1 = " AND a.tgl_doc >= '" . $tgl_from . "'";
-                $filter_tgl2 = " AND a.tgl_doc >= '" . $tgl_from . "'";
-                $filter_tgl3 = " AND a.tgl_doc >= '" . $tgl_from . "'";
-                $filter_tgl4 = " AND a.tanggal_doc >= '" . $tgl_from . "'";
-                $filter_tgl5 = " AND a.tanggal_doc >= '" . $tgl_from . "'";
+                $filter_tgl1 = " AND a.tgl_doc >= " . $from;
+                $filter_tgl2 = " AND a.tgl_doc >= " . $from;
+                $filter_tgl3 = " AND a.tgl_doc >= " . $from;
+                $filter_tgl4 = " AND a.tanggal_doc >= " . $from;
+                $filter_tgl5 = " AND a.tanggal_doc >= " . $from;
             } else if ($tgl_from == '' && $tgl_to !== '') {
-                $filter_tgl1 = " AND a.tgl_doc <= '" . $tgl_to . "'";
-                $filter_tgl2 = " AND a.tgl_doc <= '" . $tgl_to . "'";
-                $filter_tgl3 = " AND a.tgl_doc <= '" . $tgl_to . "'";
-                $filter_tgl4 = " AND a.tanggal_doc <= '" . $tgl_to . "'";
-                $filter_tgl5 = " AND a.tanggal_doc <= '" . $tgl_to . "'";
+                $filter_tgl1 = " AND a.tgl_doc <= " . $to;
+                $filter_tgl2 = " AND a.tgl_doc <= " . $to;
+                $filter_tgl3 = " AND a.tgl_doc <= " . $to;
+                $filter_tgl4 = " AND a.tanggal_doc <= " . $to;
+                $filter_tgl5 = " AND a.tanggal_doc <= " . $to;
             }
         }
 
         if ($bank !== '') {
-            $filter_bank1 = ' AND b.bank_name LIKE "%' . $bank . '%"';
-            $filter_bank2 = ' AND d.bank_name LIKE "%' . $bank . '%"';
+            $filter_bank1 = " AND b.bank_name LIKE '%" . $this->db->escape_like_str((string) $bank) . "%' ESCAPE '!'";
+            $filter_bank2 = " AND d.bank_name LIKE '%" . $this->db->escape_like_str((string) $bank) . "%' ESCAPE '!'";
         }
 
         $data    = $this->db->query("SELECT a.id as ids,a.no_doc,a.nama,a.tgl_doc,'Transportasi' as keperluan, 'transportasi' as tipe,a.jumlah_expense as jumlah,null as tanggal,a.no_doc as id, a.bank_id, a.accnumber, a.accname, a.sts_reject, a.sts_reject_manage FROM tr_transport_req a LEFT JOIN request_payment b ON b.no_doc = a.no_doc WHERE a.id != '' " . $filter_tgl1 . " " . $filter_bank1 . "

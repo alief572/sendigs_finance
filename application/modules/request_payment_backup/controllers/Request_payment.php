@@ -22,6 +22,8 @@ class Request_payment extends Admin_Controller
 	public function __construct()
 	{
 		parent::__construct();
+		// Salinan lama dengan celah upload dan SQL injection: diblokir sejak audit 25-Nov-2026.
+		show_404();
 		$this->load->model(array('Request_payment/Request_payment_model', 'All/All_model', 'Jurnal_nomor/Jurnal_model'));
 		$this->template->title('Manage Request Payment');
 		$this->template->page_icon('fa fa-table');

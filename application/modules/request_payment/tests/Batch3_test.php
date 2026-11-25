@@ -32,6 +32,8 @@ class Batch3Result {
 class Batch3Db extends FixtureDb {
     public $queryNumber = 0; public $queryError = 0; public $writeNumber = 0;
     public $writes = array(); public $committed = false;
+    public function escape($value) { return "'" . addslashes($value) . "'"; }
+    public function escape_like_str($value) { return addslashes($value); }
     public function __call($name, $args) {
         global $scenario;
         if (in_array($name, array('get', 'get_where', 'query'), true)) {
