@@ -38,7 +38,8 @@ Butuh `jsdom` (`npm i jsdom`) atau env `JSDOM_PATH` yang menunjuk ke folder jsdo
 - Bank pembayar per company, No COA jurnal, dan letak menu Payment List disetting IT Developer.
 - PGJ lama (admin per dokumen) dibiarkan apa adanya.
 - Format Request Payment seragam: PPN/PPh tetap ada untuk semua kategori, kasbon tanpa pajak cukup tidak dicentang.
-- Bank Charge di Payment default = admin dari Request Payment, bisa diedit sesuai bukti bayar (tanpa batas selisih, keterangan wajib kalau beda).
+- Bank Charge di Payment = biaya yang dipotong bank, default admin dari Request Payment (0 bila gratis), bisa diedit sesuai bukti bayar (keterangan wajib kalau beda).
+- Jurnal Payment mengikuti jurnal aktual (RP-R-36, `input/Ditanggung Penerima.png`, `input/Ditanggung Perusahaan.png`, `input/Admin 0.png`): Payment Bank = nominal transfer (ditanggung penerima: DIBAYARKAN − admin), Cr Bank 2 baris (TRF + BIAYA TRANSFER), Administrasi Bank otomatis = Payment Bank + Bank Charge − Total Payment (Dr perusahaan, 0 penerima). Admin aktual Gratis (RP-R-38): transfer penuh, Bank Charge 0, tanpa admin di jurnal; Cr Administrasi Bank hanya kalau Payment Bank diubah lebih kecil padahal bank tidak memotong. Total keluar bank = Payment Bank + Bank Charge.
 - Nominal admin tetap 0 / 2.500 / 6.500.
 - Excel: cukup 1 kolom JUMLAH DIBAYARKAN BANK setelah DIBAYARKAN (Jumlah Transfer dan Total Keluar Bank dihapus); kolom Nama menjadi Nama Rekening; KETERANGAN PEMBAYARAN paling kanan.
 - Jurnal Payment tanpa baris penanda per kategori; pola per kategori ada di halaman Ringkasan.
@@ -47,7 +48,9 @@ Permintaan dicatat di `specs/docs/requests.md`, bagian "Request Payment" (ID `RP
 
 ## Print Record dan jurnal Payment
 
+- **Print Voucher (Bukti Bank Keluar)** di Record Payment, per payment (RP-R-37): format `specs/input/Voucher STM - Copy.xlsx` sheet "BBK (2)", A4 portrait, dialog print → Save as PDF. Isi = jurnal Payment lengkap dengan kolom Debit / Kredit, termasuk Cr Bank TRF dan BIAYA TRANSFER (RP-R-39); Total Debit = Total Kredit. View Record Payment juga menampilkan Preview Jurnal. No `YYYY-COMPANY/BBK/romawi/urut` per company per bulan. Tanda tangan dan logo company selain STM (diisi user).
+
 - **Print Record** (Excel) mengikuti `specs/input/Request Payment/Print di Record.xlsx`: judul, Company, No. Pengajuan, Dicetak pada, lalu kolom NO s.d. DIBAYARKAN per dokumen. Setelah DIBAYARKAN: JUMLAH DIBAYARKAN BANK (total DIBAYARKAN per transfer), Nama Rekening, Bank, No. Rek, TRANSFER, ADMIN DITANGGUNG, dan KETERANGAN PEMBAYARAN paling kanan (pengajuan apa, dokumen mana yang digabung jadi 1 payment). Kolom per transfer di-merge untuk dokumen yang digabung.
-- **Jurnal Payment** mengikuti `specs/input/Request Payment/JURNAL PEMBAYARAN - SSC.xlsx` (sheet Jurnal Non Operation & Jurnal Petty Cash): Kasbon Dr Piutang Kasbon; Direct Payment, Periodik, Transportasi, Expense Dr Biaya; bayar kurang kasbon Dr Hutang Expense; Refill Petty Cash Dr Kas Kecil 1101-01-02, Cr Bank STM. PPN Dr PPN DN, PPh Cr PPh, Dr Administrasi Bank kalau admin ditanggung perusahaan, Cr Bank 1x per transfer. No COA apa adanya dari file: kosong ditulis (belum ada), akun Biaya ditulis sesuai item.
+- **Jurnal Payment** mengikuti `specs/input/Request Payment/JURNAL PEMBAYARAN - SSC.xlsx` (sheet Jurnal Non Operation & Jurnal Petty Cash): Kasbon Dr Piutang Kasbon; Direct Payment, Periodik, Transportasi, Expense Dr Biaya; bayar kurang kasbon Dr Hutang Expense; Refill Petty Cash Dr Kas Kecil 1101-01-02, Cr Bank STM. PPN Dr PPN DN, PPh Cr PPh, Administrasi Bank otomatis (Dr ditanggung perusahaan, Cr bila bank tidak memotong), Cr Bank 2 baris per transfer: TRF dan BIAYA TRANSFER (RP-R-36). No COA apa adanya dari file: kosong ditulis (belum ada), akun Biaya ditulis sesuai item.
 
 **Tutorial (driver.js):** tombol mengambang **Tutorial halaman ini** di pojok kanan bawah menjalankan panduan langkah demi langkah untuk halaman yang sedang dibuka (Request Payment, Atur Pembayaran, Approval, Record, Payment List, Form Payment). driver.js 1.3.1 dari jsDelivr, butuh internet.
