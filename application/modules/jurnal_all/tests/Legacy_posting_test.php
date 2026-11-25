@@ -1,7 +1,9 @@
 <?php
 define('BASEPATH',true);define('DBACC_STM','acc_stm');define('DBACC_VUCA','acc_vuca');define('DBACC_SUST','acc_sustain');define('DBCNL','consultant');
 #[\AllowDynamicProperties]
-class Admin_Controller{} class BF_Model{}
+class Admin_Controller{}
+#[\AllowDynamicProperties]
+class BF_Model{}
 $permissions=['Jurnal_All.Manage'];
 function has_permission($permission){global $permissions;return in_array($permission,$permissions,true);}
 function log_message($level,$message){}

@@ -210,6 +210,7 @@ class ExpenseBatch6Result {
 }
 
 class ExpenseBatch6Db {
+    public $db_debug = true;
     public $whereData = array();
     public $selectFields = '';
     public $fromTable = '';

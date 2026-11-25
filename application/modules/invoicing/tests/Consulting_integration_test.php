@@ -16,7 +16,9 @@ function &get_instance(){return $GLOBALS['test_ci'];}
 function audit_log($message,$status,$event){$GLOBALS['audit'][]=array($message,$status,$event);if(!empty($GLOBALS['audit_failure']))throw new RuntimeException('Writer unavailable');return true;}
 if(!function_exists('mb_strlen')){function mb_strlen($s,$enc=null){return strlen($s);}}
 #[\AllowDynamicProperties]
-class Admin_Controller {} class BF_Model {}
+class Admin_Controller {}
+#[\AllowDynamicProperties]
+class BF_Model {}
 require BASEPATH.'database/DB.php';
 require APPPATH.'libraries/Module_audit_recorder.php';
 require APPPATH.'helpers/json_helper.php';
@@ -95,12 +97,21 @@ if($mode==='--worker'){
     exit;
 }
 function workerStart($payload){
-    $extDir = realpath(ini_get('extension_dir')) ?: realpath(dirname(PHP_BINARY) . '/ext') ?: ini_get('extension_dir');
-    $command=array(PHP_BINARY,'-n','-d','extension_dir='.$extDir,'-d','extension=mysqli','-d','extension=mbstring',__FILE__,'--worker');
+    $command=array(PHP_BINARY,'-d','display_errors=stderr','-d','log_errors=0','-d','error_reporting=-1',__FILE__,'--worker');
     $process=proc_open($command,array(0=>array('pipe','r'),1=>array('pipe','w'),2=>array('pipe','w')),$pipes);
     if(!is_resource($process))throw new RuntimeException('Worker launch failed.');fwrite($pipes[0],json_encode($payload));fclose($pipes[0]);return array($process,$pipes);
 }
-function workerFinish($worker){list($process,$pipes)=$worker;$out=stream_get_contents($pipes[1]);$err=stream_get_contents($pipes[2]);fclose($pipes[1]);fclose($pipes[2]);$exit=proc_close($process);verify($exit===0,'Worker exit '.$exit.': '.$err.' '.$out);$r=json_decode($out,true);verify(is_array($r),'Worker JSON '.$out);return $r;}
+function workerFinish($worker){
+    list($process,$pipes)=$worker;
+    $out=stream_get_contents($pipes[1]);$err=stream_get_contents($pipes[2]);
+    fclose($pipes[1]);fclose($pipes[2]);
+    $exit=proc_close($process);
+    verify($exit===0,'Worker exit '.$exit.': '.$err.' '.$out);
+    if ($err !== '') { fwrite(STDERR, $err); }
+    $r=json_decode($out,true);
+    verify(is_array($r),'Worker JSON '.$out);
+    return $r;
+}
 $admin=@new mysqli('127.0.0.1','root','consulting_test_local','',33319);
 $started_server_proc=null;
 if($admin->connect_errno){

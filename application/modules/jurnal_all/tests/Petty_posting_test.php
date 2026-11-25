@@ -1,5 +1,9 @@
 <?php
-define('BASEPATH',true);class Admin_Controller{}class BF_Model{}
+define('BASEPATH',true);
+#[\AllowDynamicProperties]
+class Admin_Controller{}
+#[\AllowDynamicProperties]
+class BF_Model{}
 $allowed=true;function has_permission($p){global $allowed;return $allowed;}
 require dirname(__DIR__,2).'/jurnal_payment_petty_cash/controllers/Jurnal_payment_petty_cash.php';
 require dirname(__DIR__,2).'/jurnal_payment_petty_cash/models/Jurnal_payment_petty_cash_model.php';

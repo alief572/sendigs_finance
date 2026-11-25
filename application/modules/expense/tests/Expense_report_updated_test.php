@@ -607,7 +607,14 @@ testCheck($has_pi_filter === true, "Query get_dat_expense_data memfilter a.no_do
 testCheck(isset($json6['data']), "Response format get_dat_expense_data valid DataTables JSON");
 
 // Verifikasi direct DB dev jika tersedia
-$db_conn = @new mysqli("206.84.97.107", "alief", "Alief@ssc1", "db_sendigs_ss_dev", 3306);
+$db_conn = null;
+$fixtureHost = getenv('EXPENSE_TEST_DB_HOST');
+if ($fixtureHost) {
+    mysqli_report(MYSQLI_REPORT_OFF);
+    $db_conn = @new mysqli($fixtureHost, getenv('EXPENSE_TEST_DB_USER') ?: 'root',
+        getenv('EXPENSE_TEST_DB_PASS') ?: '', getenv('EXPENSE_TEST_DB_NAME') ?: '',
+        (int) (getenv('EXPENSE_TEST_DB_PORT') ?: 3306));
+}
 if ($db_conn && !$db_conn->connect_error) {
     $res_check = $db_conn->query("SELECT id, no_doc FROM tr_expense WHERE (pettycash IS NULL OR pettycash = '') AND (exp_pib IS NULL OR exp_pib = '') AND (id_po IS NULL OR id_po = '') AND no_doc NOT LIKE 'PI-%'");
     $has_pi_in_result = false;

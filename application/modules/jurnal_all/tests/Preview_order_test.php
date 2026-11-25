@@ -2,7 +2,7 @@
 $checks=0;
 function check($ok,$message){global $checks;$checks++;if(!$ok)throw new RuntimeException($message);}
 function renderPreview(array $rows,$source='PAY',$posted=false){
-    $detail=['header'=>['source'=>$source,'jenis_transaksi'=>'Transport','no_transaksi'=>'BK-1','no_referensi'=>'RQ-1','nm_company'=>'STM','nm_divisi'=>'Finance','tgl_jurnal'=>'2026-07-20','debit'=>'150.00','kredit'=>'150.00','source_numbers'=>'JV-1'],
+    $detail=['header'=>['source'=>$source,'jenis_transaksi'=>'Transport','no_transaksi'=>'BK-1','no_referensi'=>'RQ-1','invoice_number'=>'INV-1','nm_company'=>'STM','nm_divisi'=>'Finance','tgl_jurnal'=>'2026-07-20','debit'=>'150.00','kredit'=>'150.00','source_numbers'=>'JV-1'],
         'rows'=>$rows,'is_balance'=>true];
     ob_start();require dirname(__DIR__).'/views/preview.php';return ob_get_clean();
 }

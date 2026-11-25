@@ -222,3 +222,9 @@ Publikasi atas permintaan user: siapkan commit terisolasi dari tip terbaru devel
 2. Bangun runtime PHP 8.5.13, ukur error dengan `E_ALL`, lalu perbaiki kompatibilitas bootstrap, HMVC, database dan sesi pada core CI3 yang ada.
 3. Kunci dependensi di Composer root. Migrasikan jalur aktif mPDF dan PHPExcel dengan membandingkan hasil dokumen dan regresi transaksi terhadap baseline.
 4. Verifikasi kandidat dari build bersih, uji setup setara server existing dan siapkan rollback. Keputusan rilis produksi terpisah dari implementasi branch.
+
+### Tindak lanjut regresi PHP 8.5
+
+1. Reproduksi 33 kegagalan dan 18 warning dari kandidat `e6b218a6`. Bandingkan terhadap snapshot commit dasar `ccd47e6e` di Docker PHP 7.4, dengan Node dan isolasi jaringan yang sama.
+2. Perbaiki regresi runtime PHP 8.5 yang terbukti, termasuk test double yang gagal karena perubahan bahasa. Untuk tes yang membutuhkan database atau akses tulis, gunakan fixture lokal sementara jika skemanya tersedia.
+3. Ulangi kasus terdampak, suite Docker lokal, serta pemeriksaan artefak yang relevan. Catat hasil per tes, batas fixture, dan keputusan di checkpoint. Pertahankan perubahan di `upgrade/php-8.5`.

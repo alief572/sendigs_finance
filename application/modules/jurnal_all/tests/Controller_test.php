@@ -1,5 +1,9 @@
 <?php
-define('BASEPATH',true);define('APPPATH',dirname(__DIR__,3).'/');class Admin_Controller{}class BF_Model{}
+define('BASEPATH',true);define('APPPATH',dirname(__DIR__,3).'/');
+#[\AllowDynamicProperties]
+class Admin_Controller{}
+#[\AllowDynamicProperties]
+class BF_Model{}
 $permissions=['Jurnal_All.View','Jurnal_All.Manage','Report_Jurnal_All.View'];
 function has_permission($p){global $permissions;return in_array($p,$permissions,true);}
 function log_message($level,$message){}
@@ -52,13 +56,13 @@ $c=fixture('Report_jurnal_all');$c->legacy('EXP');check($redirected==='report_ju
 include APPPATH.'config/routes.php';
 foreach(['jurnal_invoicing'=>'INV','jurnal_penerimaan'=>'RCV','jurnal_payment'=>'PAY','jurnal_expense'=>'EXP','jurnal_payment_petty_cash'=>'PCS'] as $path=>$tab){check($route[$path]==='jurnal_all/legacy/'.$tab&&$route[$path.'/index']===$route[$path],'entry-only redirect '.$path);check(!isset($route[$path.'/save_posting_jurnal']),'posting route retained '.$path);}
 check(!isset($route['jurnal'],$route['jurnal_payment_petty_cash/buku_besar']),'generic Jurnal and Buku Besar preserved');
-$detail=['header'=>['source'=>'PAY','no_transaksi'=>'<script>','no_referensi'=>'<svg>','nm_company'=>'<img>','nm_divisi'=>'Finance','tgl_jurnal'=>'2026-10-14','source_numbers'=>'SOURCE','debit'=>'100.25','kredit'=>'100.25'], 'rows'=>[['id'=>1,'tgl_jurnal'=>'2026-10-14','jenis_transaksi'=>'Payment','coa'=>'<img>','nm_coa'=>'<svg>','keterangan'=>'</textarea><script>bad</script> {REF:REF1}','no_transaksi'=>'DOC1','debit'=>'100.25','kredit'=>'100.25']],'is_balance'=>true];
+$detail=['header'=>['source'=>'PAY','jenis_transaksi'=>'Payment','no_transaksi'=>'<script>','no_referensi'=>'<svg>','nm_company'=>'<img>','nm_divisi'=>'Finance','tgl_jurnal'=>'2026-10-14','source_numbers'=>'SOURCE','debit'=>'100.25','kredit'=>'100.25'], 'rows'=>[['id'=>1,'tgl_jurnal'=>'2026-10-14','jenis_transaksi'=>'Payment','coa'=>'<img>','nm_coa'=>'<svg>','keterangan'=>'</textarea><script>bad</script> {REF:REF1}','no_transaksi'=>'DOC1','debit'=>'100.25','kredit'=>'100.25']],'is_balance'=>true];
 $posted=false;ob_start();include dirname(__DIR__).'/views/preview.php';$html=ob_get_clean();check(strpos($html,'<script>')===false&&strpos($html,'&lt;script&gt;')!==false,'safe preview');check(strpos($html,'100.25')!==false,'preview cents');
 $posted=true;ob_start();include dirname(__DIR__).'/views/preview.php';$html=ob_get_clean();check(strpos($html,'<textarea')===false&&strpos($html,'No. Jurnal Accounting')!==false,'report detail read-only source labels');
 $rows=[['header'=>$detail['header']+['tab'=>'PAY','category'=>'=HYPERLINK("x")'],'line'=>$detail['rows'][0]+['nm_company'=>'Company','nm_divisi'=>'Finance','no_jurnal'=>'SOURCE']]];
 ob_start();include dirname(__DIR__).'/views/export_excel.php';$html=ob_get_clean();check(strpos($html,'<script>')===false&&strpos($html,'&#039;=HYPERLINK')!==false,'export escaping and formula injection');
 $posted=false;
-$detail['header']=array_merge($detail['header'],['source'=>'INV','no_transaksi'=>'INTERNAL-INV','display_no_transaksi'=>'INV/1','invoice_number'=>'INV/1','no_referensi'=>'SPK-1']);
+$detail['header']=array_merge($detail['header'],['source'=>'INV','jenis_transaksi'=>'Invoicing','no_transaksi'=>'INTERNAL-INV','display_no_transaksi'=>'INV/1','invoice_number'=>'INV/1','no_referensi'=>'SPK-1']);
 $detail['rows'][0]['keterangan']='PPh - INTERNAL-INV';
 ob_start();include dirname(__DIR__).'/views/preview.php';$html=ob_get_clean();
 check(strpos($html,'<dd>INV/1</dd>')!==false&&strpos($html,'<dd>SPK-1</dd>')!==false,'invoice preview metadata follows invoice/SPK display');

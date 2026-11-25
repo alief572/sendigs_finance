@@ -14,9 +14,17 @@ class View_payment_new_test {
     private $db;
 
     public function __construct() {
-        $this->db = new mysqli('206.84.97.107', 'alief', 'Alief@ssc1', 'db_sendigs_ss_dev');
+        $fixtureHost = getenv('MATERIAL_TEST_DB_HOST');
+        if (!$fixtureHost) {
+            echo "SKIP: set MATERIAL_TEST_DB_HOST to run the payment view database verification\n";
+            exit(0);
+        }
+        mysqli_report(MYSQLI_REPORT_OFF);
+        $this->db = @new mysqli($fixtureHost, getenv('MATERIAL_TEST_DB_USER') ?: 'root',
+            getenv('MATERIAL_TEST_DB_PASS') ?: '', getenv('MATERIAL_TEST_DB_NAME') ?: '',
+            (int) (getenv('MATERIAL_TEST_DB_PORT') ?: 3306));
         if ($this->db->connect_error) {
-            die("DB Connection failed: " . $this->db->connect_error . "\n");
+            throw new RuntimeException("Test database unavailable: " . $this->db->connect_error);
         }
     }
 

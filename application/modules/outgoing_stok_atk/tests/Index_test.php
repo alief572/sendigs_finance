@@ -18,6 +18,7 @@ class IndexResult {
 }
 class IndexDb {
     public $pdo, $queries = array(), $failAt = 0, $errorCode = 0;
+    public $db_debug = false;
     public function __construct() {
         $this->pdo = new PDO('sqlite::memory:');
         $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);

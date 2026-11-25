@@ -6,7 +6,9 @@
 define('BASEPATH', '/var/www/html/system/');
 require '/var/www/html/application/helpers/mockup_format_helper.php';
 if (!function_exists('base_url')) { function base_url($p = '') { return '/' . $p; } }
-define('APPPATH', '/var/www/html/application/');
+define('FCPATH', '/var/www/html/');
+define('APPPATH', FCPATH . 'application/');
+define('VIEWPATH', APPPATH . 'views/');
 define('ENVIRONMENT', 'development');
 
 require_once '/var/www/html/system/core/Common.php';

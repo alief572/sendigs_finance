@@ -1,7 +1,7 @@
 <?php
 // Report "No. Jurnal Accounting" fallback (japh lookup) for Payment/Refill whose journal key is a long approval-ID list.
 define('BASEPATH',dirname(__DIR__,4).'/system/');define('APPPATH',dirname(__DIR__,3).'/');
-function log_message($l,$m){}function show_error($m){throw new RuntimeException($m);}function load_class($n,$d){return null;}class BF_Model{}
+function log_message($l,$m){}function show_error($m){throw new RuntimeException($m);}function load_class($n,$d){return null;}class BF_Model{public $db;}
 require BASEPATH.'database/DB.php';require dirname(__DIR__).'/models/Jurnal_all_model.php';
 $checks=0;function check($v,$m){global $checks;$checks++;if(!$v)throw new RuntimeException($m);}
 $gl=DB(['dbdriver'=>'pdo','subdriver'=>'sqlite','dsn'=>'sqlite::memory:','db_debug'=>false],true);
