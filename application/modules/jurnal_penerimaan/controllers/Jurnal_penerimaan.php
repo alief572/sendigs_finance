@@ -147,6 +147,7 @@ class Jurnal_penerimaan extends Admin_Controller
 
 	public function save_posting_jurnal()
 	{
+		if (!$this->allowJournalAction()) { return; }
 		$post = $this->input->post();
 
 		$get_jurnal        = $this->db->get_where('tr_jurnal', ['id' => $post['id']])->row();
@@ -288,7 +289,16 @@ class Jurnal_penerimaan extends Admin_Controller
 
 	public function update_sts_revisi_jurnal()
 	{
+		if (!$this->allowJournalAction()) { return; }
 		$this->Jurnal_penerimaan_model->update_sts_revisi_jurnal();
+	}
+
+	private function allowJournalAction()
+	{
+		if ($this->input->method(true) === 'POST' && (has_permission($this->managePermission) || has_permission('Jurnal_All.Manage'))) return true;
+		$this->output->set_status_header(403);
+		echo json_encode(['status'=>0,'save'=>0,'msg'=>'Anda tidak memiliki akses untuk aksi jurnal ini.']);
+		return false;
 	}
 
 	public function get_data_jurnal_invoicing()
