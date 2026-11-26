@@ -15,7 +15,7 @@ class Coa_master_stub {
 }
 $stub=new Coa_master_stub();
 $model=new Jurnal_all_model();$model->db=$db;
-$glDbs=new ReflectionProperty('Jurnal_all_model','glDbs');if (PHP_VERSION_ID < 80100) { $glDbs->setAccessible(true); }
+$glDbs=new ReflectionProperty('Jurnal_all_model','glDbs');$glDbs->setAccessible(true);
 $glDbs->setValue($model,['accounting_stm'=>$stub]);
 
 $kwId=journal('Kwitansi Deposit','0','KW-COA','7','500.00','500.00'); // coa 5101-01, owner STM

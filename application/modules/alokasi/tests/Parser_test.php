@@ -3,12 +3,7 @@
 define('BASEPATH', __DIR__);
 require dirname(__DIR__) . '/libraries/Rekening_koran_parser.php';
 function pCheck($ok, $m) { if (!$ok) throw new RuntimeException($m); }
-function csv($rows) {
-    return array_map(static function ($row) {
-        $line = implode(',', array_map(static function ($field) { return '"' . $field . '"'; }, $row));
-        return str_getcsv($line, ',', '"', '\\');
-    }, $rows);
-}
+function csv($rows) { return array_map('str_getcsv', array_map(function ($r) { return implode(',', array_map(function ($c) { return '"' . $c . '"'; }, $r)); }, $rows)); }
 
 // Jenis 7: 7 baris header, data mulai baris ke-8: tanggal, keterangan, cabang, nominal + CR/DB, saldo.
 $rows7 = array(array('No. rekening : 123'), array('Periode : 01/10/2026 - 31/10/2026'), array('Saldo Awal : 1,000.00'), array('Mutasi Debet : 0'), array('Mutasi Kredit : 0'), array('Saldo Akhir : 0'), array(''),

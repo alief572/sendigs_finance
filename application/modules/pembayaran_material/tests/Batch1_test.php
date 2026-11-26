@@ -4,9 +4,7 @@ define('DBACC', 'fixture_accounting');
 require dirname(__DIR__, 2) . '/request_payment/tests/Audit_test.php';
 require APPPATH . 'helpers/audit_trail_helper.php';
 require APPPATH . 'helpers/app_helper.php';
-#[\AllowDynamicProperties]
 class BF_Model {}
-#[\AllowDynamicProperties]
 class CI_Model {}
 require dirname(__DIR__) . '/models/Pembayaran_material_model.php';
 require dirname(__DIR__) . '/models/Jurnal_model.php';

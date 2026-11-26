@@ -154,9 +154,9 @@
             <tr>
                 <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;"><?= $data_invoice->print_keterangan ?></td>
                 <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;">1</td>
-                <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;"><?= number_format($data_actual_plan_tagih->nominal_payment ?? 0, $print_decimals) ?></td>
+                <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;"><?= number_format($data_actual_plan_tagih->nominal_payment, $print_decimals) ?></td>
                 <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;"></td>
-                <td style="text-align: right; height: 200px; vertical-align: top;"><?= number_format($data_actual_plan_tagih->nominal_payment ?? 0, $print_decimals) ?></td>
+                <td style="text-align: right; height: 200px; vertical-align: top;"><?= number_format($data_actual_plan_tagih->nominal_payment, $print_decimals) ?></td>
             </tr>
             <tr>
                 <td style="border-top: 1px solid black;" colspan="3"></td>
@@ -166,7 +166,7 @@
                         <tr>
                             <td style="text-align: center;" width="100">:</td>
                             <td style="text-align: right;" width="100">
-                                <?= number_format($data_actual_plan_tagih->nominal_payment ?? 0, $print_decimals) ?>
+                                <?= number_format($data_actual_plan_tagih->nominal_payment, $print_decimals) ?>
                             </td>
                         </tr>
                     </table>
@@ -180,7 +180,7 @@
                         <tr>
                             <td style="text-align: center;" width="100">:</td>
                             <td style="text-align: right;" width="100">
-                                <?= number_format($data_invoice->dpp_nilai_lain ?? 0, $print_decimals) ?>
+                                <?= number_format($data_invoice->dpp_nilai_lain, $print_decimals) ?>
                             </td>
                         </tr>
                     </table>
@@ -303,9 +303,9 @@
             <tr>
                 <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;"><?= $data_invoice->print_keterangan ?></td>
                 <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;">1</td>
-                <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;"><?= number_format($data_actual_plan_tagih->nominal_payment ?? 0, $print_decimals) ?></td>
+                <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;"><?= number_format($data_actual_plan_tagih->nominal_payment, $print_decimals) ?></td>
                 <td style="text-align: center; height: 200px; vertical-align: top; border-right: 1px solid black;"></td>
-                <td style="text-align: right; height: 200px; vertical-align: top;"><?= number_format($data_actual_plan_tagih->nominal_payment ?? 0, $print_decimals) ?></td>
+                <td style="text-align: right; height: 200px; vertical-align: top;"><?= number_format($data_actual_plan_tagih->nominal_payment, $print_decimals) ?></td>
             </tr>
             <tr>
                 <td style="border-top: 1px solid black;" colspan="3"></td>
@@ -315,7 +315,7 @@
                         <tr>
                             <td style="text-align: center;" width="100">:</td>
                             <td style="text-align: right;">
-                                <?= number_format($data_actual_plan_tagih->nominal_payment ?? 0, $print_decimals) ?>
+                                <?= number_format($data_actual_plan_tagih->nominal_payment, $print_decimals) ?>
                             </td>
                         </tr>
                     </table>
@@ -329,7 +329,7 @@
                         <tr>
                             <td style="text-align: center;" width="100">:</td>
                             <td style="text-align: right;">
-                                <?= number_format($data_invoice->dpp_nilai_lain ?? 0, $print_decimals) ?>
+                                <?= number_format($data_invoice->dpp_nilai_lain, $print_decimals) ?>
                             </td>
                         </tr>
                     </table>

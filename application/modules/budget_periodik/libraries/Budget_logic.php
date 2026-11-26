@@ -67,7 +67,7 @@ class Budget_logic
 		$out = array('n' => count($rows), 'act' => 0, 'bln' => 0.0, 'thn' => 0.0);
 		foreach ($rows as $r) {
 			$n = self::normalize($r);
-			if (!self::is_active($r, $inSysById[$n['id'] ?? ''] ?? 0)) {
+			if (!self::is_active($r, $inSysById[$n['id']] ?? 0)) {
 				continue;
 			}
 			$out['act']++;
@@ -93,7 +93,7 @@ class Budget_logic
 		$old = array();
 		foreach ($master as $m) {
 			$n = self::normalize($m);
-			$old[$n['id'] ?? ''] = $n;
+			$old[$n['id']] = $n;
 		}
 		$rows = array_values(array_filter($draft, function ($r) { return !self::is_blank_new($r); }));
 		if (!$rows) {
@@ -107,7 +107,7 @@ class Budget_logic
 			if (!($n['nilai'] > 0)) {
 				return 'Perkiraan biaya "' . $n['nama'] . '" harus lebih dari 0.';
 			}
-			$used = self::used($r, $inSysById[$n['id'] ?? ''] ?? 0);
+			$used = self::used($r, $inSysById[$n['id']] ?? 0);
 			if ($n['masa_berlaku'] > 0 && $n['masa_berlaku'] < $used) {
 				return 'Masa berlaku "' . $n['nama'] . '" tidak boleh kurang dari ' . $used . ' kali.';
 			}
@@ -133,7 +133,7 @@ class Budget_logic
 		$byId = array();
 		foreach ($master as $m) {
 			$n = self::normalize($m);
-			$byId[$n['id'] ?? ''] = $n;
+			$byId[$n['id']] = $n;
 		}
 		$out = array();
 		foreach ($draft as $r) {

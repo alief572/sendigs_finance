@@ -1,7 +1,6 @@
 <?php
 // Regresi: company petty cash 'SUSTAIN'/'VUCA' (huruf besar di sumber) harus ter-resolve ke id + nama kanonik kons.
 define('BASEPATH', __DIR__);
-#[\AllowDynamicProperties]
 class BF_Model { public function __construct() {} public function __get($n) { return null; } }
 require dirname(__DIR__) . '/models/Request_payment_model.php';
 

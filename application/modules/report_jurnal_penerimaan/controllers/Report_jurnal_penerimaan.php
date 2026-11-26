@@ -18,6 +18,7 @@ class Report_jurnal_penerimaan extends Admin_Controller
     public function __construct()
     {
         parent::__construct();
+        show_404(); // ditutup: diganti Report Jurnal (report_jurnal_all); endpoint lama tanpa cek izin
         $this->load->library(array('upload', 'Image_lib'));
         $this->load->model(array(
             'Report_jurnal_penerimaan/Report_jurnal_penerimaan_model',

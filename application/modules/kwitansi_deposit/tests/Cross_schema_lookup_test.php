@@ -1,7 +1,6 @@
 <?php
 define('BASEPATH', __DIR__);
 define('DBCNL', 'consultant_fixture');
-#[\AllowDynamicProperties]
 class BF_Model {}
 require dirname(__DIR__).'/models/Kwitansi_deposit_model.php';
 function verifyLookup($ok, $message) { if (!$ok) throw new RuntimeException($message); }

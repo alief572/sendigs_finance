@@ -1,6 +1,5 @@
 <?php
 define('BASEPATH', __DIR__);
-#[\AllowDynamicProperties]
 class Admin_Controller {}
 function log_message($level, $message) {}
 function show_error($message, $status) { throw new RuntimeException($message, $status); }

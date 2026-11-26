@@ -9,12 +9,8 @@ if (file_exists($helper)) {
     require_once $helper;
 }
 
-if (!class_exists('BF_Model')) {
-    #[\AllowDynamicProperties]
-    class BF_Model {} }
-if (!class_exists('CI_Model')) {
-    #[\AllowDynamicProperties]
-    class CI_Model {} }
+if (!class_exists('BF_Model')) { class BF_Model {} }
+if (!class_exists('CI_Model')) { class CI_Model {} }
 
 if (!function_exists('show_404')) {
     function show_404($page = '', $log_error = TRUE) {
@@ -63,8 +59,8 @@ if (!class_exists('Template', false)) {
 class EpcStop extends Exception {}
 
 class EpcRow extends ArrayObject {
-    public function offsetExists($k): bool { return true; }
-    public function offsetGet($k): mixed { return parent::offsetExists($k) ? parent::offsetGet($k) : 0; }
+    public function offsetExists($k) { return true; }
+    public function offsetGet($k) { return parent::offsetExists($k) ? parent::offsetGet($k) : 0; }
     public function __get($k) { return 0; }
 }
 

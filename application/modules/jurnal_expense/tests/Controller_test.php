@@ -1,6 +1,5 @@
 <?php
 define('BASEPATH', true);
-#[\AllowDynamicProperties]
 class Admin_Controller {}
 $allowed = true; $viewOnly = false;
 function has_permission($permission) { global $allowed, $viewOnly; return $allowed && (!$viewOnly || $permission === 'Jurnal_Expense.View'); }

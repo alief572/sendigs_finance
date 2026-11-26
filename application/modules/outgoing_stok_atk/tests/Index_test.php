@@ -1,7 +1,6 @@
 <?php
 define('BASEPATH', __DIR__);
 set_error_handler(function ($severity, $message, $file, $line) { throw new ErrorException($message, 0, $severity, $file, $line); });
-#[\AllowDynamicProperties]
 class BF_Model {}
 function get_list_user() { return array(7 => array('nama' => 'Finance')); }
 function base_url($path = '') { return '/fixture/' . $path; }
@@ -18,7 +17,6 @@ class IndexResult {
 }
 class IndexDb {
     public $pdo, $queries = array(), $failAt = 0, $errorCode = 0;
-    public $db_debug = false;
     public function __construct() {
         $this->pdo = new PDO('sqlite::memory:');
         $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);

@@ -141,7 +141,7 @@ function ac_make($options, $post) {
     $ci = (new ReflectionClass('Actual_plan_tagih'))->newInstanceWithoutConstructor();
     $ci->module_audit_recorder = new Module_audit_recorder();
     $ci->db = new AcDb();
-    $prop = new ReflectionProperty('Actual_plan_tagih', 'consultant'); if (PHP_VERSION_ID < 80100) { $prop->setAccessible(true); } $prop->setValue($ci, new AcConsultant());
+    $prop = new ReflectionProperty('Actual_plan_tagih', 'consultant'); $prop->setAccessible(true); $prop->setValue($ci, new AcConsultant());
     $ci->auth = new AcAuth(); $ci->template = new AcTemplate(); $ci->session = new AcSession();
     $ci->input = new AcInput(); $ci->load = new AcLoad(); $ci->output = new AcOutput(); $ci->upload = new AcUpload();
     $ci->Actual_plan_tagih_model = new AcModel(); $ci->Invoicing_model = new AcInvoicingModel();

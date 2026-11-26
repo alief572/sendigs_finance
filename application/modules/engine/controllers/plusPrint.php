@@ -19,7 +19,7 @@ function PrintMaterialPlanning($Nama_APP, $koneksi, $printby, $no_so){
 	mysqli_select_db($conn, $KONN['db']);
 
 	$sroot 		= $_SERVER['DOCUMENT_ROOT'];
-	require_once APPPATH . 'libraries/Mpdf.php';
+	include $sroot."/origa_live/application/libraries/MPDF57/mpdf.php";
 	// $mpdf=new mPDF('utf-8','A4');
 	$mpdf=new mPDF('utf-8','A4-L');
 

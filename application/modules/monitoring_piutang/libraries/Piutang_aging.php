@@ -68,6 +68,21 @@ class Piutang_aging
     const FU_FILTERS = ['', 'none', '1', '2', '3', '4', 'tambahan', 'selesai', 'bermasalah'];
     // Filter company grup: id kons_tr_company (STM 7, STM-Sustain 6, STM-Vuca 1, Vuca 4, Sustain 3; sama dengan modul Request Payment/Jurnal).
     const COMPANY_GROUPS = ['STM' => ['7', '6', '1'], 'VUCA' => ['4'], 'SUSTAIN' => ['3']];
+    const CARI_MAKS = 100;
+
+    /** Parameter request sebagai teks: bentuk array (?x[]=) diabaikan; $max > 0 memotong panjangnya. */
+    public static function param($v, $max = 0)
+    {
+        $v = is_scalar($v) ? trim((string) $v) : '';
+        return $max > 0 ? mb_substr($v, 0, $max) : $v;
+    }
+
+    /** Invoice masuk cakupan modul piutang: bukan deposit (DEP / KD-) dan tanggalnya memenuhi. Status close dinilai pemanggil. */
+    public static function in_scope($r)
+    {
+        return strtoupper((string) ($r['tax_treatment'] ?? '')) !== 'DEP' && stripos((string) ($r['id'] ?? ''), 'KD-') !== 0
+            && self::eligible_invoice_date($r);
+    }
 
     public static function today()
     {
@@ -661,7 +676,11 @@ class Piutang_aging
         if (self::filled($r['plan_bayar'] ?? null) && self::is_bermasalah($r)) {
             $e[] = 'Invoice bermasalah tidak bisa diberi plan bayar.';
         }
-        // No faktur (MP-FR-18): wajib saat tanggal terima pertama kali disimpan; data lama tanpa faktur tidak diblokir saat simpan ulang.
+        $faktur = trim((string) ($r['no_faktur'] ?? ''));
+        if (mb_strlen($faktur) > 100 && $faktur !== trim((string) ($old['no_faktur'] ?? ''))) {
+            $e[] = 'No faktur maksimal 100 karakter.';
+        }
+        // No faktur (MP-FR-18):wajib saat tanggal terima pertama kali disimpan; data lama tanpa faktur tidak diblokir saat simpan ulang.
         if (self::filled($r['tgl_terima'] ?? null) && !self::filled($r['no_faktur'] ?? null) && (!self::filled($old['tgl_terima'] ?? null) || self::filled($old['no_faktur'] ?? null))) {
             $e[] = 'No faktur wajib diisi.';
         }

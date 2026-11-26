@@ -1,7 +1,7 @@
 <?php
 	$sroot 		= $_SERVER['DOCUMENT_ROOT'];
 //	include $sroot."/application/libraries/MPDF57/mpdf.php"; 
-require_once APPPATH . 'libraries/Mpdf.php';
+require_once(APPPATH.'libraries/MPDF57/mpdf.php');
 	$mpdf=new mPDF('utf-8','A4');
 	// $mpdf=new mPDF('utf-8','A4-L');
 

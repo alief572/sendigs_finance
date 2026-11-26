@@ -210,5 +210,15 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
     };
     api.mount(workspace); await flush();
     check(node('#ja-table tbody').innerHTML.includes('Company &lt;img src=x&gt; belum tersedia') && !node('#ja-table tbody').innerHTML.includes('+ Post'), 'blocked Expense remains readable with escaped reason and no Post label');
+    // Filter Bank hanya ada di Report Jurnal; Jurnal All (tanpa elemen bank) sudah dilewati di atas.
+    form.elements.bank = new Element(); workspace.dataset.posted = '1'; workspace.dataset.tab = 'PAY';
+    api.mount(workspace); await flush();
+    check(node('#ja-bank').hidden === false && form.elements.bank.options.some(option => option.value === '' && option.text === 'Semua Bank'), 'bank filter shown on payment tab with all-banks option');
+    form.elements.bank.value = '1101-BCA'; form.fire('submit'); await flush();
+    check(calls.filter(call => call[0].endsWith('get_data_jurnal')).at(-1)[1].bank === '1101-BCA', 'bank filter sent to backend');
+    node('#ja-export').fire('click');
+    check(assigned.includes('bank=1101-BCA'), 'bank filter included in export');
+    tabButtons[0].fire('click'); await flush();
+    check(node('#ja-bank').hidden === true, 'bank filter hidden outside payment tab');
     console.log('PASS Jurnal All client: ' + checks + ' assertions');
 })().catch(error => { console.error(error); process.exitCode = 1; });

@@ -2,7 +2,7 @@
 // Runs only inside the native disposable database runner.
 $kwState=function()use($service){$state=array();foreach(array('tr_kwitansi_deposit','tr_customer_deposit','tr_invoicing','tr_jurnal')as $table)$state[$table]=$service->rows('SELECT * FROM '.$table.' ORDER BY id');return Invoice_calculation::fingerprint($state);};
 $createPost=array('id_spk_penawaran'=>'SP-CLOSURE-KW','id_customer'=>'KW-CUST','tanggal_kwitansi'=>'2098-10-30','nilai_kwitansi'=>'1500000.00');
-$depth=new ReflectionProperty('CI_DB_driver','_trans_depth');if (PHP_VERSION_ID < 80100) { $depth->setAccessible(true); }
+$depth=new ReflectionProperty('CI_DB_driver','_trans_depth');$depth->setAccessible(true);
 foreach(array('kw_number'=>0,'kw_deposit_number'=>0,'kw_header'=>1,'deposit_insert'=>2,'kw_invoice'=>3,'journal'=>4,'commit'=>4)as $fault=>$expectedWrites){
     $before=$kwState();$auditBefore=count($GLOBALS['audit']);$db->kwWrites=array();$db->fault=$fault;
     $failed=$kwService->create($createPost,$kwModel);

@@ -1,5 +1,6 @@
 <?php if (!defined('BASEPATH')) exit('No direct script access allowed');
 require_once dirname(__DIR__, 2).'/monitoring_piutang/libraries/Piutang_aging.php';
+require_once dirname(__DIR__, 3).'/helpers/company_override_helper.php';
 
 // Define cross-database constants if not already defined
 if (!defined('DBCNL')) define('DBCNL', 'db_consultant_new');
@@ -232,7 +233,7 @@ class Request_payment_model extends BF_Model
     function generate_id_detail($no = null)
     {
         $generate_id = $this->db->query("SELECT MAX(id) AS max_id FROM payment_approve_details WHERE id LIKE '%PAY1-" . date('m-y') . "%'")->row();
-        $kodeBarang = (string) $generate_id->max_id;
+        $kodeBarang = $generate_id->max_id;
 
         if ($no !== null) {
             $urutan = (int) substr($kodeBarang, 11, 5);
@@ -2283,6 +2284,11 @@ class Request_payment_model extends BF_Model
      */
     public function resolve_row_company($r)
     {
+        $override = company_override($r->no_dokumen ?? '');
+        if ($override) {
+            return ['company_id' => $override['id'], 'company_nama' => $override['nama']];
+        }
+
         $company_map   = self::company_map();
         $company_names = $this->get_company_names_lookup();
 

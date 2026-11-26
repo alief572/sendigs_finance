@@ -10,7 +10,6 @@ function log_message($level, $message) {
     $logged_messages[] = [$level, $message];
 }
 
-#[\AllowDynamicProperties]
 class BF_Model {}
 require dirname(__DIR__) . '/models/Jurnal_all_model.php';
 require dirname(__DIR__) . '/libraries/Jurnal_all_dispatcher.php';

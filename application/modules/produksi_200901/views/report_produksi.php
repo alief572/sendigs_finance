@@ -11,7 +11,7 @@
 						<option value="0">Select An Option</option>
 						<?php
               foreach (get_sales_order() AS $val => $valx){
-                echo "<option value='".$valx['no_so']."'>".date('d-m-Y', strtotime($valx['delivery_date']))." - ".strtoupper($valx['name_customer'])."</option>";
+  						        echo "<option value='".$valx['no_so']."'>".date('d-m-Y', strtotime($valx['delivery_date']))." - ".strtoupper($valx['name_customer'])."</option>"
   						}
             ?>
 					</select>

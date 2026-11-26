@@ -128,7 +128,20 @@ class Jurnal_all extends Admin_Controller
     public function export_excel()
     {
         $this->endpoint(__FUNCTION__, function () {
-            $rows = $this->Jurnal_all_model->export_rows($this->values(), $this->posted);
+            $values = $this->values();
+            if ($this->posted && ($values['tab'] ?? '') === 'PAY') {
+                // Report tab Pembayaran: .xlsx dengan header sesuai template (tab lain dan Jurnal pending tetap .xls lama).
+                require_once dirname(__DIR__) . '/libraries/Jurnal_pembayaran_xlsx.php';
+                $rows = $this->Jurnal_all_model->export_payment_rows($values);
+                $stamp = date('Ymd_His');
+                $binary = Jurnal_pembayaran_xlsx::render($rows, Jurnal_all_model::TITLES, 'Report_Jurnal_' . $stamp);
+                $this->output->set_header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+                $this->output->set_header('Content-Disposition: attachment; filename="Report_Jurnal_' . $stamp . '.xlsx"');
+                $this->output->set_header('Cache-Control: no-store');
+                $this->output->set_output($binary);
+                return ['row_count' => count($rows), 'outcome' => 'exported'];
+            }
+            $rows = $this->Jurnal_all_model->export_rows($values, $this->posted);
             $name = ($this->posted ? 'Report_Jurnal' : 'Jurnal_Pending') . '_' . date('Ymd_His') . '.xls';
             $this->output->set_header('Content-Type: application/vnd.ms-excel; charset=UTF-8');
             $this->output->set_header('Content-Disposition: attachment; filename="' . $name . '"');

@@ -4,9 +4,7 @@ if (!function_exists('has_permission')) { function has_permission($permission) {
 define('BASEPATH', __DIR__);
 define('DBCNL', 'consultant_fixture');
 set_error_handler(function ($severity, $message, $file, $line) { throw new ErrorException($message, 0, $severity, $file, $line); });
-#[\AllowDynamicProperties]
 class Admin_Controller {}
-#[\AllowDynamicProperties]
 class BF_Model {}
 require dirname(__DIR__) . '/models/Penerimaan_uang_model.php';
 require dirname(__DIR__) . '/controllers/Penerimaan_uang.php';
@@ -101,7 +99,7 @@ function legacyController($class, $db) {
     $c = (new ReflectionClass($class))->newInstanceWithoutConstructor();
     $c->db = $db; $c->input = new LegacyInput; $c->template = new LegacyTemplate;
     foreach (array('consultant','accounting') as $name) {
-        $p = new ReflectionProperty($class, $name); if (PHP_VERSION_ID < 80100) { $p->setAccessible(true); } $p->setValue($c, $db);
+        $p = new ReflectionProperty($class, $name); $p->setAccessible(true); $p->setValue($c, $db);
     }
     return $c;
 }

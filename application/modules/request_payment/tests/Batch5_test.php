@@ -354,15 +354,15 @@ function run_batch5($method, $options = array(), $post = array(), $get = array()
     $ci->input = new Batch5Input();
     $ci->template = new Batch5Template();
     $consultantProp = new ReflectionProperty('Request_payment', 'consultant');
-    if (PHP_VERSION_ID < 80100) { $consultantProp->setAccessible(true); }
+    $consultantProp->setAccessible(true);
     $consultantProp->setValue($ci, $ci->db);
 
     $model = new Request_payment_model();
     $mConsultant = new ReflectionProperty('Request_payment_model', 'consultant');
-    if (PHP_VERSION_ID < 80100) { $mConsultant->setAccessible(true); }
+    $mConsultant->setAccessible(true);
     $mConsultant->setValue($model, $ci->db);
     $mHris = new ReflectionProperty('Request_payment_model', 'hris');
-    if (PHP_VERSION_ID < 80100) { $mHris->setAccessible(true); }
+    $mHris->setAccessible(true);
     $mHris->setValue($model, $ci->db);
     $ci->Request_payment_model = $model;
 

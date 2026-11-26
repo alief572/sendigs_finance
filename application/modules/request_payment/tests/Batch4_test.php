@@ -5,7 +5,6 @@ define('DBACC', 'fixture_accounting');
 require __DIR__ . '/Audit_test.php';
 function has_permission($permission) { return true; }
 function base_url($path = '') { return '/fixture/' . $path; }
-#[\AllowDynamicProperties]
 class BF_Model {
     public function __get($key) { $ci =& get_instance(); return $ci->$key ?? null; }
 }
@@ -189,7 +188,7 @@ function run_batch4($method, $options = array(), $post = array(), $get = array()
     $ci = new Request_payment();
     $ci->db = new Batch4Db(); $ci->load = new Batch4Load();
     $consultantProp = new ReflectionProperty('Request_payment', 'consultant');
-    if (PHP_VERSION_ID < 80100) { $consultantProp->setAccessible(true); } $consultantProp->setValue($ci, $ci->db);
+    $consultantProp->setAccessible(true); $consultantProp->setValue($ci, $ci->db);
     $ci->input = new Batch4Input(); $ci->uri = new Batch4Uri();
     $ci->Request_payment_model = new Batch4Model(); $ci->Approval_request_payment_model = $ci->Request_payment_model;
     $ci->auth = new Batch4Auth(); $ci->session = new Batch4Session(); $ci->template = new Batch4Template();
@@ -197,7 +196,7 @@ function run_batch4($method, $options = array(), $post = array(), $get = array()
         $ci->Request_payment_model = (new ReflectionClass('Request_payment_model'))->newInstanceWithoutConstructor();
         $ref = new ReflectionClass('Request_payment_model');
         foreach (array('consultant', 'hris') as $propName) {
-            $prop = $ref->getProperty($propName); if (PHP_VERSION_ID < 80100) { $prop->setAccessible(true); } $prop->setValue($ci->Request_payment_model, $ci->db);
+            $prop = $ref->getProperty($propName); $prop->setAccessible(true); $prop->setValue($ci->Request_payment_model, $ci->db);
         }
         $ci->Approval_request_payment_model = $ci->Request_payment_model;
     }

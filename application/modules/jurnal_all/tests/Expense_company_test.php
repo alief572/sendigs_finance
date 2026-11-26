@@ -18,7 +18,7 @@ class Expense_gl_loader {
 class Expense_gl_db {public $conn_id=true;public function table_exists($table){return false;}}
 $companyRuntime=(object)['load'=>new Expense_gl_loader()];
 function &get_instance(){global $companyRuntime;return $companyRuntime;}
-$reader=new ReflectionMethod('Jurnal_all_model','resolveGlMetadata');if (PHP_VERSION_ID < 80100) { $reader->setAccessible(true); }
+$reader=new ReflectionMethod('Jurnal_all_model','resolveGlMetadata');$reader->setAccessible(true);
 foreach(['1'=>'accounting_vuca','4'=>'accounting_vuca','3'=>'accounting_sustain','6'=>'accounting_sustain','7'=>'accounting_stm'] as $company=>$target){
     $m=new Jurnal_all_model();$m->db=$db;
     $rows=[['source'=>'EXP','no_transaksi'=>'ER-META','id_company'=>$company,'source_numbers'=>'']];

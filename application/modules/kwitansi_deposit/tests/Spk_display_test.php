@@ -1,7 +1,5 @@
 <?php
-define('BASEPATH',__DIR__);
-#[\AllowDynamicProperties]
-class BF_Model{}
+define('BASEPATH',__DIR__);class BF_Model{}
 require dirname(__DIR__,2).'/../helpers/mockup_format_helper.php';
 require dirname(__DIR__).'/models/Kwitansi_deposit_model.php';
 set_error_handler(function($level,$message,$file,$line){throw new ErrorException($message,0,$level,$file,$line);});

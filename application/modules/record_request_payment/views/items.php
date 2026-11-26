@@ -56,11 +56,10 @@
 					if (type !== 'display') return id;
 
 					var html = '<a class="mini-btn view" href="<?= site_url('record_request_payment/detail'); ?>/' + Number(id) + '?from=items">View</a>';
-					if (row.has_transfer_file && row.transfer_detail_id) {
-						html += ' <a class="mini-btn print" target="_blank" rel="noopener" href="<?= site_url('record_request_payment/print_transfer_document'); ?>/' +
-							Number(row.transfer_detail_id) + '"><i class="fa fa-paperclip"></i> Cetak Dokumen</a>';
-					} else if (row.print_url && /^https?:\/\//i.test(row.print_url)) {
-						html += ' <a class="mini-btn print" target="_blank" rel="noopener" href="' + escapeText(row.print_url).replace(/"/g, '&quot;').replace(/'/g, '&#39;') + '"><i class="fa fa-print"></i> Cetak Dokumen</a>';
+					if ((row.has_transfer_file && row.transfer_detail_id) || row.print_url) {
+						var attribute = function(value) { return escapeText(value).replace(/"/g, '&quot;'); };
+						html += ' <button type="button" class="mini-btn print" data-pengajuan="' + Number(id) + '" data-pdoc="' + attribute(row.no_dokumen) + '">' +
+							'<i class="fa ' + (row.has_transfer_file ? 'fa-paperclip' : 'fa-print') + '"></i> Cetak Dokumen</button>';
 					}
 					return '<span class="rec-item-actions">' + html + '</span>';
 

@@ -22,7 +22,7 @@ class Monitoring_piutang_model extends BF_Model
     private function base_sql()
     {
         return "SELECT i.id, i.no_invoice, i.tanggal_invoice AS tgl_invoice, COALESCE(NULLIF(i.nm_customer, ''), s.nm_customer) AS customer, COALESCE(NULLIF(i.nm_project, ''), mk.nm_paket) AS project, i.id_spk_penawaran AS no_spk,
-                    i.no_faktur, i.no_po, i.total_nominal_jurnal AS dpp, i.ppn_jurnal AS ppn, COALESCE(NULLIF(s.nm_project_leader, ''), '') AS konsultan, i.total_akhir_jurnal AS nilai, i.saldo_piutang AS saldo, i.sts_close, i.close_date, i.close_reason,
+                    i.no_faktur, i.no_po, i.total_nominal_jurnal AS dpp, i.ppn_jurnal AS ppn, COALESCE(NULLIF(s.nm_project_leader, ''), '') AS konsultan, i.total_akhir_jurnal AS nilai, i.saldo_piutang AS saldo, i.sts_close, i.close_date, i.close_reason, i.tax_treatment,
                     c.id AS company, c.nm_company AS company_name,
                     (SELECT d.urutan FROM kons_tr_plan_tagih_detail d WHERE d.id = i.id_detail_plan_tagih LIMIT 1) AS top_ke,
                     ar.tgl_kirim, ar.kirim_via, ar.ket_kirim, ar.no_resi, ar.tgl_terima, ar.ket_terima, ar.bukti_terima, ar.bukti_terima_nama, ar.fu_pic_nama, ar.fu_pic_telp,

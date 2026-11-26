@@ -16,7 +16,7 @@ if (!is_resource($process)) { throw new RuntimeException('Cannot start upload fi
 fclose($pipes[0]);
 $caseNumber = 0;
 function uploadRequest($endpoint, $uploads, $options = array(), $extra = array()) {
-    global $address, $caseNumber, $root;
+    global $address, $caseNumber;
     $caseNumber++;
     $boundary = 'ExpenseBoundary' . $caseNumber;
     $fields = array_merge(array('id' => '', 'no_doc' => 'EXP-TEST', 'id_expense' => '10',
@@ -40,10 +40,8 @@ function uploadRequest($endpoint, $uploads, $options = array(), $extra = array()
     $context = stream_context_create(array('http' => array('method' => 'POST', 'timeout' => 10,
         'header' => 'Content-Type: multipart/form-data; boundary=' . $boundary, 'content' => $body, 'ignore_errors' => true)));
     $raw = file_get_contents('http://' . $address . '/?' . http_build_query(array_merge(array('endpoint' => $endpoint, 'case' => 'case' . $caseNumber), $options)), false, $context);
-    $reply = json_decode((string) $raw, true);
-    $validReply = is_array($reply) && is_array($reply['response'] ?? null);
-    $serverLog = $validReply ? '' : implode('', array_slice(file($root . '/server.log') ?: [], -12));
-    requestCheck($validReply, $endpoint . ': valid JSON ' . $raw . "\n" . $serverLog);
+    $reply = json_decode($raw, true);
+    requestCheck(is_array($reply) && is_array($reply['response']), $endpoint . ': valid JSON ' . $raw);
     requestCheck(count($reply['events']) === 1, $endpoint . ': exactly one audit outcome');
     requestCheck(strpos(json_encode($reply['events']), 'fixture upload') === false && strpos(json_encode($reply['events']), 'receipt.pdf') === false, 'Audit excludes file contents and names');
     return $reply;

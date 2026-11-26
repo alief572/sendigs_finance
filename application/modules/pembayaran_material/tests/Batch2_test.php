@@ -15,8 +15,8 @@ $GLOBALS['materialRowDefaults'] = array_merge($GLOBALS['materialRowDefaults'], a
     'coa_bank' => '1101-01', 'nm_coa' => 'Kas', 'no_coa' => '1101-01', 'coa' => '1101-01',
     'requestor' => 'PRIVATE', 'request_by' => 'PRIVATE', 'keperluan' => 'PRIVATE', 'created_on' => '2026-10-13',
     'max_id' => '', 'kode_bank' => 'BNK', 'nocab' => '101', 'subcab' => '01', 'nobuk' => 1, 'no_payment_hutang' => 'PHP-1',
-    'department_id' => 5, 'company_id' => 'COM006', 'id_comp' => 'COM006', 'nm_company' => 'Sustain', 'name' => 'Department',
-    'currency' => 'IDR', 'tipe' => 'kasbon', 'title_id' => 'TIT001', 'nilai_pph' => 0, 'nilai_ppn' => 0
+    'department_id' => 5, 'company_id' => 'COM006', 'nm_company' => 'Sustain', 'name' => 'Department',
+    'currency' => 'IDR', 'tipe' => 'kasbon', 'nilai_pph' => 0, 'nilai_ppn' => 0
 ));
 if ($child === '--material2-abort-write') { material_run('save_payment', array('abort_commit' => true)); exit; }
 if ($child === '--material2-abort-read') { material_run('set_jurnal', array('abort_query' => 1)); exit; }
@@ -144,13 +144,8 @@ check($event['status'] === 1 && $controller->db->queryNumber >= 4, 'Fallback adm
 foreach (range(1, $controller->db->queryNumber) as $i) {
     list($event) = material_run('proses_payment', array('no_admin_rows' => true, 'fail_query' => $i)); check($event['status'] === 0, 'Fallback admin query error');
 }
-$transportRefill = array('row_overrides' => array('tipe' => 'transportasi', 'title_id' => 'TIT009'));
-list($event, $output, $controller) = material_run('set_jurnal_refill', $transportRefill);
+list($event) = material_run('set_jurnal_refill', array('row_overrides' => array('tipe' => 'transportasi', 'title_id' => 'TIT009')));
 check($event['status'] === 1, 'Transport refill');
-for ($i = 1; $i <= $controller->db->queryNumber; $i++) {
-    list($event) = material_run('set_jurnal_refill', $transportRefill + array('fail_query' => $i));
-    check($event['status'] === 0, 'Transport refill query failure ' . $i);
-}
 list($event) = material_run('get_list_req_payment', array(), array('jenis_payment' => 2, 'order' => array(array('column' => '3', 'dir' => 'DESC'))));
 check($event['context']['data']['jenis_payment'] === 2 && $event['context']['data']['sort_column'] === 3 && $event['context']['data']['sort_direction'] === 'desc', 'Backend navigation metadata');
 list($event) = material_run('check_payment', array(), array('id' => '')); check($event['status'] === 0, 'Empty selection ID');

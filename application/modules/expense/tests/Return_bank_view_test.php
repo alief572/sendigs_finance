@@ -1,6 +1,6 @@
 <?php
 require __DIR__.'/Expense_report_updated_test.php';
-$data=(object)['id'=>10,'no_doc'=>'ER-BANK','id_kasbon'=>'KS-BANK','id_bank_pengembalian'=>'18','transfer_coa_bank'=>'1101-02-01','status'=>'2','lebih_bayar'=>185000,'transfer_jumlah'=>185000,'transfer_tanggal'=>'2026-10-28'];
+$data=(object)['no_doc'=>'ER-BANK','id_kasbon'=>'KS-BANK','id_bank_pengembalian'=>'18','transfer_coa_bank'=>'1101-02-01','status'=>'2','lebih_bayar'=>185000,'transfer_jumlah'=>185000,'transfer_tanggal'=>'2026-10-28'];
 $kasbon=null;$is_readonly=true;
 $bank_options=[(object)['id'=>'18','nama'=>'PT. Sentral Tehnologi Managemen','rekening'=>'436.300.5287','coa_bank'=>'1101-02-01','nama_bank'=>'BCA'],
     (object)['id'=>'21','nama'=>'PT. SENTRAL SUSTAINABILITY CONSULTING','rekening'=>'436.400.0300','coa_bank'=>'1101-02-01','nama_bank'=>'BCA']];

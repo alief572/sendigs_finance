@@ -55,4 +55,11 @@ Piutang_export::fill($sp, ['title' => 'P', 'heading' => ['Judul'], 'pre' => func
     'cols' => [['h' => 'Inv', 'k' => 'inv']], 'rows' => [['inv' => 'X']]]);
 ok($sp->getCell('A3')->getValue() === 'Ringkas' && $sp->getCell('A5')->getValue() === 'Inv' && $sp->getCell('A6')->getValue() === 'X', 'pre: blok sebelum header tabel');
 
+// kolom No sempit walau judul di kolom A panjang; kolom lain tetap auto; sheet dengan 'pre' tidak diubah
+ok(!$ws->getColumnDimension('A')->getAutoSize() && $ws->getColumnDimension('A')->getWidth() == 7, 'kolom No lebar tetap');
+ok($ws->getColumnDimension('B')->getAutoSize(), 'kolom lain auto-size');
+$spNo = (new PHPExcel())->getActiveSheet();
+Piutang_export::fill($spNo, ['title' => 'P', 'pre' => function ($ws, $r) { return $r + 1; }, 'cols' => $cols, 'rows' => []]);
+ok($spNo->getColumnDimension('A')->getAutoSize(), 'dengan blok pre kolom A tetap auto-size');
+
 echo "PASS: $n assertions\n";

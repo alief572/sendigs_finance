@@ -3,7 +3,6 @@
 define('BASEPATH', __DIR__);
 define('DBCNL', 'consultant_fixture');
 set_error_handler(function ($s, $m, $f, $l) { throw new ErrorException($m, 0, $s, $f, $l); });
-#[\AllowDynamicProperties]
 class BF_Model {}
 function base_url($p = '') { return '/' . $p; }
 function int_to_roman($m) { return 'X'; }

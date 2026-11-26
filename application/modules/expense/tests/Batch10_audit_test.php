@@ -58,8 +58,8 @@ if (!function_exists('site_url')) { function site_url($u = '') { return 'http://
 
 // Baris generik: array/objek yang mengembalikan 0 untuk key yang tidak ada.
 class B10Row extends ArrayObject {
-    public function offsetExists($k): bool { return true; }
-    public function offsetGet($k): mixed { return parent::offsetExists($k) ? parent::offsetGet($k) : 0; }
+    public function offsetExists($k) { return true; }
+    public function offsetGet($k) { return parent::offsetExists($k) ? parent::offsetGet($k) : 0; }
     public function __get($k) { return 0; }
 }
 
@@ -123,7 +123,7 @@ function expense_b10_run($method, $options = array(), $post = array(), $args = a
     $ci->template = new B10Template();
     $ci->load = new B10Load();
     $ps = new ReflectionProperty('Expense', 'status');
-    if (PHP_VERSION_ID < 80100) { $ps->setAccessible(true); }
+    $ps->setAccessible(true);
     $ps->setValue($ci, array());
     $ci->input->query = $query;
     $ci->input->values = array_merge(array('draw' => 1, 'length' => 10, 'start' => 0, 'search' => array('value' => ''),

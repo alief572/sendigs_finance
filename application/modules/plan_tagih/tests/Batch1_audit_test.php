@@ -90,7 +90,7 @@ function pt_make($options, $post) {
     $ci = (new ReflectionClass('Plan_tagih'))->newInstanceWithoutConstructor();
     $ci->module_audit_recorder = new Module_audit_recorder();
     $ci->db = new PtDb();
-    $prop = new ReflectionProperty('Plan_tagih', 'consultant'); if (PHP_VERSION_ID < 80100) { $prop->setAccessible(true); } $prop->setValue($ci, new PtConsultant());
+    $prop = new ReflectionProperty('Plan_tagih', 'consultant'); $prop->setAccessible(true); $prop->setValue($ci, new PtConsultant());
     $ci->auth = new PtAuth(); $ci->template = new PtTemplate(); $ci->session = new PtSession();
     $ci->input = new PtInput(); $ci->load = new PtLoad(); $ci->Plan_tagih_model = new PtModel();
     $ci->input->values = array_merge(array(

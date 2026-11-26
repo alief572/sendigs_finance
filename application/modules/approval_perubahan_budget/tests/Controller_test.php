@@ -13,7 +13,6 @@ function base_url($p = '') { return '/base/' . $p; }
 function has_permission($p = '') { return empty($GLOBALS['deny'][$p]); }
 function redirect($uri = '') { $GLOBALS['redirectTarget'] = $uri; }
 function simpan_aktifitas($a, $b, $c, $d, $e, $status) { $GLOBALS['activity'][] = array($c, $status); }
-#[\AllowDynamicProperties]
 class BF_Model { public function __construct() {} }
 class Stub_Input { public $values = array(); public function post($k = null) { return $k === null ? $this->values : (isset($this->values[$k]) ? $this->values[$k] : null); } }
 class Stub_Auth { public function restrict($p) { if (!empty($GLOBALS['deny'][$p])) { throw new RuntimeException('denied ' . $p); } } public function user_name() { return 'direktur'; } }
@@ -21,7 +20,6 @@ class Stub_Out { public function set_content_type($t) { return $this; } }
 class Stub_Template { public $data = array(); public $view = ''; public $messages = array(); public function set($k, $v = null) { $this->data[$k] = $v; } public function title($t = '') {} public function page_icon($t = '') {}
 	public function render($v) { $this->view = $v; } public function set_message($m, $t = '') { $this->messages[] = $m; } }
 class Stub_Loader { public function model($m) {} public function view($name, $data = array()) { $GLOBALS['viewCalled'] = array($name, $data); echo 'VIEW:' . $name; } }
-#[\AllowDynamicProperties]
 class Admin_Controller { public $load, $template, $auth, $input, $output, $db; public function __construct() { $this->load = new Stub_Loader(); $this->template = new Stub_Template(); } }
 class Stub_All { public function GetDeptCombo($k = '') { return array('' => '', 'DEP-1' => 'Finance - STM', 'DEP-2' => 'GA - STM'); } }
 require BASEPATH . 'database/DB.php';

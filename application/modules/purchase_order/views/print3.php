@@ -1,7 +1,7 @@
 <?php
 // Require composer autoload
 $sroot = $_SERVER['DOCUMENT_ROOT'];
-require_once APPPATH . 'libraries/Mpdf.php';
+include $sroot."/metalsindo/application/libraries/MPDF57/mpdf.php";
 
 $mpdf=new mPDF('utf-8','A4-L');
 

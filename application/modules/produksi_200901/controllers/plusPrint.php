@@ -21,7 +21,7 @@ function print_planning_produksi($Nama_APP, $no_plan, $koneksi, $printby){
 
 	$sroot 		= $_SERVER['DOCUMENT_ROOT'];
 	// include $sroot. "/application/libraries/PHPMailer/PHPMailerAutoload.php";
-	require_once APPPATH . 'libraries/Mpdf.php';
+	include $sroot."/application/libraries/MPDF57/mpdf.php";
 	// $mpdf=new mPDF('utf-8','A4');
 	$mpdf=new mPDF('utf-8','A4-L');
 
@@ -446,7 +446,7 @@ function print_planning_produksi_custom($Nama_APP, $costcenter, $koneksi, $print
 
 	$sroot 		= $_SERVER['DOCUMENT_ROOT'];
 	// include $sroot. "/application/libraries/PHPMailer/PHPMailerAutoload.php";
-	require_once APPPATH . 'libraries/Mpdf.php';
+	include $sroot."/application/libraries/MPDF57/mpdf.php";
 	// $mpdf=new mPDF('utf-8','A4');
 	$mpdf=new mPDF('utf-8','A4-L');
 

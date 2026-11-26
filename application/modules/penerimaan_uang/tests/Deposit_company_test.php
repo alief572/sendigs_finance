@@ -11,7 +11,7 @@ seedDepositEvidence($db);
 $ci = new MockCi($db);
 $engine = new Consulting_receipt($ci);
 $property = new ReflectionProperty('Consulting_receipt', 's');
-if (PHP_VERSION_ID < 80100) { $property->setAccessible(true); }
+$property->setAccessible(true);
 $property->setValue($engine, new CustomService($ci));
 $post = array('choose_inv'=>array(801), 'id_alokasi'=>100, 'pph23_dipotong'=>'N', 'deposit_choice'=>'N');
 $preview = $engine->preview($post);

@@ -505,7 +505,7 @@ function expense_run($method, $options = array(), $post = array(), $args = array
     $ci->All_model = new ExpenseAllModel();
 
     $propStatus = new ReflectionProperty('Expense', 'status');
-    if (PHP_VERSION_ID < 80100) { $propStatus->setAccessible(true); }
+    $propStatus->setAccessible(true);
     $propStatus->setValue($ci, array("0" => "Waiting Approval Finance", "1" => "Approved", "2" => "Approved", "3" => "Approved", "9" => "Rejected"));
 
     $defaultPost = array(

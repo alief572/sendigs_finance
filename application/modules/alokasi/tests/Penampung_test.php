@@ -1,9 +1,7 @@
 <?php
 // Run: scratch/runtime/php74/php.exe application/modules/alokasi/tests/Penampung_test.php
 define('BASEPATH', __DIR__);
-#[\AllowDynamicProperties]
 class BF_Model { public $db; }
-#[\AllowDynamicProperties]
 class Admin_Controller { public $auth, $input, $output, $template, $load, $Alokasi_penampung_model; }
 require dirname(__DIR__) . '/models/Alokasi_penampung_model.php';
 $checks = 0;

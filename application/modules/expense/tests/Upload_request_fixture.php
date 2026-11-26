@@ -15,7 +15,6 @@ if (!empty($_GET['blocked'])) {
     if (!is_dir(FCPATH . 'assets')) { mkdir(FCPATH . 'assets'); }
     file_put_contents(FCPATH . 'assets/expense', 'blocked destination');
 }
-#[\AllowDynamicProperties]
 class Admin_Controller {}
 function has_permission($name) { return true; }
 function simpan_aktifitas() {}

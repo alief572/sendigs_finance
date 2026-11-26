@@ -281,7 +281,7 @@ if (!is_string($record_tab) || !in_array($record_tab, ['batch', 'items', 'legacy
 				<?php endif; ?>
 
 				<div class="tab-pane<?= $record_tab === 'items' ? ' active' : ''; ?>" id="tab_items">
-					<?php $this->load->view('items'); ?>
+					<?php $this->load->view('items'); $this->load->view('document_modal'); ?>
 				</div>
 
 				<!-- TAB 2: HISTORI LAMA -->
@@ -378,8 +378,10 @@ if (!is_string($record_tab) || !in_array($record_tab, ['batch', 'items', 'legacy
 					render: function(row) {
 						if (!row.transfer_count) return '-';
 						if (!row.transfer_paid) return 'Belum dibayar';
-						if (row.transfer_paid === row.transfer_count) return 'Sudah dibayar';
-						return 'Sebagian<br><small>' + row.transfer_paid + ' dari ' + row.transfer_count + ' transfer dibayar</small>';
+						var outside = Number(row.docs_outside) || 0;
+						if (!outside && row.transfer_paid === row.transfer_count) return 'Sudah dibayar';
+						return 'Sebagian<br><small>' + row.transfer_paid + ' dari ' + row.transfer_count + ' transfer dibayar'
+							+ (outside ? ', ' + outside + ' dokumen di luar transfer' : '') + '</small>';
 					}
 				},
 				{

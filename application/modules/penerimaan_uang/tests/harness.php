@@ -2,9 +2,7 @@
 /** Runs only against a newly created disposable database on loopback. */
 mysqli_report(MYSQLI_REPORT_OFF);
 define('BASEPATH', __DIR__);
-#[\AllowDynamicProperties]
 class BF_Model {}
-#[\AllowDynamicProperties]
 class Admin_Controller {}
 function has_permission($p) { return true; }
 function int_to_roman($m) { return array(1=>'I',2=>'II',3=>'III',4=>'IV',5=>'V',6=>'VI',7=>'VII',8=>'VIII',9=>'IX',10=>'X',11=>'XI',12=>'XII')[(int)$m]; }
@@ -78,7 +76,7 @@ class VucaTestModel { function generate_id_invoice_jurnal($n) { return 'vuca-tes
 function updateVuca($db,$id) {
     $c=(new ReflectionClass('Invoicing'))->newInstanceWithoutConstructor();
     $c->db=$db; $c->input=new TestInput; $c->auth=new TestAuth; $c->Invoicing_model=new VucaTestModel;
-    $p=new ReflectionProperty('Invoicing','accounting'); if (PHP_VERSION_ID < 80100) { $p->setAccessible(true); } $p->setValue($c,new VucaTestAccounting);
+    $p=new ReflectionProperty('Invoicing','accounting'); $p->setAccessible(true); $p->setValue($c,new VucaTestAccounting);
     // Gross omitted, incorrect hidden net and journal values: server must compute them.
     $c->input->values=array('id_invoicing'=>$id,'tanggal_invoice'=>'2026-09-01','nomor_invoice'=>$id.'/VSB/2026','no_po'=>'','nomor_faktur'=>'','total_akhir_jurnal'=>'999','invoice_fingerprint'=>Invoice_calculation::fingerprint($db->query('SELECT * FROM tr_invoicing WHERE id = ?',array($id))->row_array()));
     foreach(range(1,4) as $n) foreach(array('tgl_jurnal_'=>'2026-09-01','coa_jurnal_'=>'tampered','id_company_'=>'1','nm_company_'=>'Vuca','nm_coa_'=>'tampered','debit_'=>'999','kredit_'=>'999') as $key=>$v) $c->input->values[$key.$n]=$v;
@@ -89,7 +87,7 @@ function setupController($db, $session=null) {
     $controller=(new ReflectionClass('Penerimaan_uang'))->newInstanceWithoutConstructor();
     $controller->db=$db; $controller->Penerimaan_uang_model=$model; $controller->session=$session ?: new TestSession;
     $controller->input=new TestInput; $controller->auth=new TestAuth; $controller->output=new TestOutput; $controller->template=new TestTemplate;
-    $property=new ReflectionProperty('Penerimaan_uang','accounting'); if (PHP_VERSION_ID < 80100) { $property->setAccessible(true); } $property->setValue($controller,$db);
+    $property=new ReflectionProperty('Penerimaan_uang','accounting'); $property->setAccessible(true); $property->setValue($controller,$db);
     return $controller;
 }
 function preview($controller,$ids,$allocation,$choice='N') {

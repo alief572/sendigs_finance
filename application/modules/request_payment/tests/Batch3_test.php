@@ -5,7 +5,6 @@ define('DBACC', 'fixture_accounting');
 require __DIR__ . '/Audit_test.php';
 function has_permission($permission) { return true; }
 function base_url($path = '') { return '/fixture/' . $path; }
-#[\AllowDynamicProperties]
 class BF_Model {}
 require dirname(__DIR__) . '/models/Request_payment_model.php';
 

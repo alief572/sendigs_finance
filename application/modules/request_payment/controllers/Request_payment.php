@@ -1503,7 +1503,7 @@ class Request_payment extends Admin_Controller
 				$Harga[] 		= $nilai;
 			}
 
-			$id_detail = preg_replace_callback('/[A-Za-z0-9]+\z/', static fn($part) => str_increment($part[0]), $id_detail);
+			$id_detail++;
 		}
 
 		if ($Data['tipe'] == 'expense' && isset($expense) && !empty($expense->id_kasbon) && !empty($expense->kurang_bayar) && $expense->kurang_bayar > 0) {

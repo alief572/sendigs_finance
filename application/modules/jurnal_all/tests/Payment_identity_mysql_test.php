@@ -19,7 +19,7 @@ try{
             foreach($columns as $column){$type=strtoupper($column['type']);if($type==='TEXT')$type='VARCHAR(255)';$ddl[]='`'.$column['name'].'` '.$type;if($column['pk'])$pk[$column['pk']]='`'.$column['name'].'`';}
             if($pk){ksort($pk);$ddl[]='PRIMARY KEY ('.implode(',',$pk).')';}
             identityMysqlQuery($conn,'CREATE TABLE `'.$table.'` ('.implode(',',$ddl).') ENGINE='.($name==='source'?'InnoDB':'MyISAM'));
-            $rows=$original->get($table)->result_array();if($rows&&!$conn->insert_batch($table,$rows))throw new RuntimeException('Fixture seed failed for '.$table.': '.$conn->error()['message']);
+            $rows=$original->get($table)->result_array();if($rows&&!$conn->insert_batch($table,$rows))throw new RuntimeException('Fixture seed failed.');
         }
         if($name==='source')$ci->db=$conn;else $ci->load->dbs[$name]=$conn;
     }

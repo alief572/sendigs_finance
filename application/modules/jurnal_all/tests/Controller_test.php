@@ -1,9 +1,5 @@
 <?php
-define('BASEPATH',true);define('APPPATH',dirname(__DIR__,3).'/');
-#[\AllowDynamicProperties]
-class Admin_Controller{}
-#[\AllowDynamicProperties]
-class BF_Model{}
+define('BASEPATH',true);define('APPPATH',dirname(__DIR__,3).'/');class Admin_Controller{}class BF_Model{}
 $permissions=['Jurnal_All.View','Jurnal_All.Manage','Report_Jurnal_All.View'];
 function has_permission($p){global $permissions;return in_array($p,$permissions,true);}
 function log_message($level,$message){}
@@ -26,6 +22,8 @@ class Data extends Jurnal_all_model {
     public function summary($filters){$this->read();return ['INV'=>['count'=>1]];}
     public function detail($id,$posted){$this->read();return ['header'=>['source'=>$this->source,'no_transaksi'=>'PC1','jenis_transaksi'=>'Petty Cash','payment_reference_error'=>$this->blockReason,'company_error'=>$this->companyError],'is_balance'=>$this->balanced,'can_post'=>$this->canPost,'rows'=>$this->rows];}
     public function export_rows($values,$posted=false){$this->read();return [];}
+    public $paymentExports=0;
+    public function export_payment_rows($values){$this->read();$this->paymentExports++;return [];}
 }
 class Dispatcher {public $calls=0,$status=1;public function execute($action,$id,$source,$payload){$this->calls++;return ['status'=>$this->status,'msg'=>'outcome'];}}
 class PettyPreview {public $calls=0,$rows=[];public function find_unclear_coa($rows){return [];}public function get_detail_by_transaksi($number,$type){$this->calls++;return $this->rows;}}
@@ -56,13 +54,13 @@ $c=fixture('Report_jurnal_all');$c->legacy('EXP');check($redirected==='report_ju
 include APPPATH.'config/routes.php';
 foreach(['jurnal_invoicing'=>'INV','jurnal_penerimaan'=>'RCV','jurnal_payment'=>'PAY','jurnal_expense'=>'EXP','jurnal_payment_petty_cash'=>'PCS'] as $path=>$tab){check($route[$path]==='jurnal_all/legacy/'.$tab&&$route[$path.'/index']===$route[$path],'entry-only redirect '.$path);check(!isset($route[$path.'/save_posting_jurnal']),'posting route retained '.$path);}
 check(!isset($route['jurnal'],$route['jurnal_payment_petty_cash/buku_besar']),'generic Jurnal and Buku Besar preserved');
-$detail=['header'=>['source'=>'PAY','jenis_transaksi'=>'Payment','no_transaksi'=>'<script>','no_referensi'=>'<svg>','nm_company'=>'<img>','nm_divisi'=>'Finance','tgl_jurnal'=>'2026-10-14','source_numbers'=>'SOURCE','debit'=>'100.25','kredit'=>'100.25'], 'rows'=>[['id'=>1,'tgl_jurnal'=>'2026-10-14','jenis_transaksi'=>'Payment','coa'=>'<img>','nm_coa'=>'<svg>','keterangan'=>'</textarea><script>bad</script> {REF:REF1}','no_transaksi'=>'DOC1','debit'=>'100.25','kredit'=>'100.25']],'is_balance'=>true];
+$detail=['header'=>['source'=>'PAY','no_transaksi'=>'<script>','no_referensi'=>'<svg>','nm_company'=>'<img>','nm_divisi'=>'Finance','tgl_jurnal'=>'2026-10-14','source_numbers'=>'SOURCE','debit'=>'100.25','kredit'=>'100.25'], 'rows'=>[['id'=>1,'tgl_jurnal'=>'2026-10-14','jenis_transaksi'=>'Payment','coa'=>'<img>','nm_coa'=>'<svg>','keterangan'=>'</textarea><script>bad</script> {REF:REF1}','no_transaksi'=>'DOC1','debit'=>'100.25','kredit'=>'100.25']],'is_balance'=>true];
 $posted=false;ob_start();include dirname(__DIR__).'/views/preview.php';$html=ob_get_clean();check(strpos($html,'<script>')===false&&strpos($html,'&lt;script&gt;')!==false,'safe preview');check(strpos($html,'100.25')!==false,'preview cents');
 $posted=true;ob_start();include dirname(__DIR__).'/views/preview.php';$html=ob_get_clean();check(strpos($html,'<textarea')===false&&strpos($html,'No. Jurnal Accounting')!==false,'report detail read-only source labels');
 $rows=[['header'=>$detail['header']+['tab'=>'PAY','category'=>'=HYPERLINK("x")'],'line'=>$detail['rows'][0]+['nm_company'=>'Company','nm_divisi'=>'Finance','no_jurnal'=>'SOURCE']]];
 ob_start();include dirname(__DIR__).'/views/export_excel.php';$html=ob_get_clean();check(strpos($html,'<script>')===false&&strpos($html,'&#039;=HYPERLINK')!==false,'export escaping and formula injection');
 $posted=false;
-$detail['header']=array_merge($detail['header'],['source'=>'INV','jenis_transaksi'=>'Invoicing','no_transaksi'=>'INTERNAL-INV','display_no_transaksi'=>'INV/1','invoice_number'=>'INV/1','no_referensi'=>'SPK-1']);
+$detail['header']=array_merge($detail['header'],['source'=>'INV','no_transaksi'=>'INTERNAL-INV','display_no_transaksi'=>'INV/1','invoice_number'=>'INV/1','no_referensi'=>'SPK-1']);
 $detail['rows'][0]['keterangan']='PPh - INTERNAL-INV';
 ob_start();include dirname(__DIR__).'/views/preview.php';$html=ob_get_clean();
 check(strpos($html,'<dd>INV/1</dd>')!==false&&strpos($html,'<dd>SPK-1</dd>')!==false,'invoice preview metadata follows invoice/SPK display');
@@ -94,4 +92,11 @@ $rows=[['header'=>array_merge($detail['header'],['tab'=>'INV','category'=>'Invoi
 ob_start();include dirname(__DIR__).'/views/export_excel.php';$html=ob_get_clean();check(strpos($html,'FINAL-JV')!==false&&strpos($html,'BAD-STAGING')===false&&strpos($html,'2026-10-15')!==false,'posted Excel uses actual accounting metadata rather than staging number');
 $permissions=['Jurnal_All.View','Jurnal_All.Manage'];$c=fixture();$c->Jurnal_all_model->source='EXP';$c->input->values['source']='EXP';$c->Jurnal_all_model->canPost=false;$c->Jurnal_all_model->companyError='Sumber company belum pasti.';$c->preview();$response=json_decode($c->output->body,true);
 check($response['show_post']&&!$response['can_post']&&$response['post_block_reason']==='Sumber company belum pasti.','Expense preview preserves specific company block reason');
+$permissions=['Jurnal_All.View','Jurnal_All.Manage','Report_Jurnal_All.View'];
+$c=fixture('Report_jurnal_all');$c->input->verb='GET';$c->input->values=['tab'=>'PAY'];$c->export_excel();
+check($c->Jurnal_all_model->paymentExports===1&&substr($c->output->body,0,2)==='PK'&&strpos(implode('|',$c->output->headers),'spreadsheetml.sheet')!==false&&strpos(implode('|',$c->output->headers),'.xlsx')!==false,'report PAY export is a real xlsx');
+$c=fixture('Report_jurnal_all');$c->input->verb='GET';$c->input->values=['tab'=>'INV'];$c->export_excel();
+check($c->Jurnal_all_model->paymentExports===0&&strpos(implode('|',$c->output->headers),'.xls"')!==false,'report non-PAY tabs keep the HTML xls');
+$c=fixture();$c->input->verb='GET';$c->input->values=['tab'=>'PAY'];$c->export_excel();
+check($c->Jurnal_all_model->paymentExports===0&&strpos(implode('|',$c->output->headers),'.xls"')!==false,'pending Jurnal All export is unchanged');
 echo "PASS Jurnal All controllers/routes/views: {$checks} assertions\n";

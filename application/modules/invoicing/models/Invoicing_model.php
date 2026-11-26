@@ -22,7 +22,7 @@ class Invoicing_model extends BF_Model
         $Ym             = date('ym');
         $srcMtr            = "SELECT MAX(id) as maxP FROM tr_invoicing WHERE id LIKE '%" . date('-y') . "%' ";
         $resultMtr        = $this->db->query($srcMtr)->result_array();
-        $angkaUrut2        = $resultMtr[0]['maxP'] ?? '';
+        $angkaUrut2        = $resultMtr[0]['maxP'];
         $urutan2        = (int)substr($angkaUrut2, 0, 5);
         $urutan2++;
         $urut2            = sprintf('%05s', $urutan2);
@@ -36,7 +36,7 @@ class Invoicing_model extends BF_Model
         $Ym             = date('ym');
         $srcMtr            = "SELECT MAX(id) as maxP FROM tr_jurnal WHERE no_jurnal LIKE '%" . int_to_roman(date('m')) . "-" . date('-y') . "%' ";
         $resultMtr        = $this->db->query($srcMtr)->result_array();
-        $angkaUrut2        = $resultMtr[0]['maxP'] ?? '';
+        $angkaUrut2        = $resultMtr[0]['maxP'];
         $urutan2        = (int)substr($angkaUrut2, 0, 5);
         $urutan2 = $urutan2 + $nomor;
         $urut2            = sprintf('%05s', $urutan2);

@@ -20,7 +20,7 @@ function print_request_material($Nama_APP, $kode_trans, $koneksi, $printby, $che
 
 	$sroot 		= $_SERVER['DOCUMENT_ROOT'].'/origa_live';
 	// include $sroot."/application/libraries/MPDF57/mpdf.php";
-	require_once APPPATH . 'libraries/Mpdf.php';
+	include $sroot."/application/libraries/MPDF57/mpdf.php";
 	// $mpdf=new mPDF('utf-8','A4');
 	$mpdf=new mPDF('utf-8','A4-L');
 

@@ -2,9 +2,7 @@
 // Jalankan: scratch/runtime/php74/php.exe application/modules/monitoring_piutang/tests/Follow_up_targets_test.php
 define('APPPATH', dirname(__DIR__, 3) . '/');
 define('DBCNL', 'db_consultant_new');
-#[\AllowDynamicProperties]
 class Admin_Controller {}
-#[\AllowDynamicProperties]
 class BF_Model {}
 function has_permission($permission) { return true; }
 require_once __DIR__ . '/../libraries/Piutang_aging.php';
@@ -20,7 +18,7 @@ function invoice($extra = []) {
         'sts_close' => '0', 'tgl_kirim' => null, 'tgl_terima' => null, 'plan_bayar' => null, 'extra_fu' => []];
 }
 function invoke($object, $name, $args = []) {
-    $method = new ReflectionMethod($object, $name); if (PHP_VERSION_ID < 80100) { $method->setAccessible(true); } return $method->invokeArgs($object, $args);
+    $method = new ReflectionMethod($object, $name); $method->setAccessible(true); return $method->invokeArgs($object, $args);
 }
 class TargetInput { public $values = []; function get($key, $xss = false) { return $this->values[$key] ?? null; } }
 class TargetConfig { function load(...$args) {} function item(...$args) { return '2019-01-01'; } }

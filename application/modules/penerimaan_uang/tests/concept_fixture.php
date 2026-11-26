@@ -9,7 +9,7 @@ function contractFixture($bank = '217997500.00', $tax = 'PKP', $choice = 'Y') {
     $db->invoices[] = makeInvoice(1, 'CONCEPT-1', $tax, 20000000000, 18333333333, $tax === 'PKP' ? 2200000000 : 0, 366666667, $gross, $gross);
     $ci = new MockCi($db);
     $engine = new Consulting_receipt($ci);
-    $ref = new ReflectionProperty('Consulting_receipt', 's'); if (PHP_VERSION_ID < 80100) { $ref->setAccessible(true); }
+    $ref = new ReflectionProperty('Consulting_receipt', 's'); $ref->setAccessible(true);
     $ref->setValue($engine, new CustomService($ci));
     $preview = $engine->preview(array('choose_inv'=>array(1), 'id_alokasi'=>100, 'pph23_dipotong'=>$choice));
     return array($db,$engine,$preview,contractPost($preview, $choice));

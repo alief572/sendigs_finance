@@ -1,7 +1,6 @@
 <?php
 // Setiap endpoint Penerimaan Uang harus menolak pengguna tanpa izin SEBELUM menyentuh model/database. Tanpa database, tanpa browser.
 define('BASEPATH', __DIR__);
-#[\AllowDynamicProperties]
 class Admin_Controller {}
 require dirname(__DIR__) . '/controllers/Penerimaan_uang.php';
 set_error_handler(function ($severity, $message, $file, $line) { throw new ErrorException($message, 0, $severity, $file, $line); });

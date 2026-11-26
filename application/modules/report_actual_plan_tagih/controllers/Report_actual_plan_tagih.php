@@ -292,22 +292,22 @@ class Report_actual_plan_tagih extends Admin_Controller
             $nm_consultant = implode(', ', $arr_konsultan);
 
             $colIdx = 0;
-            $sheet->setCellValue([$colIdx++ + 1, $row], $no);
-            $sheet->setCellValue([$colIdx++ + 1, $row], $item->nm_company);
-            $sheet->setCellValue([$colIdx++ + 1, $row], $item->id_spk_penawaran);
-            $sheet->setCellValue([$colIdx++ + 1, $row], $item->nm_customer);
-            $sheet->setCellValue([$colIdx++ + 1, $row], $nm_consultant);
-            $sheet->setCellValue([$colIdx++ + 1, $row], $item->nm_sales ?? '');
-            $sheet->setCellValue([$colIdx++ + 1, $row], $item->nm_paket);
-            $sheet->setCellValue([$colIdx++ + 1, $row], $item->nilai_kontrak);
-            $sheet->setCellValue([$colIdx++ + 1, $row], $current_invoice);
-            $sheet->setCellValue([$colIdx++ + 1, $row], $current_uninvoice);
-            $sheet->setCellValue([$colIdx++ + 1, $row], $current_macet);
+            $sheet->setCellValueByColumnAndRow($colIdx++, $row, $no);
+            $sheet->setCellValueByColumnAndRow($colIdx++, $row, $item->nm_company);
+            $sheet->setCellValueByColumnAndRow($colIdx++, $row, $item->id_spk_penawaran);
+            $sheet->setCellValueByColumnAndRow($colIdx++, $row, $item->nm_customer);
+            $sheet->setCellValueByColumnAndRow($colIdx++, $row, $nm_consultant);
+            $sheet->setCellValueByColumnAndRow($colIdx++, $row, $item->nm_sales ?? '');
+            $sheet->setCellValueByColumnAndRow($colIdx++, $row, $item->nm_paket);
+            $sheet->setCellValueByColumnAndRow($colIdx++, $row, $item->nilai_kontrak);
+            $sheet->setCellValueByColumnAndRow($colIdx++, $row, $current_invoice);
+            $sheet->setCellValueByColumnAndRow($colIdx++, $row, $current_uninvoice);
+            $sheet->setCellValueByColumnAndRow($colIdx++, $row, $current_macet);
 
             // Bulan
             foreach ($list_bulan_map as $num => $key) {
                 $val_bulan = ($is_same_year) ? ($item->$key ?? 0) : 0;
-                $sheet->setCellValue([$colIdx++ + 1, $row], $val_bulan);
+                $sheet->setCellValueByColumnAndRow($colIdx++, $row, $val_bulan);
                 $total_per_bulan[$num] += $val_bulan;
             }
 
@@ -321,16 +321,16 @@ class Report_actual_plan_tagih extends Admin_Controller
 
         // Grand Total row
         $colIdx = 0;
-        $sheet->setCellValue([$colIdx + 1, $row], 'Grand Total');
-        $sheet->mergeCells([1, $row, 7, $row]);
+        $sheet->setCellValueByColumnAndRow($colIdx, $row, 'Grand Total');
+        $sheet->mergeCellsByColumnAndRow(0, $row, 6, $row);
         $colIdx = 7;
-        $sheet->setCellValue([$colIdx++ + 1, $row], $ttl_nominal_spk);
-        $sheet->setCellValue([$colIdx++ + 1, $row], $ttl_invoice);
-        $sheet->setCellValue([$colIdx++ + 1, $row], $ttl_uninvoice);
-        $sheet->setCellValue([$colIdx++ + 1, $row], $ttl_macet);
+        $sheet->setCellValueByColumnAndRow($colIdx++, $row, $ttl_nominal_spk);
+        $sheet->setCellValueByColumnAndRow($colIdx++, $row, $ttl_invoice);
+        $sheet->setCellValueByColumnAndRow($colIdx++, $row, $ttl_uninvoice);
+        $sheet->setCellValueByColumnAndRow($colIdx++, $row, $ttl_macet);
 
         foreach ($total_per_bulan as $total_bln) {
-            $sheet->setCellValue([$colIdx++ + 1, $row], $total_bln);
+            $sheet->setCellValueByColumnAndRow($colIdx++, $row, $total_bln);
         }
 
         // Style grand total

@@ -5,8 +5,8 @@ require_once dirname(__DIR__) . '/libraries/Consulting_receipt.php';
 
 $stub = new class { public $rows = array(); public function master($owner) { return $this->rows; } };
 $engine = (new ReflectionClass('Consulting_receipt'))->newInstanceWithoutConstructor();
-$prop = new ReflectionProperty('Consulting_receipt', 's'); if (PHP_VERSION_ID < 80100) { $prop->setAccessible(true); } $prop->setValue($engine, $stub);
-$call = new ReflectionMethod('Consulting_receipt', 'account'); if (PHP_VERSION_ID < 80100) { $call->setAccessible(true); }
+$prop = new ReflectionProperty('Consulting_receipt', 's'); $prop->setAccessible(true); $prop->setValue($engine, $stub);
+$call = new ReflectionMethod('Consulting_receipt', 'account'); $call->setAccessible(true);
 $fails = function (array $args) use ($call, $engine) { try { $call->invokeArgs($engine, $args); return null; } catch (RuntimeException $e) { return $e->getMessage(); } };
 
 $stub->rows = array(array('no_perkiraan' => '1101-02-01', 'nama' => 'Bank BCA'));

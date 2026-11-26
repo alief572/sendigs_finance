@@ -487,11 +487,11 @@ function expense_b4_run($method, $options = array(), $post = array(), $args = ar
     $ci->All_model = new ExpenseBatch4AllModel();
 
     $propStatus = new ReflectionProperty('Expense', 'status');
-    if (PHP_VERSION_ID < 80100) { $propStatus->setAccessible(true); }
+    $propStatus->setAccessible(true);
     $propStatus->setValue($ci, array("0" => "Waiting Approval Finance", "1" => "Approved", "2" => "Approved", "3" => "Approved", "9" => "Rejected"));
 
     $propManage = new ReflectionProperty('Expense', 'managePermission');
-    if (PHP_VERSION_ID < 80100) { $propManage->setAccessible(true); }
+    $propManage->setAccessible(true);
     $propManage->setValue($ci, 'Expense.Manage');
 
     $ci->input->values = array_merge(array(

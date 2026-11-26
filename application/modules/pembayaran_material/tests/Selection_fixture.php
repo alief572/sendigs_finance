@@ -5,9 +5,7 @@ require dirname(__DIR__, 2) . '/request_payment/tests/Audit_test.php';
 require APPPATH . 'helpers/audit_trail_helper.php';
 require APPPATH . 'helpers/app_helper.php';
 require APPPATH . 'helpers/json_helper.php';
-#[\AllowDynamicProperties]
 class BF_Model {}
-#[\AllowDynamicProperties]
 class CI_Model {}
 require dirname(__DIR__) . '/models/Pembayaran_material_model.php';
 require dirname(__DIR__) . '/models/Jurnal_model.php';
@@ -108,7 +106,7 @@ class MaterialResult {
 class MaterialInput extends FixtureInput { public function ip_address() { return '127.0.0.1'; } }
 class MaterialUri { public function segment($number) { return 'pembayaran_material'; } }
 class MaterialMaster { public function getArray() { return array(); } }
-class MaterialAuth extends FixtureAuth { public function user_id() { return 7; } }
+class MaterialAuth extends FixtureAuth { public function user_id() { return 7; } public function has_permission($permission) { return true; } }
 class MaterialJurnal extends Jurnal_model { public function __construct($db, $load) { $this->db = $db; $this->load = $load; } }
 class MaterialPcvs { public function update_status_done($document, $actor) { global $scenario; return empty($scenario['pcvs_failure']); } }
 function show_error($message, $status = 500) { throw new RuntimeException('HTTP ' . $status); }

@@ -1,8 +1,6 @@
 <?php
 define('BASEPATH', __DIR__);
-#[\AllowDynamicProperties]
 class Admin_Controller {}
-#[\AllowDynamicProperties]
 class BF_Model {}
 require dirname(__DIR__) . '/controllers/Setting.php';
 require dirname(__DIR__) . '/models/Permissions_model.php';
@@ -116,7 +114,7 @@ permissionCheck(preg_match_all('/value="955"[^>]*checked=\x27checked\x27[^>]*dis
 $setting->input = new PermissionMenuInput();
 $setting->input->ids = array('955', '956', '955', '956');
 $setting->user_permissions_model = new PermissionMenuPersistence();
-$save = new ReflectionMethod('Setting', 'save_permission'); if (PHP_VERSION_ID < 80100) { $save->setAccessible(true); }
+$save = new ReflectionMethod('Setting', 'save_permission'); $save->setAccessible(true);
 permissionCheck((bool)$save->invoke($setting, 206), 'Selected permissions save successfully');
 permissionCheck($setting->user_permissions_model->saved === array(array('id_user' => 206, 'id_permission' => '955'), array('id_user' => 206, 'id_permission' => '956')), 'Save aliases once, only View/Add selected; no Manage/Delete escalation');
 

@@ -159,7 +159,7 @@ function iv_make($options, $post = array(), $get = array()) {
     $db = new IvDb();
     $ci->db = $db; $ci->output = new IvOutput();
     foreach (array('consultant', 'accounting', 'accounting_vuca', 'hris') as $prop) {
-        $rp = new ReflectionProperty('Invoicing', $prop); if (PHP_VERSION_ID < 80100) { $rp->setAccessible(true); } $rp->setValue($ci, $db);
+        $rp = new ReflectionProperty('Invoicing', $prop); $rp->setAccessible(true); $rp->setValue($ci, $db);
     }
     $ci->auth = new IvAuth(); $ci->template = new IvTemplate(); $ci->session = new IvSession();
     $ci->input = new IvInput(); $ci->load = new IvLoad(); $ci->Invoicing_model = new IvModel();
@@ -329,7 +329,7 @@ function iv_call_private($method, $options, $post = array()) {
     global $scenario, $events, $ci, $scenarioCount;
     $scenarioCount++;
     iv_make($options, $post);
-    $rm = new ReflectionMethod('Invoicing', $method); if (PHP_VERSION_ID < 80100) { $rm->setAccessible(true); }
+    $rm = new ReflectionMethod('Invoicing', $method); $rm->setAccessible(true);
     ob_start(); $stopped = false;
     try { $rm->invoke($ci); } catch (IvStop $s) { $stopped = true; } catch (Throwable $e) { ob_end_clean(); throw $e; }
     $out = ob_get_clean();
@@ -340,7 +340,7 @@ function iv_private_event($method, $options, $post = array()) {
     iv_make($options, $post);
     $ci->module_audit_recorder->begin('invoicing', $method, array('data' => array()),
         array('id', 'id_invoicing', 'id_penawaran', 'invoice_type', 'row_count', 'filter_status', 'reason', 'outcome'));
-    $rm = new ReflectionMethod('Invoicing', 'legacy_' . $method); if (PHP_VERSION_ID < 80100) { $rm->setAccessible(true); }
+    $rm = new ReflectionMethod('Invoicing', 'legacy_' . $method); $rm->setAccessible(true);
     ob_start(); $stopped = false;
     try { $rm->invoke($ci); } catch (IvStop $s) { $stopped = true; } catch (Throwable $e) { ob_end_clean(); throw $e; }
     $out = ob_get_clean();

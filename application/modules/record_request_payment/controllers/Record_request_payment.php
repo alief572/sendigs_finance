@@ -1,5 +1,7 @@
 <?php if (!defined('BASEPATH')) exit('No direct script access allowed');
 require_once dirname(__DIR__).'/libraries/Rp_transfer_record.php';
+require_once dirname(__DIR__).'/libraries/Rp_document_attachments.php';
+require_once dirname(__DIR__).'/libraries/Record_payment_legacy.php';
 
 /*
  * Controller: Record Request Payment (histori final snapshot - FSD 2026-09)
@@ -215,7 +217,8 @@ class Record_request_payment extends Admin_Controller
 		set_time_limit(0);
 		ini_set('memory_limit', '512M');
 		$transfers = Rp_transfer_record::groups($this->db, $id_pengajuan);
-		if ($transfers) {
+		// Format transfer hanya bila lengkap; kalau sebagian, format lama supaya tidak ada dokumen yang hilang.
+		if ($transfers && !Rp_transfer_record::hasDocumentsOutside($this->db, $id_pengajuan)) {
 			$first = reset($transfers);
 			$this->export_plan_cash_flow($transfers,
 				'Pengajuan Pembayaran ' . $first['no_pengajuan'] . ' (' . tgl_indo(date('Y-m-d', strtotime($first['decided_at']))) . ') - Pengajuan',
@@ -528,7 +531,7 @@ class Record_request_payment extends Admin_Controller
 			$company = $this->input->get('company');
 			$search = $this->input->get('q');
 			$tab = $this->input->get('tab');
-			if (!in_array($company, [null, '', '7','3','4'], true) || ($search !== null && !is_string($search)) || !in_array($tab, [null,'','diff','same'], true)) {
+			if (!in_array($company, [null, '', '7','3','4'], true) || ($search !== null && !is_string($search)) || !in_array($tab, [null,'','diff','same','old'], true)) {
 				throw new DomainException('Filter Record Payment tidak valid.');
 			}
 			$entries = [];
@@ -546,8 +549,23 @@ class Record_request_payment extends Admin_Controller
 			}
 			usort($entries, static function ($a, $b) { return [$b['tgl_bayar'], $b['id']] <=> [$a['tgl_bayar'], $a['id']]; });
 			$counts = ['all' => count($entries), 'diff' => count(array_filter($entries, static function ($row) { return !empty($row['differences']); }))];
-			if ($tab) {
+			if ($tab === 'diff' || $tab === 'same') {
 				$entries = array_filter($entries, static function ($row) use ($tab) { return (bool) $row['differences'] === ($tab === 'diff'); });
+			}
+			$oldNumbers = Record_payment_legacy::numbers($this->db, (string) $company, (string) $search);
+			$old_count = count($oldNumbers);
+			$old_rows = [];
+			$old_page = $old_pages = 1;
+			if ($tab === 'old') {
+				if ($this->input->get('export') === '1') {
+					$this->export_old_payments(Record_payment_legacy::details($this->db, $oldNumbers));
+					return;
+				}
+				$old_pages = max(1, (int) ceil($old_count / Record_payment_legacy::PER_PAGE));
+				$old_page = min($old_pages, max(1, (int) $this->input->get('page')));
+				$old_rows = Record_payment_legacy::details($this->db,
+					array_slice($oldNumbers, ($old_page - 1) * Record_payment_legacy::PER_PAGE, Record_payment_legacy::PER_PAGE));
+				$entries = [];
 			}
 			if ($this->input->get('export') === '1') {
 				$this->load->library('PHPExcel');
@@ -569,15 +587,30 @@ class Record_request_payment extends Admin_Controller
 				$this->send_workbook($workbook, 'Record_Payment.xlsx', count($entries));
 				return;
 			}
-			$this->template->set(compact('entries', 'company', 'search', 'tab', 'counts'));
+			$this->template->set(compact('entries', 'company', 'search', 'tab', 'counts', 'old_count', 'old_rows', 'old_page', 'old_pages'));
 			$this->template->title('Record Payment');
 			$this->template->page_icon('fa fa-table');
 			$this->template->render('record_payment');
-			$this->completeAudit('Membuka Record Payment', 1, ['row_count' => count($entries)]);
+			$this->completeAudit('Membuka Record Payment', 1, ['row_count' => $tab === 'old' ? count($old_rows) : count($entries)]);
 		} catch (Throwable $e) {
 			$this->completeAudit('Record Payment gagal dimuat', 0, ['reason' => 'record_payment_failure']);
 			show_error($e instanceof DomainException ? $e->getMessage() : 'Gagal memuat Record Payment.', 400);
 		}
+	}
+
+	private function export_old_payments(array $rows)
+	{
+		$this->load->library('PHPExcel');
+		$workbook = new PHPExcel();
+		$sheet = $workbook->getActiveSheet();
+		$sheet->setTitle('Payment Lama');
+		Rp_transfer_record::row($sheet, 1, ['NO','NO. PAYMENT','TGL BAYAR','NO. PENGAJUAN','COMPANY','REQUEST BY','DOKUMEN','BANK PEMBAYAR','DIBAYAR','BANK CHARGE','KETERANGAN PEMBAYARAN']);
+		Rp_transfer_record::headline($sheet, 'A1:K1');
+		foreach (array_values($rows) as $i => $row) {
+			Rp_transfer_record::row($sheet, $i + 2, [$i + 1, $row['payment'], $row['tgl'], $row['pengajuan'], $row['company'], $row['request_by'],
+				implode(', ', $row['docs']), $row['bank'], $row['paid'], $row['charge'], $row['note']]);
+		}
+		$this->send_workbook($workbook, 'Record_Payment_Lama.xlsx', count($rows));
 	}
 
 	public function transfer_file($id)
@@ -679,6 +712,52 @@ class Record_request_payment extends Admin_Controller
 		]))->result_array();
 		$this->load->view('print_transfer_document', compact('doc', 'files', 'original'));
 		$this->completeAudit('Mencetak dokumen transfer', 1, ['row_count' => count($files)]);
+	}
+
+	/** Isi modal Cetak Dokumen: ringkasan, lampiran awal, lampiran tambahan dan alamat cetak. Hanya membaca. */
+	public function document_info()
+	{
+		$this->beginAudit(__FUNCTION__, [], ['id_pengajuan', 'row_count']);
+		$this->auth->restrict($this->viewPermission);
+		$batch = (int) $this->input->get('id_pengajuan');
+		$number = $this->input->get('no_dokumen');
+		try {
+			if ($batch < 1 || !is_string($number) || $number === '' || strlen($number) > 100) {
+				throw new DomainException('Dokumen tidak valid.');
+			}
+			$doc = Rp_transfer::write($this->db->query(
+				"SELECT d.*, h.company_nama FROM tr_rp_pengajuan_d d JOIN tr_rp_pengajuan_h h ON h.id=d.id_pengajuan
+				 WHERE h.id=? AND d.no_dokumen=? AND h.status='done' AND h.deleted=0 AND d.decision='approved' ORDER BY d.id LIMIT 1", [$batch, $number]
+			))->row();
+			if (!$doc) {
+				throw new DomainException('Dokumen tidak ditemukan.');
+			}
+			$additional = [];
+			if (!empty($doc->id_transfer) && Rp_transfer::installed($this->db)) {
+				foreach (Rp_transfer::write($this->db->select('id,nama')->order_by('id')->get_where('tr_rp_transfer_file', [
+					'id_transfer' => $doc->id_transfer, 'id_detail' => $doc->id,
+				]))->result_array() as $file) {
+					$additional[] = ['name' => $file['nama'], 'url' => site_url('record_request_payment/transfer_file/' . $file['id'])];
+				}
+			}
+			if ($additional) {
+				$print = site_url('record_request_payment/print_transfer_document/' . $doc->id);
+			} else {
+				$this->load->model('request_payment/Request_payment_model');
+				$source = clone $doc;
+				$source->id = $doc->id_dokumen ?: $doc->no_dokumen;
+				$print = $this->Request_payment_model->build_print_url($source);
+			}
+			echo json_encode(['status' => 1, 'document' => [
+				'no_dokumen' => $doc->no_dokumen, 'kategori' => Rp_transfer_record::category($doc->kategori), 'request_by' => $doc->request_by,
+				// Keterangan asli dokumen (as is), bukan yang dilengkapi finance.
+				'company' => $doc->company_nama, 'keperluan' => $doc->keperluan, 'dibayarkan' => $doc->dibayarkan,
+			], 'initial' => Rp_document_attachments::initial($this->db, $doc->kategori, $doc->no_dokumen), 'additional' => $additional, 'print_url' => $print]);
+			$this->completeAudit('Membuka pratinjau cetak dokumen', 1, ['id_pengajuan' => $batch, 'row_count' => 1]);
+		} catch (Throwable $e) {
+			$this->completeAudit('Pratinjau cetak dokumen gagal', 0, ['reason' => 'document_unavailable']);
+			echo json_encode(['status' => 0, 'msg' => $e instanceof DomainException ? $e->getMessage() : 'Gagal memuat dokumen.']);
+		}
 	}
 
 	private function send_workbook($workbook, $filename, $count)

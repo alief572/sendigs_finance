@@ -1,7 +1,7 @@
 <?php
 // Included by Consulting_integration_test.php inside its disposable database lifetime.
 require_once dirname(__DIR__).'/libraries/Invoice_vuca.php';
-$vucaProperty=new ReflectionProperty('Invoicing','accounting_vuca');if (PHP_VERSION_ID < 80100) { $vucaProperty->setAccessible(true); }$vucaProperty->setValue($ci,$db);
+$vucaProperty=new ReflectionProperty('Invoicing','accounting_vuca');$vucaProperty->setAccessible(true);$vucaProperty->setValue($ci,$db);
 $GLOBALS['test_ci']=$ci;
 $db->query("UPDATE kons_tr_penawaran SET company=4 WHERE id_quotation='Q2'");
 foreach(array('1102-01-01'=>'Piutang Vuca','2104-01-07'=>'PPN nol','1106-01-05'=>'PPh Final') as $code=>$name)$db->insert('coa_master',array('no_perkiraan'=>$code,'nama'=>$name));

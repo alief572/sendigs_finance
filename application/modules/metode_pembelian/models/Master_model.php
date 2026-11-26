@@ -21,7 +21,7 @@ class Master_model extends CI_Model {
 		return $query->result();
 	}
 	
-	public function getDataOrderBy($table,$where_field,$where_value,$field_order){
+	public function getDataOrderBy($table,$where_field='',$where_value='',$field_order){
 		if($where_field !='' && $where_value!=''){
 			$query = $this->db->order_by($field_order,'ASC')->get_where($table, array($where_field=>$where_value));
 		}else{

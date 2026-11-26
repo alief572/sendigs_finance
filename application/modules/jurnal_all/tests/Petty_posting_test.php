@@ -1,9 +1,5 @@
 <?php
-define('BASEPATH',true);
-#[\AllowDynamicProperties]
-class Admin_Controller{}
-#[\AllowDynamicProperties]
-class BF_Model{}
+define('BASEPATH',true);class Admin_Controller{}class BF_Model{}
 $allowed=true;function has_permission($p){global $allowed;return $allowed;}
 require dirname(__DIR__,2).'/jurnal_payment_petty_cash/controllers/Jurnal_payment_petty_cash.php';
 require dirname(__DIR__,2).'/jurnal_payment_petty_cash/models/Jurnal_payment_petty_cash_model.php';
@@ -38,7 +34,7 @@ function fixture($company='STM',$type='Petty Cash',$multi=false){
 function invoke($c){ob_start();$c->save_posting_jurnal();$r=json_decode(ob_get_clean(),true);$GLOBALS['last_petty_response']=$r;check(is_array($r),'native petty response');return $r['status'];}
 function invokeRetainedDebtHelper($c){
     $rows=$c->Jurnal_payment_petty_cash_model->rows;$company=$rows[0]->nm_company;
-    $method=new ReflectionMethod('Jurnal_payment_petty_cash',$company==='STM'?'_post_stm':'_post_intercompany');if (PHP_VERSION_ID < 80100) { $method->setAccessible(true); }
+    $method=new ReflectionMethod('Jurnal_payment_petty_cash',$company==='STM'?'_post_stm':'_post_intercompany');$method->setAccessible(true);
     $header=(object)['tgl'=>'2026-10-14','jml'=>100.25,'no_reff'=>'NATIVE-KEY','user_id'=>7];
     $args=[$header,$rows,'NATIVE-KEY','Payment Hutang Petty Cash'];if($company!=='STM')array_unshift($args,$company);
     ob_start();$method->invokeArgs($c,$args);$r=json_decode(ob_get_clean(),true);$GLOBALS['last_petty_response']=$r;
@@ -88,7 +84,7 @@ class Ledger {
     public function trans_commit(){return false;}
 }
 $model=(new ReflectionClass('Jurnal_payment_petty_cash_model'))->newInstanceWithoutConstructor();
-$ledgers=[];foreach(['accounting_stm','accounting_vuca','accounting_sustain'] as $property){$p=new ReflectionProperty($model,$property);if (PHP_VERSION_ID < 80100) { $p->setAccessible(true); }$ledgers[$property]=new Ledger();$p->setValue($model,$ledgers[$property]);}
+$ledgers=[];foreach(['accounting_stm','accounting_vuca','accounting_sustain'] as $property){$p=new ReflectionProperty($model,$property);$p->setAccessible(true);$ledgers[$property]=new Ledger();$p->setValue($model,$ledgers[$property]);}
 foreach(['VUCA'=>'accounting_vuca','SUSTAIN'=>'accounting_sustain'] as $company=>$target){
     foreach($ledgers as $ledger)$ledger->writes=[];
     $rows=[];foreach([[$company,$company==='VUCA'?'4':'6',90.10],['STM','5',80.20]] as $side)foreach([[$side[2],0],[0,$side[2]]] as $money)$rows[]=(object)['id_company'=>$side[1],'nm_company'=>$side[0],'debit'=>$money[0],'kredit'=>$money[1],'tgl_jurnal'=>'2026-10-14','coa'=>'5101','keterangan'=>'Safe','no_transaksi'=>'KEY'];

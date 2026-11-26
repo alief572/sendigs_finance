@@ -12,6 +12,8 @@ class Monitoring_piutang extends Admin_Controller
     const FILTER_KEYS = ['company', 'customer', 'cari', 'kategori', 'tahun', 'bulan', 'dari', 'sampai'];
     const KAT_LABEL = ['all' => 'Semua', 'lancar' => 'Lancar', 'potensi' => 'Potensi Macet', 'macet' => 'Macet'];
     const KAT_AGE = ['lancar' => '0 - 60 hari', 'potensi' => '61 - 90 hari', 'macet' => '> 90 hari'];
+    const BUKTI_DIR = 'uploads/bukti_terima_invoice/'; // sama dengan folder upload di Follow_up_piutang
+    const BUKTI_MIME = ['pdf' => 'application/pdf', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png'];
 
     public function __construct()
     {
@@ -37,8 +39,7 @@ class Monitoring_piutang extends Admin_Controller
     {
         $f = [];
         foreach (self::FILTER_KEYS as $k) {
-            $v = $this->input->get($k, true);
-            $f[$k] = $v === null ? '' : trim((string) $v);
+            $f[$k] = Piutang_aging::param($this->input->get($k, true), $k === 'cari' ? Piutang_aging::CARI_MAKS : 0);
         }
         if ($f['kategori'] === '') {
             $f['kategori'] = 'all';
@@ -85,8 +86,9 @@ class Monitoring_piutang extends Admin_Controller
     private function dt_json(array $rows, array $keys, array $extra = [])
     {
         $dir = $this->input->get('dir', true) === 'desc' ? 'desc' : 'asc';
-        $page = Piutang_aging::page_rows($rows, (string) $this->input->get('sort', true), $dir, (int) $this->input->get('start'),
-            min((int) $this->input->get('length') ?: 10, 500), $keys);
+        $sort = $this->input->get('sort', true);
+        $page = Piutang_aging::page_rows($rows, is_scalar($sort) ? (string) $sort : '', $dir, (int) $this->input->get('start'),
+            max(1, min((int) $this->input->get('length') ?: 10, 500)), $keys);
         return $this->json(['draw' => (int) $this->input->get('draw'), 'recordsTotal' => count($rows), 'recordsFiltered' => count($rows), 'data' => $page] + $extra);
     }
 
@@ -135,10 +137,17 @@ class Monitoring_piutang extends Admin_Controller
         return $this->dt_json($rk, Piutang_aging::REKAP_SORT_KEYS, ['totals' => $t]);
     }
 
+    /** Invoice untuk detail/surat: batasnya sama dengan daftar (belum close, bukan deposit, tanggal memenuhi); selain itu null. */
+    private function row_in_scope($id)
+    {
+        $row = $this->Monitoring_piutang_model->get_row($id);
+        return $row && !Piutang_aging::is_closed($row) && Piutang_aging::in_scope($row) ? $row : null;
+    }
+
     public function detail($id = '')
     {
         $this->auth->restrict($this->viewPermission);
-        $row = $this->Monitoring_piutang_model->get_row($id);
+        $row = $this->row_in_scope($id);
         if (!$row) {
             return $this->json(['status' => 'error', 'msg' => 'Invoice tidak ditemukan.'], 404);
         }
@@ -153,7 +162,7 @@ class Monitoring_piutang extends Admin_Controller
     public function surat($id = '')
     {
         $this->auth->restrict($this->viewPermission);
-        $row = $this->Monitoring_piutang_model->get_row($id);
+        $row = $this->row_in_scope($id);
         if (!$row) {
             show_error('Invoice tidak ditemukan.', 404);
         }
@@ -164,6 +173,30 @@ class Monitoring_piutang extends Admin_Controller
         }
         $this->output->set_content_type('text/html', 'UTF-8')
             ->set_output(Surat_konfirmasi::render(Surat_konfirmasi::data($row, $today), base_url('assets/images/surat/')));
+    }
+
+    /**
+     * File bukti terima ke-$n (urutan Piutang_aging::bukti_list) hanya untuk user ber-login yang boleh melihat Monitoring
+     * atau Follow Up. Path diambil dari database, tidak dari URL. Akses langsung ke folder upload ditolak di .htaccess root.
+     * Tidak dibatasi row_in_scope: Follow Up juga menampilkan bukti invoice yang sudah close.
+     */
+    public function bukti($id = '', $n = '0')
+    {
+        $this->auth->restrict(has_permission($this->viewPermission) ? $this->viewPermission : 'Follow_Up_Piutang.View');
+        $row = $this->Monitoring_piutang_model->get_row($id);
+        $list = $row ? Piutang_aging::bukti_list($row) : [];
+        $path = ctype_digit((string) $n) ? (string) ($list[(int) $n]['path'] ?? '') : '';
+        $name = basename($path);
+        $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+        $file = FCPATH . self::BUKTI_DIR . $name;
+        if ($path !== self::BUKTI_DIR . $name || !isset(self::BUKTI_MIME[$ext]) || !is_file($file)) {
+            show_404();
+        }
+        $this->output->set_content_type(self::BUKTI_MIME[$ext])
+            ->set_header('Content-Disposition: inline; filename="' . preg_replace('/[^A-Za-z0-9_.\-]/', '_', $name) . '"')
+            ->set_header('X-Content-Type-Options: nosniff')
+            ->set_header('Cache-Control: private, no-store')
+            ->set_output(file_get_contents($file));
     }
 
     public function export()

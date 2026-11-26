@@ -1,13 +1,5 @@
 <?php
-$fixtureHost = getenv('MATERIAL_TEST_DB_HOST');
-if (!$fixtureHost) {
-    echo "SKIP: set MATERIAL_TEST_DB_HOST to run the database grouping verification\n";
-    exit(0);
-}
-mysqli_report(MYSQLI_REPORT_OFF);
-$c = @mysqli_connect($fixtureHost, getenv('MATERIAL_TEST_DB_USER') ?: 'root',
-    getenv('MATERIAL_TEST_DB_PASS') ?: '', getenv('MATERIAL_TEST_DB_NAME') ?: '',
-    (int) (getenv('MATERIAL_TEST_DB_PORT') ?: 3306));
+$c = @mysqli_connect('206.84.97.107', 'alief', 'Alief@ssc1', 'db_sendigs_ss');
 if (!$c) {
     echo "SKIP: Database connection not available for live grouping verification\n";
     exit(0);

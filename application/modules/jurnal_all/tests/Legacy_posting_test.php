@@ -1,9 +1,6 @@
 <?php
 define('BASEPATH',true);define('DBACC_STM','acc_stm');define('DBACC_VUCA','acc_vuca');define('DBACC_SUST','acc_sustain');define('DBCNL','consultant');
-#[\AllowDynamicProperties]
-class Admin_Controller{}
-#[\AllowDynamicProperties]
-class BF_Model{}
+class Admin_Controller{} class BF_Model{}
 $permissions=['Jurnal_All.Manage'];
 function has_permission($permission){global $permissions;return in_array($permission,$permissions,true);}
 function log_message($level,$message){}
@@ -51,7 +48,7 @@ class NativeAuth {public function user_id(){return 7;}public function user_name(
 class NativeOutput {public $status=200;public function set_status_header($status){$this->status=$status;}}
 class NativeNumber {public $calls=[];public function __call($name,$args){$this->calls[]=[$name,$args];return 'NATIVE-001';}}
 class NativeLoader {public $dbs=[];public function database($key,$return){return $this->dbs[$key];}}
-function assign($object,$field,$value){$p=new ReflectionProperty($object,$field);if (PHP_VERSION_ID < 80100) { $p->setAccessible(true); }$p->setValue($object,$value);}
+function assign($object,$field,$value){$p=new ReflectionProperty($object,$field);$p->setAccessible(true);$p->setValue($object,$value);}
 function fixture($class,$company='7',$type='Payment'){
     $c=(new ReflectionClass($class))->newInstanceWithoutConstructor();$c->input=new NativeInput();$c->auth=new NativeAuth();$c->output=new NativeOutput();$c->db=new NativeDb();$c->load=new NativeLoader();
     $row=['id'=>1,'no_transaksi'=>'1,2','jenis_transaksi'=>$type,'id_company'=>$company,'nm_company'=>'STM','tgl_jurnal'=>'2026-10-14','coa'=>'5101','nm_coa'=>'Piutang','debit'=>'100.25','kredit'=>'0.00','keterangan'=>'Description {REF:DOC1}'];

@@ -1,9 +1,5 @@
 <?php
-define('BASEPATH',true);
-#[\AllowDynamicProperties]
-class Admin_Controller{}
-#[\AllowDynamicProperties]
-class BF_Model{}
+define('BASEPATH',true);class Admin_Controller{}class BF_Model{}
 function log_message($level,$message){}
 function has_permission($permission){return true;}
 function &get_instance(){return $GLOBALS['ci'];}

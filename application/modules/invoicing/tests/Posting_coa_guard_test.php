@@ -26,14 +26,10 @@ class StubService extends Invoice_consulting_service {
 function guardRun($rows) {
     $posting = new Consulting_posting(new StubCi);
     $service = new StubService; $service->journalRows = $rows;
-    $ref = new ReflectionProperty('Consulting_posting', 'service'); if (PHP_VERSION_ID < 80100) { $ref->setAccessible(true); } $ref->setValue($posting, $service);
+    $ref = new ReflectionProperty('Consulting_posting', 'service'); $ref->setAccessible(true); $ref->setValue($posting, $service);
     return $posting->receipt(1);
 }
-$line = function ($coa, $name) {
-    return array('id' => 1, 'no_transaksi' => 'RCV-1', 'tgl_jurnal' => '2026-10-01',
-        'coa' => $coa, 'nm_coa' => $name, 'sts' => '0', 'debit' => '10.00', 'kredit' => '0.00',
-        'id_company' => 7, 'nm_company' => 'STM', 'keterangan' => 'Fixture penerimaan');
-};
+$line = function ($coa, $name) { return array('id' => 1, 'coa' => $coa, 'nm_coa' => $name, 'sts' => '0', 'debit' => '10.00', 'kredit' => '0.00', 'id_company' => 7); };
 $r = guardRun(array($line('1101-02-01', 'Bank BCA'), $line('', 'Beban PPh Final')));
 if ($r['status'] !== 0 || strpos($r['msg'], 'Akun Beban PPh Final belum memiliki nomor COA') === false) throw new RuntimeException('GAGAL: COA kosong harus ditolak, dapat: ' . json_encode($r));
 $r = guardRun(array($line('1101-02-01', 'Bank BCA'), $line('   ', 'Hutang PPh Final')));
