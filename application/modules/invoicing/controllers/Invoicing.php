@@ -200,8 +200,7 @@ class Invoicing extends Admin_Controller
                 $quote=$source ? $source['quote'] : $s->non_consulting_source($invoice['id_penawaran'])['quote'];
                 $issued=$s->one('SELECT COALESCE(SUM(total_nominal),0) AS total FROM tr_invoicing WHERE id_penawaran=? AND id<>?',array($invoice['id_penawaran'],$invoice['id']??''));
                 $outstanding=Invoice_calculation::decimal(Invoice_calculation::cents($quote['grand_total'])-Invoice_calculation::cents($issued['total']));
-                // TEMP: cek outstanding penawaran dinonaktifkan sementara; aktifkan lagi dengan menghapus komentar ini.
-                // if (Invoice_calculation::cents($quote['grand_total'])<=Invoice_calculation::cents($issued['total']) && $mode==='add') throw new RuntimeException('Outstanding penawaran sudah habis.');
+                if (Invoice_calculation::cents($quote['grand_total'])<=Invoice_calculation::cents($issued['total']) && $mode==='add') throw new RuntimeException('Outstanding penawaran sudah habis.');
             }
             $data=array('invoice'=>$invoice,'snapshot'=>$snapshot,'items'=>$items,'mode'=>$mode,'journals'=>$journals,'non_consulting'=>true,'outstanding'=>$outstanding,
                 'source_fingerprint'=>$source?Invoice_calculation::fingerprint(array('source'=>$source,'mapping'=>$snapshot)):'','invoice_fingerprint'=>$fingerprint,'error'=>null);

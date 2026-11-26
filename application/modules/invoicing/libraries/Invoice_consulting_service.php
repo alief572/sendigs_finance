@@ -257,8 +257,7 @@ class Invoice_consulting_service
                 || !is_scalar($item['qty']) || !is_scalar($item['harga']) || strlen($item['nama'])>1000) throw new InvalidArgumentException('Item invoice tidak valid.');
             $items=Invoice_calculation::items($post['item']??null,$shipping);
             $issued=$this->one('SELECT COALESCE(SUM(total_nominal),0) AS total FROM tr_invoicing WHERE id_penawaran=? AND id<>?',array($quoteId,$edit?$id:''));
-            // TEMP: cek outstanding penawaran dinonaktifkan sementara; aktifkan lagi dengan menghapus komentar ini.
-            // if ($items['dpp']>Invoice_calculation::cents($quote['grand_total'])-Invoice_calculation::cents($issued['total'])) throw new RuntimeException('Total penjualan melebihi outstanding invoice.');
+            if ($items['dpp']>Invoice_calculation::cents($quote['grand_total'])-Invoice_calculation::cents($issued['total'])) throw new RuntimeException('Total penjualan melebihi outstanding invoice.');
             $type=$this->required($post,'tax_treatment',8); $role=$this->required($post,'sales_role',40);
             $totals=Invoice_consulting::totals(Invoice_calculation::decimal($items['dpp']),$type);
             if (!$edit) {
