@@ -147,6 +147,8 @@ class Jurnal_penerimaan extends Admin_Controller
 
     public function save_posting_jurnal()
     {
+        // Izin diperiksa sebelum mengambil lock database (pemeriksaan di dalam tetap ada).
+        if (!$this->allowJournalAction()) { return; }
         require_once dirname(__DIR__,2).'/invoicing/libraries/Invoice_consulting_service.php';
         $service=new Invoice_consulting_service($this);
         return $service->serialized(function(){return $this->serialized_save_posting_jurnal();});
