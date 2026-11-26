@@ -2324,6 +2324,15 @@ class Request_payment_model extends BF_Model
             }
         }
 
+        // Periodik: company mengikuti departemen budget (batch), bukan departemen pembuat.
+        // Departemen yang company-nya belum dipetakan tetap kosong, tidak jatuh ke jalur pembuat.
+        if ($kategori == 'Periodik') {
+            $periodik = $this->_periodik_source($no_dok);
+            if ($periodik && !empty($periodik->departement)) {
+                return $this->resolve_company_via_hris_dept($periodik->departement);
+            }
+        }
+
         // Jalur 3: HRIS langsung (v_request_payment -> users -> departments -> hris_companies)
         $hris_company_id = !empty($r->hris_company_id) ? $r->hris_company_id : (!empty($r->id_company) ? $r->id_company : null);
         if (!empty($hris_company_id) && isset($company_map[$hris_company_id])) {
@@ -2352,6 +2361,29 @@ class Request_payment_model extends BF_Model
         }
 
         return ['company_id' => $company_id_kons, 'company_nama' => $company_nama];
+    }
+
+    /**
+     * Departemen dan tanggal approval satu dokumen Periodik. no_dokumen bisa nomor item (PI-)
+     * atau nomor batch lama yang belum punya no_item.
+     *
+     * @return object|null properti: departement, approved_date
+     */
+    private function _periodik_source($no_dokumen)
+    {
+        $item = $this->db->select('h.departement, d.item_approved_date as approved_date')
+            ->from('tr_pengajuan_rutin_detail d')
+            ->join('tr_pengajuan_rutin h', 'h.no_doc = d.no_doc')
+            ->where('d.no_item', $no_dokumen)
+            ->get()->row();
+        $this->trackAuditDbError();
+        if ($item) {
+            return $item;
+        }
+        $batch = $this->db->select('departement, approved_date')
+            ->get_where('tr_pengajuan_rutin', ['no_doc' => $no_dokumen])->row();
+        $this->trackAuditDbError();
+        return $batch;
     }
 
     /**
@@ -2416,8 +2448,7 @@ class Request_payment_model extends BF_Model
                 return (string) $row->approved_on;
 
             case 'Periodik':
-                $row = $this->db->select('approved_date')
-                    ->get_where('tr_pengajuan_rutin', ['no_doc' => $no])->row();
+                $row = $this->_periodik_source($no);
                 return $row ? (string) $row->approved_date : '';
 
             case 'Direct Payment':
