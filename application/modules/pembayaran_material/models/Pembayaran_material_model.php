@@ -1,5 +1,6 @@
 <?php
 require_once dirname(__DIR__).'/libraries/Payment_journal_validator.php';
+require_once dirname(__DIR__, 3).'/helpers/company_override_helper.php';
 class Pembayaran_material_model extends BF_Model
 {
 
@@ -92,6 +93,11 @@ class Pembayaran_material_model extends BF_Model
 		$empty = ['id_company' => '', 'nm_company' => ''];
 		if (empty($no_doc)) {
 			return $empty;
+		}
+
+		$override = company_override($no_doc);
+		if ($override) {
+			return ['id_company' => $override['id'], 'nm_company' => $override['nama']];
 		}
 
 		$id_penawaran     = null;
@@ -1162,6 +1168,10 @@ class Pembayaran_material_model extends BF_Model
 					$target_comp_id = '3';
 				} else if ($idd_company == 'COM012') {
 					$target_comp_id = '4';
+				}
+				$override = company_override($item_payment->no_doc);
+				if ($override) {
+					$target_comp_id = $override['id'];
 				}
 
 				if ($target_comp_id !== '') {
