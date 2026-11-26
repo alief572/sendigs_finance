@@ -327,4 +327,31 @@ $db->where('id_penawaran','P-NON-KONS-007-09-26')->update('consultant.kons_tr_pe
 check(empty($model->detail($nonKonsId,true)['header']['nm_divisi']),'missing non-consulting division does not invent a value');
 $model->departmentDb->query('DROP TABLE departments');
 check(empty($model->detail($secondId,false)['header']['nm_divisi']),'HRIS query failure must not fall back to wrong finance-host department');
+
+// Filter Bank (Report Jurnal tab Pembayaran): cocok bila ada baris kredit pada COA bank.
+$db->query('CREATE TABLE list_bank (id INTEGER, nama_bank TEXT)');
+$db->query('CREATE TABLE ms_bank (id INTEGER, nama TEXT, rekening TEXT, coa_bank TEXT, bank INTEGER, deleted TEXT)');
+$db->query("INSERT INTO list_bank VALUES (1,'BCA'),(2,'Mandiri')");
+$db->query("INSERT INTO ms_bank VALUES (1,'PT STM','111','1101-BCA',1,'0'),(2,'PT VUCA','222','1101-MDR',2,'0'),(3,'PT STM','333','1101-MDR',2,'0'),(4,'PT STM','444','1101-HAPUS',1,'1'),(5,'PT STM','555','',1,'0')");
+function bankLine($number,$type,$coa,$debit,$credit) {
+    global $db,$id;
+    $db->insert('tr_jurnal',['id'=>++$id,'no_transaksi'=>$number,'jenis_transaksi'=>$type,'sts'=>'1','id_company'=>'7','nm_company'=>'STM','tgl_jurnal'=>'2031-03-10','coa'=>$coa,'debit'=>$debit,'kredit'=>$credit,'nm_divisi'=>'','keterangan'=>'']);
+}
+bankLine('BANK-A','Payment','5101-01','100','0'); bankLine('BANK-A','Payment','1101-BCA','0','100');
+bankLine('BANK-A','Refill Pettycash','5101-01','5','0'); bankLine('BANK-A','Refill Pettycash','1102-01','0','5');
+bankLine('BANK-B','Transport','5101-01','200','0'); bankLine('BANK-B','Transport','1101-MDR','0','200');
+bankLine('BANK-C','Kasbon','1101-BCA','50','0'); bankLine('BANK-C','Kasbon','5101-01','0','50');
+$bankFilter=['tab'=>'PAY','year'=>2031];
+$numbers=function($values,$posted=true)use($model){$n=array_column($model->groups($values,$posted),'no_transaksi');sort($n);return $n;};
+check($numbers($bankFilter)===['BANK-A','BANK-A','BANK-B','BANK-C'],'tanpa filter bank semua transaksi tampil');
+check($numbers($bankFilter+['bank'=>'1101-BCA'])===['BANK-A','BANK-A'],'hanya yang mengkredit COA bank, termasuk baris pendamping; baris debit tidak dihitung');
+check($numbers($bankFilter+['bank'=>'1101-MDR'])===['BANK-B'],'COA bank lain terpisah');
+check($numbers($bankFilter+['bank'=>"x' OR '1'='1"])===[],'nilai bank di-binding');
+$listing=$model->listing($bankFilter+['bank'=>'1101-MDR'],true);
+check($listing['recordsFiltered']===1&&$listing['totals']['debit']==='200.00','total mengikuti filter bank');
+check(count($model->export_rows($bankFilter+['bank'=>'1101-MDR'],true))===2,'export mengikuti filter bank');
+check($model->filters(['tab'=>'RCV','bank'=>'1101-BCA'])['bank']===''&&$model->filters(['tab'=>'PAY','bank'=>['x']])['bank']==='','bank hanya tab PAY dan bukan array');
+$banks=$model->options($bankFilter+['bank'=>'1101-MDR'],true)['banks'];
+check(array_keys($banks)===['1101-BCA','1101-MDR']&&$banks['1101-BCA']==='BCA - 111 (PT STM)'&&$banks['1101-MDR']==='Mandiri - 222 (PT VUCA) / Mandiri - 333 (PT STM)','opsi bank: aktif, digabung per COA');
+check(!isset($model->options($bankFilter,false)['banks'])&&!isset($model->options(['tab'=>'RCV','year'=>2031],true)['banks']),'opsi bank hanya di Report Jurnal tab Pembayaran');
 echo "PASS Jurnal All query: {$checks} assertions\n";

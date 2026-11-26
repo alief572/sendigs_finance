@@ -43,7 +43,7 @@
 #journal-workspace .ja-export i { margin-right: 6px; }
 #journal-workspace .ja-filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; padding: 18px; border: 1px solid #e2e8f0; border-radius: 6px; background: #f8fafc; }
 #journal-workspace .ja-filters label { display: flex; flex: 1 1 140px; flex-direction: column; gap: 7px; min-width: 120px; max-width: 260px; margin: 0; font-size: 12px; font-weight: 600; color: #334155; }
-#journal-workspace #ja-category { flex-basis: 200px; }
+#journal-workspace #ja-category, #journal-workspace #ja-bank { flex-basis: 200px; }
 #journal-workspace .ja-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
 #journal-workspace .form-control { height: 40px; border: 1px solid #8392a7; border-radius: 5px; box-shadow: none; font-size: 13px; color: #1e293b; background-color: #fff; }
 #journal-workspace textarea.form-control { height: auto; }

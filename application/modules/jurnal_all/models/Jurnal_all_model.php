@@ -81,7 +81,8 @@ class Jurnal_all_model extends BF_Model
         }
         $search = is_array($values['search'] ?? null) ? ($values['search']['value'] ?? '') : ($values['q'] ?? '');
         return ['tab'=>$tab,'year'=>$year === '' ? '' : (int)$year,'month'=>$month,'company'=>$this->scalar($values['company'] ?? ''),
-            'category'=>$tab === 'PAY' ? $this->scalar($values['category'] ?? '') : '', 'q'=>$this->scalar($search)];
+            'category'=>$tab === 'PAY' ? $this->scalar($values['category'] ?? '') : '', 'bank'=>$tab === 'PAY' ? $this->scalar($values['bank'] ?? '') : '',
+            'q'=>$this->scalar($search)];
     }
 
     public function groups($values, $posted = false, $withSearch = true)
@@ -144,6 +145,8 @@ class Jurnal_all_model extends BF_Model
             if($f['month']!=='' && (int)substr($header['tgl_jurnal'],5,2)!==(int)$f['month'])continue;
             $rows[]=$header;
         }
+        // Filter bank hanya untuk Report Jurnal; daftar, total, dan Excel sama-sama lewat sini.
+        if ($posted && $f['bank'] !== '') $rows=$this->paidFromBank($rows,$f['bank']);
         $result = [];
         foreach ($rows as $row) {
             if (!$posted && !$this->eligible($row)) continue;
@@ -155,6 +158,45 @@ class Jurnal_all_model extends BF_Model
         if ($withSearch && trim($f['q']) !== '') $result = $this->search($result,$f['q'],$posted);
         usort($result,function($a,$b){return strcmp($b['tgl_jurnal'],$a['tgl_jurnal']) ?: ($b['id'] <=> $a['id']);});
         return array_values($result);
+    }
+
+    /**
+     * Transaksi yang uangnya keluar dari COA bank $coa: punya baris kredit di COA itu. Dicocokkan per no_transaksi supaya
+     * baris pendamping satu voucher (mis. Refill Petty Cash) ikut. Sumbernya jurnal, bukan payment_approve, agar histori
+     * yang tidak terpetakan tetap tersaring.
+     */
+    private function paidFromBank($rows,$coa)
+    {
+        $types=array_merge(self::SOURCES['PAY'],['Refill Pettycash','Payment Hutang Petty Cash']);
+        $numbers=[];
+        foreach ($rows as $row) if (empty($row['debt_group'])) $numbers[(string)$row['no_transaksi']]=true;
+        $paid=[];
+        foreach (array_chunk(array_map('strval',array_keys($numbers)),200) as $chunk) {
+            $found=$this->read($this->db->select('no_transaksi')->where_in('no_transaksi',$chunk)->where_in('jenis_transaksi',$types)
+                ->where('coa',$coa)->where('kredit >',0)->where('sts','1')->group_by('no_transaksi')->get('tr_jurnal'))->result_array();
+            foreach ($found as $line) $paid[(string)$line['no_transaksi']]=true;
+        }
+        return array_values(array_filter($rows,function($row)use($paid,$coa){
+            if (empty($row['debt_group'])) return isset($paid[(string)$row['no_transaksi']]);
+            foreach ($this->debt_groups()->find($row['id'])['rows'] as $line)
+                if ((string)$line['coa']===$coa && $this->cents($line['kredit'])>0) return true;
+            return false;
+        }));
+    }
+
+    /** Pilihan filter Bank dari master bank aktif: coa_bank => "Nama Bank - Rekening (PT)"; rekening satu COA digabung. */
+    private function bankOptions()
+    {
+        $rows=$this->read($this->db->select('a.nama, a.rekening, a.coa_bank, b.nama_bank')->from('ms_bank a')
+            ->join('list_bank b','b.id = a.bank','left')->where('a.deleted','0')->order_by('b.nama_bank')->order_by('a.rekening')->get())->result_array();
+        $banks=[];
+        foreach ($rows as $row) {
+            $coa=trim((string)$row['coa_bank']);
+            if ($coa==='') continue;
+            $label=trim((string)$row['nama_bank']).' - '.trim((string)$row['rekening']).' ('.trim((string)$row['nama']).')';
+            $banks[$coa]=isset($banks[$coa]) ? $banks[$coa].' / '.$label : $label;
+        }
+        return $banks;
     }
 
     public function listing($values, $posted = false)
@@ -196,7 +238,7 @@ class Jurnal_all_model extends BF_Model
 
     public function options($values, $posted = false)
     {
-        $f=$this->filters($values); $f['company']=''; $f['category']=''; $f['q']='';
+        $f=$this->filters($values); $f['company']=''; $f['category']=''; $f['bank']=''; $f['q']='';
         $rows=$this->groups($f,$posted,false); $companies=[]; $categories=[];
         foreach ($rows as $row) {
             foreach ($row['categories'] as $category) $categories[$category]=$category;
@@ -205,7 +247,9 @@ class Jurnal_all_model extends BF_Model
         $years=$this->read($this->db->select('MIN(tgl_jurnal) AS first_date, MAX(tgl_jurnal) AS last_date')->get('tr_jurnal'))->row_array();
         $first=max(1900,(int)substr($years['first_date'] ?? date('Y'),0,4));
         $last=min(9998,max((int)date('Y'),(int)substr($years['last_date'] ?? date('Y'),0,4)));
-        return ['companies'=>$companies,'categories'=>array_values($categories),'years'=>range($last,min($first,(int)date('Y')),-1)];
+        $options=['companies'=>$companies,'categories'=>array_values($categories),'years'=>range($last,min($first,(int)date('Y')),-1)];
+        if ($posted && $f['tab']==='PAY') $options['banks']=$this->bankOptions();
+        return $options;
     }
 
     public function detail($id, $posted)
