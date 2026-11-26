@@ -45,9 +45,25 @@ ok(strpos($html, 'Tati Rina') !== false && strpos($html, 'sspm@sentral-sistem.co
 $part = $S::render($S::data(inv(['saldo' => 8700000]), $today), '/x/');
 ok(strpos($part, 'Sudah dibayar</td><td>: Rp. 13.500.000') !== false && strpos($part, 'Sisa tagihan</td><td>: <b>Rp. 8.700.000') !== false, 'baris dibayar dan sisa');
 
+// VUCA (4) dan Sustain (3): satu gambar kop penuh, kode nomor dan penandatangan sesuai contoh docx, footer ada
+$vuca = $S::render($S::data(inv(['company' => '4', 'company_name' => 'Vuca']), $today), '/x/');
+ok(strpos($vuca, 'src="/x/vuca_kop.png"') !== false && strpos($vuca, 'stm_kop_logo') === false && strpos($vuca, 'class="kop-default"') === false, 'kop VUCA');
+ok(strpos($vuca, 'VSB-Fnc/SK/XI/26') !== false && strpos($vuca, 'PT. VUCA STRATEGI BISNIS') !== false, 'nomor dan PT VUCA');
+ok(strpos($vuca, 'Imanuel Iman') !== false && strpos($vuca, 'Direktur') !== false && strpos($vuca, 'class="footer"') !== false, 'penandatangan dan footer VUCA');
+$sus = $S::render($S::data(inv(['company' => '3', 'company_name' => 'Sustain']), $today), '/x/');
+ok(strpos($sus, 'src="/x/sustain_kop.png"') !== false && strpos($sus, 'SSC-Fnc/SK/XI/26') !== false, 'kop dan nomor Sustain');
+ok(strpos($sus, 'PT. SENTRAL SUSTAINABILITY CONSULTING') !== false && strpos($sus, 'Cahyadi') !== false, 'PT dan penandatangan Sustain');
+ok(is_file(__DIR__ . '/../../../../assets/images/surat/vuca_kop.png') && is_file(__DIR__ . '/../../../../assets/images/surat/sustain_kop.png'), 'file gambar kop ada');
+
+// STM-Vuca (1) dan STM-Sustain (6): kop, kode nomor dan penandatangan STM
+foreach (['1' => 'STM-Vuca', '6' => 'STM-Sustain'] as $cid => $cname) {
+    $g = $S::render($S::data(inv(['company' => $cid, 'company_name' => $cname]), $today), '/x/');
+    ok(strpos($g, '/x/stm_kop_logo.jpg') !== false && strpos($g, '/STM-Fnc/SK/XI/26') !== false && strpos($g, 'Tati Rina') !== false && strpos($g, 'class="footer"') !== false, 'kop STM untuk ' . $cname);
+}
+
 // company tanpa profil -> kop teks nama company, tanpa gambar dan footer
-$other = $S::render($S::data(inv(['company' => '3', 'company_name' => 'Sustain']), $today), '/x/');
-ok(strpos($other, 'class="kop-default">Sustain<') !== false && strpos($other, 'stm_kop_logo') === false && strpos($other, 'class="footer"') === false, 'kop default');
+$other = $S::render($S::data(inv(['company' => '9', 'company_name' => 'Lain']), $today), '/x/');
+ok(strpos($other, 'class="kop-default">Lain<') !== false && strpos($other, 'stm_kop_logo') === false && strpos($other, 'kop_img') === false && strpos($other, 'class="footer"') === false, 'kop default');
 
 // escape: nama customer berisi HTML tidak boleh lolos
 $xss = $S::render($S::data(inv(['customer' => '<script>alert(1)</script>', 'project' => 'a"b']), $today), '/x/');
