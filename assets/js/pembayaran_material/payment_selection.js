@@ -23,6 +23,8 @@
         loading = true;
         updateControls();
         table.ajax.reload(null, false);
+        // Pilihan yang sama juga tampil di tabel atas.
+        if (window.rpUpperTable) { window.rpUpperTable.ajax.reload(null, false); }
     }
 
     tableElement.on('preXhr.dt', function () {
@@ -49,9 +51,13 @@
             type: 'POST',
             url: siteurl + active_controller + 'get_list_req_payment',
             dataType: 'json',
-            data: function (data) { data.jenis_payment = jenisPayment; },
+            data: function (data) {
+                data.jenis_payment = jenisPayment;
+                data.periode = tableElement.attr('data-periode');
+            },
             dataSrc: function (data) {
                 if (data.selection_error) { message(data.selection_error); }
+                if (window.rpSelectedCount && data.selected_count !== undefined) { window.rpSelectedCount(data.selected_count); }
                 return data.data;
             }
         },
@@ -125,6 +131,8 @@
 
     $(document).on('click', '.proses_payment', function () {
         if (pending || loading) { return; }
+        // Transfer format baru yang dicentang diproses oleh halaman.
+        if (window.rpProcessTransfer && window.rpProcessTransfer()) { return; }
         pending = true;
         updateControls();
         $.ajax({
@@ -139,6 +147,10 @@
             }
             if (data.count_choosed_payment < 1) {
                 message('Pilih minimal satu transaksi pembayaran.');
+                return;
+            }
+            if (data.target === 'transfer') {
+                window.location.href = siteurl + active_controller + 'transfer_draft?ids=' + encodeURIComponent(data.arr_choosed_payment);
                 return;
             }
             var bearer = data.has_admin_fee ? 'recipient' : 'company';

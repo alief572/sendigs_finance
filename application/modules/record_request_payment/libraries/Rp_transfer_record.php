@@ -103,6 +103,19 @@ final class Rp_transfer_record
         return array_values($batches);
     }
 
+    /** Ada dokumen disetujui di luar transfer? Hutang Petty Cash memang tidak pernah masuk transfer. */
+    public static function hasDocumentsOutside($db, $batch)
+    {
+        $rows = Rp_transfer::write($db->select('kategori')
+            ->get_where('tr_rp_pengajuan_d', ['id_pengajuan' => (int) $batch, 'decision' => 'approved', 'id_transfer' => null]))->result_array();
+        foreach ($rows as $row) {
+            if (Rp_transfer::groupType($row['kategori']) !== 'debt') {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public static function category($value)
     {
         return $value === 'refill_pettycash' ? 'Refill Pettycash' : $value;

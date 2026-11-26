@@ -106,7 +106,7 @@ class MaterialResult {
 class MaterialInput extends FixtureInput { public function ip_address() { return '127.0.0.1'; } }
 class MaterialUri { public function segment($number) { return 'pembayaran_material'; } }
 class MaterialMaster { public function getArray() { return array(); } }
-class MaterialAuth extends FixtureAuth { public function user_id() { return 7; } }
+class MaterialAuth extends FixtureAuth { public function user_id() { return 7; } public function has_permission($permission) { return true; } }
 class MaterialJurnal extends Jurnal_model { public function __construct($db, $load) { $this->db = $db; $this->load = $load; } }
 class MaterialPcvs { public function update_status_done($document, $actor) { global $scenario; return empty($scenario['pcvs_failure']); } }
 function show_error($message, $status = 500) { throw new RuntimeException('HTTP ' . $status); }

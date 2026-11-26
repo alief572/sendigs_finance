@@ -22,8 +22,11 @@ include dirname(__DIR__, 2) . '/request_payment/views/transfer_tutorial.php';
 </style>
 <form class="box box-primary" id="rp-pay" enctype="multipart/form-data">
 	<div class="box-body">
+		<?php foreach (['ids', 'bank', 'no_rek', 'nama', 'admin', 'bearer'] as $key): if (!empty($draft)): ?>
+			<input type="hidden" name="draft[<?= $key ?>]" value="<?= html_escape($draft[$key] ?? '') ?>">
+		<?php endif; endforeach; ?>
 		<div class="alert alert-info"><i class="fa fa-info-circle"></i> <b><?= (float) $transfer['admin'] ? 'Admin ditanggung ' . ($transfer['bearer'] === 'recipient' ? 'penerima' : 'perusahaan') . ' &ndash; Rp ' . $amount($transfer['admin']) : 'Tanpa admin charge' ?></b>
-			<small>&middot; dari <?= html_escape($transfer['no_pengajuan']) ?> / Transfer <?= (int) $transfer['urutan'] ?></small></div>
+			<small>&middot; dari <?= html_escape($transfer['no_pengajuan']) ?> / Transfer <?= (int) $transfer['urutan'] ?><?= !empty($draft) ? ' &middot; transfer dibuat saat Submit' : '' ?></small></div>
 		<div class="row">
 			<div class="col-md-6">
 				<div class="rp-row"><label for="rp-pay-date">Tgl Bayar</label><span class="rp-colon">:</span><input id="rp-pay-date" class="form-control input-sm" type="date" name="tgl_bayar" required value="<?= date('Y-m-d') ?>"></div>
