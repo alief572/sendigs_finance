@@ -22,6 +22,8 @@ class Data extends Jurnal_all_model {
     public function summary($filters){$this->read();return ['INV'=>['count'=>1]];}
     public function detail($id,$posted){$this->read();return ['header'=>['source'=>$this->source,'no_transaksi'=>'PC1','jenis_transaksi'=>'Petty Cash','payment_reference_error'=>$this->blockReason,'company_error'=>$this->companyError],'is_balance'=>$this->balanced,'can_post'=>$this->canPost,'rows'=>$this->rows];}
     public function export_rows($values,$posted=false){$this->read();return [];}
+    public $paymentExports=0;
+    public function export_payment_rows($values){$this->read();$this->paymentExports++;return [];}
 }
 class Dispatcher {public $calls=0,$status=1;public function execute($action,$id,$source,$payload){$this->calls++;return ['status'=>$this->status,'msg'=>'outcome'];}}
 class PettyPreview {public $calls=0,$rows=[];public function find_unclear_coa($rows){return [];}public function get_detail_by_transaksi($number,$type){$this->calls++;return $this->rows;}}
@@ -90,4 +92,11 @@ $rows=[['header'=>array_merge($detail['header'],['tab'=>'INV','category'=>'Invoi
 ob_start();include dirname(__DIR__).'/views/export_excel.php';$html=ob_get_clean();check(strpos($html,'FINAL-JV')!==false&&strpos($html,'BAD-STAGING')===false&&strpos($html,'2026-10-15')!==false,'posted Excel uses actual accounting metadata rather than staging number');
 $permissions=['Jurnal_All.View','Jurnal_All.Manage'];$c=fixture();$c->Jurnal_all_model->source='EXP';$c->input->values['source']='EXP';$c->Jurnal_all_model->canPost=false;$c->Jurnal_all_model->companyError='Sumber company belum pasti.';$c->preview();$response=json_decode($c->output->body,true);
 check($response['show_post']&&!$response['can_post']&&$response['post_block_reason']==='Sumber company belum pasti.','Expense preview preserves specific company block reason');
+$permissions=['Jurnal_All.View','Jurnal_All.Manage','Report_Jurnal_All.View'];
+$c=fixture('Report_jurnal_all');$c->input->verb='GET';$c->input->values=['tab'=>'PAY'];$c->export_excel();
+check($c->Jurnal_all_model->paymentExports===1&&substr($c->output->body,0,2)==='PK'&&strpos(implode('|',$c->output->headers),'spreadsheetml.sheet')!==false&&strpos(implode('|',$c->output->headers),'.xlsx')!==false,'report PAY export is a real xlsx');
+$c=fixture('Report_jurnal_all');$c->input->verb='GET';$c->input->values=['tab'=>'INV'];$c->export_excel();
+check($c->Jurnal_all_model->paymentExports===0&&strpos(implode('|',$c->output->headers),'.xls"')!==false,'report non-PAY tabs keep the HTML xls');
+$c=fixture();$c->input->verb='GET';$c->input->values=['tab'=>'PAY'];$c->export_excel();
+check($c->Jurnal_all_model->paymentExports===0&&strpos(implode('|',$c->output->headers),'.xls"')!==false,'pending Jurnal All export is unchanged');
 echo "PASS Jurnal All controllers/routes/views: {$checks} assertions\n";
