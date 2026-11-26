@@ -4,7 +4,7 @@ defined('BASEPATH') or define('BASEPATH', __DIR__);
 require_once __DIR__ . '/Piutang_aging.php';
 
 /**
- * Surat Konfirmasi Status Tagihan (MP-FR-16). Format mengikuti contoh STM (mockup, Format Surat Konfirmasi.pdf).
+ * Surat Konfirmasi Status Tagihan (MP-FR-16). Format mengikuti contoh surat final STM, VUCA dan Sustain (Surat Konfirmasi Tagihan.docx).
  * Murni PHP tanpa CI/DB: aturan siapa yang boleh dicetak, isi surat, dan HTML cetak bisa dites langsung.
  */
 class Surat_konfirmasi
@@ -12,13 +12,22 @@ class Surat_konfirmasi
     const ROMAWI = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
     const URUTAN = ['Pertama', 'Kedua', 'Ketiga', 'Keempat', 'Kelima', 'Keenam', 'Ketujuh', 'Kedelapan', 'Kesembilan', 'Kesepuluh'];
 
-    /** Profil kop per company, kunci = id company. Company tanpa profil memakai kop teks nama company. shortcut: hanya STM (id 7), tambah profil saat format company lain diterima. */
+    /** Profil kop per company, kunci = id company (7 STM, 1 STM-Vuca, 6 STM-Sustain, 3 Sustain, 4 Vuca). Company tanpa profil memakai kop teks nama company. */
     public static function profiles()
     {
-        return ['7' => ['kop' => 'stm', 'pt' => 'PT. Sentral Tehnologi Managemen', 'kode' => 'STM', 'kota' => 'Jakarta', 'ttd' => 'Tati Rina', 'jabatan' => 'Manager Accounting',
-            'tagline' => 'QUALITY, ENVIRONMENT, HEALTH, SAFETY, PROCESS IMPROVEMENT, STRATEGIC BUSINESS PLAN',
-            'footer' => ['MT. Haryono Square Lt. 3A/4 No. 2', 'Jl. MT. Haryono Kav. 10, Jakarta Timur', 'Telp. (021) 29067201-3, Fax . (021) 29067204',
-                'Email Address : sspm@sentral-sistem.com  Website. www.sentral-sistem.com']]];
+        $footer = ['MT. Haryono Square Lt. 3A/4 No. 2', 'Jl. MT. Haryono Kav. 10, Jakarta Timur', 'Telp. (021) 29067201-3, Fax . (021) 29067204',
+            'Email Address : sspm@sentral-sistem.com  Website. www.sentral-sistem.com'];
+        $stm = ['kop' => 'stm', 'pt' => 'PT. Sentral Tehnologi Managemen', 'kode' => 'STM', 'kota' => 'Jakarta', 'ttd' => 'Tati Rina', 'jabatan' => 'Manager Accounting',
+                'tagline' => 'QUALITY, ENVIRONMENT, HEALTH, SAFETY, PROCESS IMPROVEMENT, STRATEGIC BUSINESS PLAN', 'footer' => $footer];
+        return [
+            // STM-Vuca (1) dan STM-Sustain (6) = invoice atas nama STM (nomor /STM/), memakai kop dan penandatangan STM.
+            '7' => $stm, '1' => $stm, '6' => $stm,
+            // Kop VUCA dan Sustain berupa satu gambar penuh (nama, alamat, garis) dari contoh surat final.
+            '4' => ['kop' => 'img', 'kop_img' => 'vuca_kop.png', 'pt' => 'PT. VUCA STRATEGI BISNIS', 'kode' => 'VSB', 'kota' => 'Jakarta', 'ttd' => 'Imanuel Iman', 'jabatan' => 'Direktur',
+                'tagline' => '', 'footer' => $footer],
+            '3' => ['kop' => 'img', 'kop_img' => 'sustain_kop.png', 'pt' => 'PT. SENTRAL SUSTAINABILITY CONSULTING', 'kode' => 'SSC', 'kota' => 'Jakarta', 'ttd' => 'Cahyadi', 'jabatan' => 'Direktur',
+                'tagline' => '', 'footer' => $footer],
+        ];
     }
 
     public static function profile_for($r)
@@ -108,10 +117,12 @@ class Surat_konfirmasi
         };
         $pr = $d['profile'];
         $a = $e($assetBase);
-        $kop = $pr['kop'] === 'stm'
+        $kop = $pr['kop'] === 'img'
+            ? '<img class="kop-img" src="' . $a . $e($pr['kop_img']) . '" alt="' . $e(strtoupper($pr['pt'])) . '">'
+            : ($pr['kop'] === 'stm'
             ? '<div class="kop-stm"><img class="logo" src="' . $a . 'stm_kop_logo.jpg" alt=""><img class="nama" src="' . $a . 'stm_kop_nama.jpg" alt="' . $e(strtoupper($pr['pt'])) . '"><img class="sert" src="' . $a . 'stm_kop_sertifikat.jpg" alt=""></div>'
               . '<div class="kop-tag">' . $e($pr['tagline']) . '</div><div class="kop-line"></div><div class="kop-line2"></div>'
-            : '<div class="kop-default">' . $e($pr['pt']) . '</div>';
+            : '<div class="kop-default">' . $e($pr['pt']) . '</div>');
         $paid = $d['terbayar'] > 0
             ? '<tr><td>Sudah dibayar</td><td>: ' . $e(self::rp($d['terbayar'])) . '</td></tr><tr><td>Sisa tagihan</td><td>: <b>' . $e(self::rp($d['sisa'])) . '</b></td></tr>' : '';
         $footer = $pr['footer'] ? '<div class="footer">' . implode('<br>', array_map($e, $pr['footer'])) . '</div>' : '';
@@ -126,10 +137,11 @@ class Surat_konfirmasi
         return <<<HTML
 <!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><title>$title</title><style>
 @page{size:A4;margin:12mm 25mm 12mm 27mm}
-body{font-family:Verdana,Tahoma,Arial,sans-serif;font-size:10.5pt;color:#000;margin:0;background:#e9ecef}
+body{font-family:'Trebuchet MS',Verdana,Tahoma,Arial,sans-serif;font-size:10pt;color:#000;margin:0;background:#e9ecef}
 .page{width:210mm;min-height:297mm;padding:12mm 25mm 30mm 27mm;box-sizing:border-box;margin:12px auto;background:#fff;position:relative;box-shadow:0 1px 6px rgba(0,0,0,.15)}
 .kop-stm{display:flex;align-items:center;gap:10px}.kop-stm img{flex-shrink:0}.kop-stm .logo{height:42px}.kop-stm .sert{height:54px}
 .kop-stm .nama{flex:1;min-width:0;height:50px;object-fit:contain}
+.kop-img{display:block;width:100%;height:auto;margin:0 0 10px}
 .kop-tag{text-align:center;font-family:Arial,sans-serif;font-weight:700;font-size:7pt;margin:4px 0 3px}
 .kop-line{height:3px;background:#f2b705}.kop-line2{height:6px;background:#1f3f99;margin-bottom:8px}
 .kop-default{text-align:center;font-weight:700;font-size:16pt;border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:10px}

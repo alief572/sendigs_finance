@@ -17,7 +17,7 @@ Spec: `specs/docs/review-monitoring-piutang/` (`fr-nfr.md`, `use-case.md`, mocku
 - Ubah lebar kolom: seret tepi kanan judul (kecuali No, min 70px), `assets/js/piutang-kolom.js` (dipakai juga Follow Up dan Dashboard Plan Bayar); lebar tidak disimpan.
 - Geser kolom (kedua tab Monitoring): ColReorder 1.1.3 lokal; No + No Invoice (rekap: Customer) terkunci di kiri; urutan tidak disimpan. Karena posisi berubah, isi baris dan kunci urut memakai nama kolom, dan tfoot harus satu sel per kolom (tanpa `colspan`). Seret lewat sentuhan tidak didukung.
 - `libraries/Piutang_export.php`: pembuat `.xlsx` bersama (PHPExcel).
-- `libraries/Surat_konfirmasi.php`: aturan dan HTML Surat Konfirmasi. Profil kop per company di `profiles()` (kunci = id company; baru STM id 7).
+- `libraries/Surat_konfirmasi.php`: aturan dan HTML Surat Konfirmasi. Profil kop per company di `profiles()` (kunci = id company): STM id 7, STM-Vuca id 1 dan STM-Sustain id 6 (semuanya kop 3 gambar STM, nomor `STM`, Tati Rina), Sustain id 3 dan VUCA id 4 (satu gambar kop penuh `assets/images/surat/sustain_kop.png`, `vuca_kop.png`; kode nomor `SSC`/`VSB`, penandatangan sesuai `Surat Konfirmasi Tagihan.docx`). Company lain memakai kop teks default.
 - `models/Monitoring_piutang_model.php`: query dan transaksi simpan/close. Hanya membaca `tr_invoicing.saldo_piutang`.
 - `migrations/`: urutan pemasangan ada di `fr-nfr.md` bagian "Urutan pemasangan", **ditambah `019_align_id_invoice_collation.sql` setelah 015 dan sebelum 017** (menyamakan collation `id_invoice` dengan `tr_invoicing.id`; tanpa ini join gagal di MySQL 8 default). Rollback 019 = 020. Sudah dijalankan di DB dev 6 Nov 2026.
 - Bukti terima (file wajib di step Diterima Customer): migrasi `021_add_bukti_terima.sql` (rollback 022), file disimpan di `uploads/bukti_terima_invoice/` (PDF/JPG/PNG, maks 5 MB per file), diunggah lewat `Follow_up_piutang::save()`.
@@ -47,4 +47,4 @@ node application/modules/monitoring_piutang/tests/Kolom_client_test.js   # butuh
 ```
 
 ## Belum ada / diketahui
-Write-off piutang tak tertagih, invoice internal antar-company, profil surat selain STM, notifikasi. SQL model dan semua tampilan belum diuji di DB/web.
+Write-off piutang tak tertagih, invoice internal antar-company, notifikasi. SQL model dan semua tampilan belum diuji di DB/web.
