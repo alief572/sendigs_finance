@@ -17,6 +17,8 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
     .mp-page .fl.searchbox input { width: 280px; }
     .mp-btn { border: 0; border-radius: 3px; padding: 6px 12px; cursor: pointer; color: #fff; background: var(--green); font-weight: 600; font-size: 13px; }
     .mp-btn.sm { padding: 3px 8px; font-size: 12px; } .mp-btn.c { background: var(--cyan); } .mp-btn.o { background: var(--orange); }
+    .mp-btn { white-space: nowrap; } /* teks tombol tidak patah baris (sebelumnya "Surat Konfirmasi" terpotong di kolom Action) */
+    .mp-act { display: flex; flex-wrap: wrap; gap: 4px; align-items: flex-start; } .mp-act .mp-btn { display: inline-block; text-decoration: none; }
     .mp-btn.g { background: transparent; color: var(--text); border: 1px solid #c8d0d8; }
     .mp-excl { background: var(--row); border: 1px solid var(--line); border-left: 4px solid var(--cyan); border-radius: 3px; padding: 8px 12px; margin: 12px 0; font-size: 13px; }
     .mp-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 16px; }
@@ -227,8 +229,8 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
             '<span class="mp-umur ' + CODE[x.kategori] + '">' + x.umur + ' hari</span>',
             '<span class="mp-pill ' + CODE[x.kategori] + '">' + NAMA[x.kategori] + '</span>',
             bm + last + fu,
-            '<button type="button" class="mp-btn sm c" data-id="' + esc(x.id) + '">Detail</button>' +
-            (x.can_surat ? ' <a class="mp-btn sm o" target="_blank" href="' + BASE + '/surat/' + encodeURIComponent(x.id) + '" title="Print surat konfirmasi tagihan">Surat Konfirmasi</a>' : '')];
+            '<div class="mp-act"><button type="button" class="mp-btn sm c" data-id="' + esc(x.id) + '">Detail</button>' +
+            (x.can_surat ? '<a class="mp-btn sm o" target="_blank" href="' + BASE + '/surat/' + encodeURIComponent(x.id) + '" title="Print surat konfirmasi tagihan">Surat Konfirmasi</a>' : '') + '</div>'];
     }
 
     function dtLang(empty) {
