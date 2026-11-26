@@ -35,12 +35,12 @@ $rp = static function ($cents) use ($num) { return 'Rp ' . $num($cents); };
 	</div>
 	<div class="box-body">
 		<ul class="nav nav-tabs">
-			<?php foreach (['' => ['Semua', $counts['all']], 'diff' => ['Ada perbedaan', $counts['diff']], 'same' => ['Sesuai pengajuan', $counts['all'] - $counts['diff']]] as $key => $label): ?>
+			<?php foreach (['' => ['Semua', $counts['all']], 'diff' => ['Ada perbedaan', $counts['diff']], 'same' => ['Sesuai pengajuan', $counts['all'] - $counts['diff']], 'old' => ['Payment Lama', $old_count]] as $key => $label): ?>
 				<li class="<?= $key === ($tab ?? '') ? 'active' : '' ?>"><a href="<?= html_escape($url . '?' . http_build_query(['tab' => $key] + $params)) ?>"><?= html_escape($label[0]) ?> <span class="rp-count<?= $key === 'diff' ? ' diff' : '' ?>"><?= $label[1] ?></span></a></li>
 			<?php endforeach; ?>
 		</ul>
 		<div class="rp-toolbar">
-			<div class="text-muted">Payment dari Request Payment beserta perbedaannya dengan pengajuan.</div>
+			<div class="text-muted"><?= $tab === 'old' ? 'Payment yang diproses lewat form payment lama.' : 'Payment dari Request Payment beserta perbedaannya dengan pengajuan.' ?></div>
 			<form action="<?= html_escape($url) ?>" method="get">
 				<input type="hidden" name="tab" value="<?= html_escape($tab ?? '') ?>">
 				<select class="form-control input-sm" name="company" aria-label="Company" onchange="this.form.submit()" style="width:auto">
@@ -49,10 +49,13 @@ $rp = static function ($cents) use ($num) { return 'Rp ' . $num($cents); };
 						<option value="<?= $id ?>"<?= (string) $id === $company ? ' selected' : '' ?>><?= $name ?></option>
 					<?php endforeach; ?>
 				</select>
-				<input type="text" class="form-control input-sm" name="q" aria-label="Cari" value="<?= html_escape($search ?? '') ?>" placeholder="Cari no. payment, pengajuan, dokumen, penerima...">
+				<input type="text" class="form-control input-sm" name="q" aria-label="Cari" value="<?= html_escape($search ?? '') ?>" placeholder="Cari no. payment, pengajuan, dokumen, <?= $tab === 'old' ? 'request by' : 'penerima' ?>...">
 				<a class="btn btn-success btn-sm" href="<?= html_escape($url . '?' . http_build_query($params + ['export' => '1'])) ?>"><i class="fa fa-file-excel-o"></i> Export Excel</a>
 			</form>
 		</div>
+		<?php if ($tab === 'old'): ?>
+			<?php include __DIR__ . '/record_payment_old.php'; ?>
+		<?php else: ?>
 		<div class="table-responsive"><table class="table table-bordered table-striped">
 			<thead><tr><th>NO. PAYMENT</th><th>NO. PENGAJUAN</th><th>PENERIMA</th><th>DOKUMEN</th><th style="width:180px">REQUEST PAYMENT</th><th style="width:180px">PAYMENT</th><th style="width:210px">PERBEDAAN</th><th>KETERANGAN PEMBAYARAN</th><th>ACTION</th></tr></thead>
 			<tbody>
@@ -76,6 +79,7 @@ $rp = static function ($cents) use ($num) { return 'Rp ' . $num($cents); };
 				<?php endforeach; ?>
 			</tbody>
 		</table></div>
+		<?php endif; ?>
 	</div>
 </div>
 <style>
@@ -95,7 +99,7 @@ $rp = static function ($cents) use ($num) { return 'Rp ' . $num($cents); };
 	(function () {
 		var request = null;
 		// Tautan View tetap punya href: klik biasa membuka modal, buka di tab baru tetap halaman penuh.
-		$('#rec-pay').on('click', 'a.view', function (event) {
+		$('#rec-pay').on('click', 'a.view[data-payment]', function (event) {
 			if (event.ctrlKey || event.metaKey || event.shiftKey) return;
 			event.preventDefault();
 			var body = $('#rp-view-body');
