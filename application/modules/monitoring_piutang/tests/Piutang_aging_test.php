@@ -464,4 +464,15 @@ $fx = row(['tgl_kirim' => '2026-08-01', 'tgl_terima' => '2026-08-02', 'fu1_plan'
 $dx = $A::decorate($fx, $today);
 same([$dx['fu_last_ke'], $dx['fu_last_status'], $dx['fu_next_ke']], [5, 'BELUM PLAN BAYAR', 6], 'decorate: FU terakhir + status, FU berikutnya');
 same($dx['fu_extra_text'], 'FU5: 23-09-2026 · BELUM PLAN BAYAR · e; FU6: jadwal 07-10-2026', 'FU tambahan dengan status dan tanggal dd-mm-yyyy');
+// cakupan modul, parameter request, dan panjang no faktur
+ok($A::in_scope(row()), 'invoice normal dalam cakupan');
+ok(!$A::in_scope(row(['tax_treatment' => 'DEP'])) && !$A::in_scope(row(['id' => 'KD-1'])) && !$A::in_scope(row(['tgl_invoice' => '2020-01-01'])), 'deposit, KD, dan invoice lama di luar cakupan');
+ok($A::in_scope(row(['sts_close' => '1'])), 'close tidak dinilai in_scope');
+same($A::param(['x']), '', 'array jadi kosong'); same($A::param(null), '', 'null jadi kosong'); same($A::param(' abc ', 2), 'ab', 'trim dan potong');
+$panjang = str_repeat('9', 101);
+$pesan = 'No faktur maksimal 100 karakter.';
+ok(in_array($pesan, $A::validate_ar(row(['no_faktur' => $panjang]), row()), true), 'faktur baru > 100 ditolak');
+ok(!in_array($pesan, $A::validate_ar(row(['no_faktur' => str_repeat('9', 100)]), row()), true), 'faktur 100 diterima');
+ok(!in_array($pesan, $A::validate_ar(row(['no_faktur' => $panjang]), row(['no_faktur' => $panjang])), true), 'faktur lama panjang tidak memblokir');
+
 echo "PASS: $n assertions\n";

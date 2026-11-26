@@ -10,6 +10,7 @@ class Follow_up_piutang extends Admin_Controller
     protected $viewPermission = 'Follow_Up_Piutang.View';
     protected $managePermission = 'Follow_Up_Piutang.Manage';
     const PER_PAGE = 100;
+    const LUAR_CAKUPAN = 'Invoice di luar cakupan Follow Up Piutang.';
     const TAB_LABEL = ['all' => 'Semua', '1' => '1. Kirim Invoice', '2' => '2. Konfirmasi Diterima', '3' => '3. Follow Up Customer', '4' => '4. Tunggu Bayar & Close',
         'late' => 'FU Terlambat', 'bermasalah' => 'Invoice Bermasalah', 'close' => 'Invoice Close (Laporan)'];
     const FILTER_KEYS = ['tab', 'company', 'customer', 'cari', 'fu', 'plan_bulan', 'plan_tahun', 'close_tahun', 'inv_tahun', 'inv_bulan', 'inv_dari', 'inv_sampai'];
@@ -43,13 +44,12 @@ class Follow_up_piutang extends Admin_Controller
     {
         $f = [];
         foreach (self::FILTER_KEYS as $k) {
-            $v = $this->input->get($k, true);
-            $f[$k] = $v === null ? '' : trim((string) $v);
+            $f[$k] = Piutang_aging::param($this->input->get($k, true), $k === 'cari' ? Piutang_aging::CARI_MAKS : 0);
         }
         // kotak cari bawaan DataTables (search[value]) = filter "cari"; ?cari= tetap dipakai oleh export
         $dt = $this->input->get('search');
         if ($f['cari'] === '' && is_array($dt) && isset($dt['value'])) {
-            $f['cari'] = trim((string) $dt['value']);
+            $f['cari'] = Piutang_aging::param($dt['value'], Piutang_aging::CARI_MAKS);
         }
         if ($f['tab'] === '') {
             $f['tab'] = 'all';
@@ -126,13 +126,31 @@ class Follow_up_piutang extends Admin_Controller
             'customers' => $this->customers]);
     }
 
+    /** Invoice yang boleh dibuka / diubah lewat Follow Up (termasuk yang sudah close, untuk dibaca); selain itu null. */
+    private function row_in_scope($id)
+    {
+        $row = $this->Monitoring_piutang_model->get_row($id);
+        return $row && Piutang_aging::in_scope($row) ? $row : null;
+    }
+
+    private function luar_cakupan()
+    {
+        return $this->json(['status' => 'error', 'msg' => self::LUAR_CAKUPAN], 404);
+    }
+
+    /** Pengganti token CSRF untuk simpan/close: situs lain tidak bisa mengirim header X-Requested-With tanpa izin CORS. */
+    private function bukan_ajax()
+    {
+        return $this->json(['status' => 'error', 'msg' => 'Permintaan ditolak. Muat ulang halaman lalu coba lagi.'], 403);
+    }
+
     /** Data form Update: baris + status kunci per step + usulan jadwal FU. */
     public function form($id = '')
     {
         $this->auth->restrict($this->viewPermission);
-        $row = $this->Monitoring_piutang_model->get_row($id);
+        $row = $this->row_in_scope($id);
         if (!$row) {
-            return $this->json(['status' => 'error', 'msg' => 'Invoice tidak ditemukan.'], 404);
+            return $this->luar_cakupan();
         }
         $today = Piutang_aging::today();
         $d = Piutang_aging::decorate($row, $today);
@@ -177,10 +195,17 @@ class Follow_up_piutang extends Admin_Controller
     public function save()
     {
         $this->auth->restrict($this->managePermission);
-        $id = (string) $this->input->post('id', true);
+        if (!$this->input->is_ajax_request()) {
+            return $this->bukan_ajax();
+        }
+        $id = Piutang_aging::param($this->input->post('id', true));
         $input = $this->input->post(null, true) ?: [];
         if ($id === '') {
             return $this->json(['status' => 'error', 'msg' => 'Invoice tidak ditemukan.'], 400);
+        }
+        // Diperiksa sebelum upload supaya tidak ada file yang tertulis untuk invoice di luar cakupan.
+        if (!$this->row_in_scope($id)) {
+            return $this->luar_cakupan();
         }
         // Path bukti tidak pernah diterima dari browser; hanya dari hasil upload di bawah.
         unset($input['bukti_terima'], $input['bukti_terima_nama'], $input['bukti_baru']);
@@ -271,13 +296,23 @@ class Follow_up_piutang extends Admin_Controller
     public function close()
     {
         $this->auth->restrict($this->managePermission);
-        $res = $this->Monitoring_piutang_model->close_invoice((string) $this->input->post('id', true), (string) $this->input->post('reason', true), (string) $this->auth->user_id());
+        if (!$this->input->is_ajax_request()) {
+            return $this->bukan_ajax();
+        }
+        $id = Piutang_aging::param($this->input->post('id', true));
+        if (!$this->row_in_scope($id)) {
+            return $this->luar_cakupan();
+        }
+        $res = $this->Monitoring_piutang_model->close_invoice($id, Piutang_aging::param($this->input->post('reason', true)), (string) $this->auth->user_id());
         return $this->json($res['ok'] ? ['status' => 'success', 'msg' => 'Invoice berhasil di-close.'] : ['status' => 'error', 'msg' => implode("\n", $res['errors'])], $res['ok'] ? 200 : 422);
     }
 
     public function history($id = '')
     {
         $this->auth->restrict($this->viewPermission);
+        if (!$this->row_in_scope($id)) {
+            return $this->luar_cakupan();
+        }
         return $this->json(['status' => 'success', 'rows' => $this->Monitoring_piutang_model->get_log($id)]);
     }
 

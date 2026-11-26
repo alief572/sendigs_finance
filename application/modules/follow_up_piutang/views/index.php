@@ -3,6 +3,7 @@ $base = site_url('follow_up_piutang');
 $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember');
 ?>
 <link rel="stylesheet" href="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.css') ?>">
+<link rel="stylesheet" href="<?= base_url('assets/plugins/datatables/extensions/ColReorder/css/dataTables.colReorder.min.css') ?>">
 <style>
     /* Tampilan mengikuti specs/docs/review-monitoring-piutang/mockup; warna pill memakai varian lebih gelap agar teks putih lolos kontras 4.5:1. */
     .fu-page { --line: #dfe3e8; --row: #f7f9fb; --muted: #5b6670; --blue: #1d5f93; --green: #067647; --orange: #b54708; --red: #b42318; --lock: #eef0f2; }
@@ -14,23 +15,28 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
     .fu-tabs .cnt { display: inline-block; min-width: 20px; padding: 0 6px; border-radius: 9px; background: var(--line); color: #333a40; font-size: 11.5px; font-weight: 700; text-align: center; margin-left: 4px; }
     .fu-tabs .cnt.red { background: var(--red); color: #fff; }
     .fu-tabs button.on .cnt { background: var(--blue); color: #fff; }
-    .fu-groups { display: flex; gap: 4px; margin-bottom: 10px; }
-    .fu-groups button { border: 1px solid var(--line); background: var(--row); padding: 7px 16px; cursor: pointer; border-radius: 3px; font-weight: 600; color: var(--muted); }
-    .fu-groups button.on { background: var(--blue); border-color: var(--blue); color: #fff; }
-    .fu-cards { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
-    .fu-card { flex: 1 1 170px; text-align: left; background: #fff; border: 1px solid var(--line); border-left: 4px solid var(--blue); border-radius: 3px; padding: 8px 12px; cursor: pointer; font: inherit; }
-    .fu-card.on { background: rgba(29, 95, 147, .10); border-color: var(--blue); }
-    .fu-card.red { border-left-color: var(--red); } .fu-card.grey { border-left-color: #4b5563; } .fu-card.ora { border-left-color: var(--orange); }
-    .fu-card .t { display: block; font-size: 12.5px; color: var(--muted); }
+    .fu-groups { display: flex; flex-wrap: wrap; gap: 2px; border-bottom: 2px solid var(--blue); margin-bottom: 6px; }
+    .fu-groups button { border: 0; background: none; padding: 9px 22px; cursor: pointer; border-radius: 3px 3px 0 0; font-weight: 700; color: var(--muted); }
+    .fu-groups button.on { background: var(--blue); color: #fff; }
+    .fu-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .fu-card { display: flex; flex-direction: column; gap: 4px; min-width: 0; text-align: left; background: #fff; border: 1px solid var(--line); border-top: 4px solid var(--blue); border-radius: 3px; padding: 12px 14px; cursor: pointer; font: inherit; }
+    .fu-card.on { box-shadow: 0 0 0 2px #00c0ef; }
+    .fu-card.new { border-top-color: #8a949c; } .fu-card.ora { border-top-color: #f39c12; } .fu-card.grn { border-top-color: #00a65a; } .fu-card.red { border-top-color: var(--red); } .fu-card.grey { border-top-color: #555; }
+    .fu-card.ora .n { color: var(--orange); } .fu-card.red .n { color: var(--red); }
+    .fu-card .t { display: block; font-size: 12px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; color: var(--muted); }
     .fu-card .n { display: block; font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
     .fu-card .v { display: block; font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
     .fu-tbl.wide th, .fu-tbl.wide td { font-size: 12.5px; }
     .fu-tbl .wrapt { white-space: normal; min-width: 150px; max-width: 260px; }
     .fu-tbl .fk { font-size: 12px; } .fu-tbl .fk b { color: var(--muted); font-weight: 600; }
     .fu-tbl .kt .kt-f { display: none; } .fu-tbl .kt.open .kt-f, .fu-tbl.kt-all .kt-f { display: inline; } .fu-tbl .kt.open .kt-s, .fu-tbl.kt-all .kt-s { display: none; }
-    /* kolom No dan Invoice · Customer tetap terlihat (header grup: hanya baris pertama yang memuat keduanya) */
-    .fu-tbl.wide tr.grp th:nth-child(1), .fu-tbl.wide tbody td:nth-child(1), .fu-tbl.wide tfoot td:nth-child(1) { position: sticky; left: 0; z-index: 2; background: #fff; min-width: 44px; }
-    .fu-tbl.wide tr.grp th:nth-child(2), .fu-tbl.wide tbody td:nth-child(2), .fu-tbl.wide tfoot td:nth-child(2) { position: sticky; left: 44px; z-index: 2; background: #fff; min-width: 250px; box-shadow: 1px 0 0 #dfe3e8; }
+    /* Kolom kunci (mockup pinned: 'left'): No dan Invoice tidak bisa dipindah dan tetap terlihat saat tabel digeser ke samping */
+    .fu-page .fu-tbl .fu-pin { position: sticky; left: 0; z-index: 2; background-color: #fff; }
+    .fu-page .fu-tbl .fu-pinno { width: 52px; min-width: 52px; }
+    .fu-page .fu-tbl .fu-pin2 { left: var(--kol-pin, 52px); box-shadow: 1px 0 0 #dfe3e8; }
+    .fu-page .fu-tbl.wide .fu-pin2 { min-width: 250px; }
+    .fu-page .fu-tbl tbody tr:nth-child(odd) > .fu-pin, .fu-page .fu-tbl tfoot .fu-pin { background-color: var(--row); }
+    .fu-page .fu-tbl tbody tr.bm-row > td.fu-pin { background-color: #fff; background-image: linear-gradient(rgba(180, 35, 24, .07), rgba(180, 35, 24, .07)); }
     .fu-tbl .more { border: 0; background: none; color: var(--blue); cursor: pointer; padding: 0; font-size: 12px; }
     .fu-pill.bm { background: var(--red); }
     .fu-tbl tr.bm-row td { background-color: rgba(180, 35, 24, .07); }
@@ -54,7 +60,7 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
     .okmsg { background: rgba(6, 118, 71, .10); border: 1px solid rgba(6, 118, 71, .45); border-radius: 3px; padding: 8px 12px; margin-bottom: 10px; font-size: 13px; }
     .okmsg.danger { background: rgba(180, 35, 24, .08); border-color: rgba(180, 35, 24, .45); }
     .linkbtn { background: none; border: 0; padding: 0; color: var(--blue); cursor: pointer; font-size: 13px; font-weight: 600; }
-    table.fu-tbl { border-collapse: collapse; width: 100%; min-width: 860px; }
+    table.fu-tbl { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 860px; }
     .fu-tbl th, .fu-tbl td { padding: 8px 9px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
     .fu-tbl th { font-weight: 700; font-size: 13px; white-space: nowrap; border-top: 0; }
     .fu-tbl tbody tr:nth-child(odd) { background: var(--row); }
@@ -73,6 +79,7 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
     .late { color: var(--red); }
     #fu-table.fu-tbl > tbody > tr.fu-baru > td { background-color: rgba(181, 71, 8, .10); }
     #fu-table.fu-tbl > tbody > tr.fu-baru > td:first-child { box-shadow: inset 3px 0 0 var(--orange); }
+    #fu-table.fu-tbl > tbody > tr.fu-baru > td.fu-pin { background-color: #fff; background-image: linear-gradient(rgba(181, 71, 8, .10), rgba(181, 71, 8, .10)); }
     .fu-foot { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; margin-top: 10px; font-size: 13px; }
     .fu-foot .dataTables_length select { width: auto; display: inline-block; }
     .fu-empty-note { padding: 26px; text-align: center; color: var(--muted); }
@@ -80,14 +87,15 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
     .fu-page .frm h3 { font-size: 14px; margin: 14px 0 8px; padding-bottom: 4px; border-bottom: 1px solid var(--line); font-weight: 700; }
     .fu-page .frm h3:first-of-type { margin-top: 4px; }
     .fu-page .hint { font-size: 12.5px; color: var(--muted); margin: 0 0 10px; }
-    .frow { display: grid; grid-template-columns: 170px 170px 1fr; gap: 10px; }
+    /* Kolom kedua memuat tanggal + tombol "Hari ini", jadi lebih lebar; align start agar input tidak ikut meregang. */
+    .frow { display: grid; grid-template-columns: 180px 240px minmax(0, 1fr); gap: 10px; align-items: start; }
     .frow label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); font-weight: 400; margin: 0; }
     .frow .span2 { grid-column: span 2; }
-    .frow .bukti-box { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
-    .bukti-picked { display: flex; align-items: center; gap: 8px; margin: 0; padding: 2px 0; font-size: 12.5px; color: inherit; }
-    .bukti-picked button { border: 0; background: none; color: var(--red); cursor: pointer; padding: 0 4px; }
     .req { color: var(--red); }
     .picbox { background: var(--row); border: 1px solid var(--line); border-radius: 3px; padding: 8px 10px; margin-bottom: 10px; }
+    /* Dua isian PIC sama lebar; rata bawah supaya input tetap sejajar walau salah satu label terlipat. */
+    .picbox .frow { grid-template-columns: 270px 270px; align-items: end; }
+    @media (max-width: 760px) { .picbox .frow { grid-template-columns: 1fr; } }
     .fudone { list-style: none; padding: 0; margin: 0 0 8px; }
     .fudone li { border-left: 3px solid var(--green); background: var(--row); margin-bottom: 4px; font-size: 13px; }
     .fudone .fuhead { display: block; width: 100%; text-align: left; background: none; border: 0; padding: 6px 10px; cursor: pointer; font: inherit; color: inherit; }
@@ -96,11 +104,13 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
     .fuact { border: 1px solid var(--blue); border-left-width: 4px; border-radius: 3px; padding: 10px 12px; margin-bottom: 8px; }
     .fuact-t { font-weight: 700; margin-bottom: 8px; }
     .funext { margin-top: 8px; padding: 8px 10px; border: 1px dashed var(--blue); border-radius: 3px; background: var(--row); max-width: 480px; display: flex; flex-direction: column; gap: 4px; }
-    .ingrp { display: flex; gap: 4px; } .ingrp input { flex: 1; }
+    .ingrp { display: flex; gap: 4px; align-items: stretch; } .ingrp input { flex: 1; min-width: 0; } .ingrp button { flex: none; white-space: nowrap; }
+    /* Label Status FU panjang: pakai dua kolom supaya tidak patah tiga baris. */
+    .frow > label:has(select[name*="status"]) { grid-column: span 2; } .frow > label:has(select[name*="status"]) select { max-width: 260px; }
     .fu-err { color: var(--red); font-size: 12.5px; margin: 0 0 8px; }
     .fu-modal-bar { display: flex; gap: 8px; align-items: center; }
     .fu-modal-bar .sp { flex: 1; }
-    @media (max-width: 760px) { .frow { grid-template-columns: 1fr; } .frow .span2 { grid-column: auto; } }
+    @media (max-width: 760px) { .frow { grid-template-columns: 1fr; } .frow .span2, .frow > label:has(select[name*="status"]) { grid-column: auto; } }
 
     /* MP-NFR-10: huruf lebih besar, hanya menu Follow Up (daftar dan form Update). Menu lain tidak berubah. */
     .fu-page { font-size: 16px; }
@@ -109,10 +119,11 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
     .fu-page .fu-tbl.wide th, .fu-page .fu-tbl.wide td { font-size: 14.5px; }
     .fu-page .sub, .fu-page .hint, .fu-page .fk, .fu-page .asof, .fu-page .fl, .fu-page .frow label, .fu-page .fu-tabhint, .fu-page .bukti-picked,
     .fu-page .fu-err, .fu-page .okmsg, .fu-page .fu-warn { font-size: 14.5px; }
-    .fu-page .fu-card .t, .fu-page .fu-card .v, .fu-page .fu-foot, .fu-page .fudone li, .fu-page .fu-tbl .more { font-size: 14px; }
+    .fu-page .fu-card .v, .fu-page .fu-foot, .fu-page .fudone li, .fu-page .fu-tbl .more { font-size: 14px; }
     .fu-page .fu-card .n { font-size: 22px; }
     .fu-page .fu-pill { font-size: 13px; }
-    .fu-page .fu-btn, .fu-page .linkbtn, .fu-page .fu-groups button { font-size: 14.5px; }
+    .fu-page .fu-btn, .fu-page .linkbtn { font-size: 14.5px; }
+    .fu-page .fu-groups button { font-size: 16px; }
     .fu-page .fu-tabs button { font-size: 15px; } /* mockup body.pg-fu: tab 15px, h3 17px, label form/filter 14px */
     .fu-page .fu-btn.sm { font-size: 14px; }
     .fu-page select, .fu-page input[type=text], .fu-page input[type=tel], .fu-page input[type=date], .fu-page input[type=search], .fu-page input[type=file] { font-size: 15px; }
@@ -120,8 +131,8 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
     .fu-page .frow label, .fu-page .fl { font-size: 14px; }
     .fu-page .fu-card .n small { font-size: 13px; font-weight: 600; color: var(--muted); }
     .fu-page .fu-card .v b { color: #333a40; }
-    .fu-grphint { margin: 0 0 10px; color: var(--muted); font-size: 14px; }
-    .fu-tbl.wide thead tr.grp th { text-align: center; background: var(--row); border-bottom: 1px solid var(--line); }
+    .fu-tabhint.fu-grphint { margin-top: 0; }
+    .fu-page .fu-tbl thead.kol-grp th { text-align: center; background: var(--row); border-bottom: 1px solid var(--line); }
     .fu-tbl tfoot td { font-weight: 700; background: var(--row); border-top: 2px solid var(--line); }
     .fu-kt-note { color: var(--muted); font-size: 13.5px; margin-left: 8px; }
     .fu-warn { color: var(--orange); margin: 6px 0 0; }
@@ -133,11 +144,21 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
     #fu-panel.fu-loading table { opacity: .35; }
     @keyframes fu-shim { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
     @media (prefers-reduced-motion: reduce) { .fu-skel i, #fu-cards.fu-loading .fu-card .n, #fu-cards.fu-loading .fu-card .v { animation: none; } }
-    /* Bukti terima: kotak tujuan seret file + pratinjau */
-    .bukti-open { border: 2px dashed #c8d0d8; border-radius: 4px; padding: 8px; }
-    .bukti-open.drop { border-color: var(--blue); background: rgba(29, 95, 147, .08); }
-    .bukti-picked img { width: 44px; height: 44px; object-fit: cover; border-radius: 3px; border: 1px solid var(--line); }
-    .bukti-picked .ic { width: 44px; text-align: center; font-size: 28px; color: var(--red); }
+    /* Bukti terima (mockup MP-R-21): kotak seret / tempel + kartu pratinjau per file */
+    .bukti-box { margin-top: 10px; color: var(--muted); font-size: 14px; }
+    .bukti-drop { border: 2px dashed #c8d0d8; border-radius: 4px; padding: 16px 12px; text-align: center; }
+    .bukti-drop .fu-btn { margin-left: 4px; }
+    .fu-page .bukti-drop input[type=file] { display: none; } /* tema memberi display:block pada input file, mengalahkan atribut hidden */
+    .bukti-open.drop .bukti-drop { border-color: var(--blue); background: rgba(29, 95, 147, .08); color: #333a40; }
+    .bukti-list { list-style: none; padding: 0; margin: 8px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr)); gap: 8px; }
+    .bukti-picked { display: flex; align-items: center; gap: 12px; min-width: 0; border: 1px solid var(--line); border-radius: 6px; padding: 8px; background: #fff; }
+    .bukti-picked .th { flex: 0 0 56px; height: 56px; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid var(--line); border-radius: 4px; background: var(--row); font-size: 26px; color: var(--red); }
+    .bukti-picked img { width: 100%; height: 100%; object-fit: cover; }
+    .bukti-picked .info { flex: 1; min-width: 0; }
+    .bukti-picked .nm { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-weight: 600; }
+    .fu-page .bukti-picked .bukti-del { flex: none; padding: 4px 8px; color: var(--red); }
+    #fu-modal .modal-title { font-weight: 700; }
+    #fu-modal .modal-header .fu-btn { float: right; margin-top: -4px; }
     /* Fase 6: usulan jadwal FU berikutnya, peringatan bermasalah, baris disorot setelah simpan / buka */
     .fu-next { margin-top: 8px; padding: 8px 10px; border: 1px dashed var(--blue); border-radius: 3px; background: var(--row); max-width: 520px; }
     .fu-next label { display: flex; flex-direction: column; gap: 3px; margin: 0; font-weight: 400; color: var(--muted); max-width: 200px; }
@@ -158,7 +179,7 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
         <button type="button" data-group="monitoring">Monitoring</button>
         <button type="button" data-group="perhatian">Perlu Perhatian &amp; Selesai</button>
     </div>
-    <p class="fu-grphint" id="fu-ghint"></p>
+    <p class="fu-tabhint fu-grphint" id="fu-ghint"></p>
     <div class="fu-cards" id="fu-cards"></div>
     <div class="fu-tabs" id="fu-tabs" role="tablist" aria-label="Tahap follow up"></div>
     <p class="fu-tabhint" id="fu-hint"><i class="fa fa-info-circle" aria-hidden="true"></i> <span></span></p>
@@ -208,7 +229,7 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
 </div>
 
 <div class="modal fade" id="fu-modal" tabindex="-1" role="dialog" aria-labelledby="fu-modal-title"><div class="modal-dialog modal-lg"><div class="modal-content">
-    <div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-label="Tutup">&times;</button><h4 class="modal-title" id="fu-modal-title"></h4></div>
+    <div class="modal-header"><button type="button" class="fu-btn g" data-dismiss="modal">Tutup</button><h4 class="modal-title" id="fu-modal-title"></h4></div>
     <div class="modal-body">
         <div id="fu-modal-msg" class="fu-err" role="alert" style="display:none"></div>
         <div id="fu-modal-body"></div>
@@ -237,15 +258,17 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
 <script src="<?= base_url('assets/plugins/datatables/jquery.dataTables.min.js') ?>"></script>
 <script src="<?= base_url('assets/js/company-multi.js') ?>"></script>
 <script src="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.min.js') ?>"></script>
+<script src="<?= base_url('assets/plugins/datatables/extensions/ColReorder/js/dataTables.colReorder.min.js') ?>"></script>
+<script src="<?= base_url('assets/js/piutang-kolom.js') ?>"></script>
 <link rel="stylesheet" href="<?= base_url('assets/plugins/driver/driver.css') ?>">
 <script src="<?= base_url('assets/plugins/driver/driver.js.iife.js') ?>"></script>
 <script src="<?= base_url('assets/js/piutang-tutorial.js') ?>"></script>
 <script>
 (function () {
-    var BASE = '<?= $base ?>', INVOICING = '<?= site_url('invoicing') ?>', FILES = '<?= base_url() ?>', TODAY = '<?= date('Y-m-d') ?>', MANAGE = <?= $can_manage ? 'true' : 'false' ?>;
+    var BASE = '<?= $base ?>', INVOICING = '<?= site_url('invoicing') ?>', BUKTI = '<?= site_url('monitoring_piutang/bukti') ?>', TODAY = '<?= date('Y-m-d') ?>', MANAGE = <?= $can_manage ? 'true' : 'false' ?>;
     // Petunjuk per sub-tab dan per tab utama: teks mockup (FU_TABS / FU_GROUPS), disesuaikan dengan bukti terima wajib.
     var HINTS = {
-        all: 'Semua invoice yang belum close, lengkap seperti Visual Control: invoice, faktur, tanggal, nilai, pengiriman, PIC, FU 1 - 4 (plan, aktual, status, keterangan), plan bayar dan status. Geser tabel ke samping; kolom No dan Invoice · Customer tetap terlihat.',
+        all: 'Semua invoice yang belum close, lengkap seperti Visual Control: invoice, faktur, tanggal, nilai, pengiriman, PIC, FU 1 - 4 (plan, aktual, status, keterangan), plan bayar dan status. Geser tabel ke samping; kolom No dan Invoice · Customer tetap terlihat. Seret judul kolom untuk memindahkannya, atau tepi kanan judul untuk mengubah lebarnya.',
         '1': 'Invoice belum dikirim ke customer. Klik Update, isi tanggal kirim dan dikirim via (JNE / Driver).',
         '2': 'Invoice sudah dikirim (data kirim terkunci). Setelah customer konfirmasi menerima invoice, isi tanggal terima, no resi (hanya via JNE, wajib), bukti terima, dan cek no faktur.',
         '3': 'Invoice sudah diterima customer. Isi PIC penerima follow up, lakukan FU 1 - 4 sesuai jadwal sampai customer memberi rencana tanggal bayar. Bila perlu, tambah FU 5 dst. setelah FU 4.',
@@ -265,9 +288,9 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
         late: 'FU Terlambat', bermasalah: 'Invoice Bermasalah', close: 'Invoice Close (Laporan)'};
     // [kunci, judul, tab, filter FU, warna, keterangan] — teks keterangan dari mockup fuCardsData.
     var CARDS = {
-        proses: [['belum_kirim', 'Belum dikirim', '1', '', '', 'invoice belum dikirim ke customer'], ['belum_diterima', 'Belum diterima', '2', '', '', 'sudah dikirim, belum ada tanggal terima'],
-            ['belum_fu', 'Belum di-follow up', '3', '1', '', 'sudah diterima, FU 1 belum dilakukan'], ['tunggu_bayar', 'Tunggu bayar', '4', '', '', 'ada plan bayar, menunggu pembayaran / close']],
-        perhatian: [['terlambat', 'FU terlambat', 'late', '', 'ora', 'jadwal FU sudah lewat, belum ada plan bayar'], ['bermasalah', 'Invoice bermasalah', 'bermasalah', '', 'red', 'follow up berhenti, lihat keterangan'],
+        proses: [['belum_kirim', 'Belum dikirim', '1', '', 'new', 'invoice belum dikirim ke customer'], ['belum_diterima', 'Belum diterima', '2', '', '', 'sudah dikirim, belum ada tanggal terima'],
+            ['belum_fu', 'Belum di-follow up', '3', '1', 'ora', 'sudah diterima, FU 1 belum dilakukan'], ['tunggu_bayar', 'Tunggu bayar', '4', '', 'grn', 'ada plan bayar, menunggu pembayaran / close']],
+        perhatian: [['terlambat', 'FU terlambat', 'late', '', 'red', 'jadwal FU sudah lewat, belum ada plan bayar'], ['bermasalah', 'Invoice bermasalah', 'bermasalah', '', 'red', 'follow up berhenti, lihat keterangan'],
             ['closed', 'Closed', 'close', '', 'grey', 'di-close pada periode filter']]
     };
     var KAT = {lancar: 'Lancar', potensi: 'Potensi Macet', macet: 'Macet'};
@@ -279,7 +302,7 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
     function groupOf(t) { return t === 'all' ? 'monitoring' : (t === 'late' || t === 'bermasalah' || t === 'close') ? 'perhatian' : 'proses'; }
     function addDays(d, n) { var x = new Date(d + 'T00:00:00Z'); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().substr(0, 10); }
 
-    function esc(s) { return $('<div>').text(s == null ? '' : String(s)).html(); }
+    function esc(s) { return $('<div>').text(s == null ? '' : String(s)).html().replace(/"/g, '&quot;').replace(/'/g, '&#39;'); } // dipakai juga di dalam atribut
     // Tampilan mockup: "Rp 1.234.567" (desimal hanya bila ada), tanggal "2 Nov 2026". Excel tetap angka/tanggal penuh dari server.
     function nf(v) { return 'Rp ' + Number(v || 0).toLocaleString('id-ID', {minimumFractionDigits: 0, maximumFractionDigits: 2}); }
     function dmy(d) {
@@ -395,8 +418,8 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
 
     // Pustaka kolom: tiap tab memilih kolom yang dibutuhkan tugasnya.
     var COL = {
-        no: ['No', {data: null, render: function (_, t, x, m) { return m.row + m.settings._iDisplayStart + 1; }}],
-        inv: ['Invoice', {data: null, className: 'no', render: function (_, t, x) {
+        no: ['No', {data: null, className: 'fu-pin fu-pinno', render: function (_, t, x, m) { return m.row + m.settings._iDisplayStart + 1; }}],
+        inv: ['Invoice', {data: null, className: 'fu-pin fu-pin2 no', render: function (_, t, x) {
             return esc(x.no_invoice) + '<span class="sub">' + dmy(x.tgl_invoice) + '</span>' +
                 (x.bermasalah ? '<span class="fu-pill bm">' + ico('exclamation-triangle') + ' Bermasalah</span>' : '') +
                 (x.baru ? '<span class="fu-pill baru">' + ico('star') + ' Baru' + (x.baru_from ? ' · dari ' + esc(x.baru_from) : '') + '</span>' +
@@ -446,12 +469,12 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
         close: ['no', 'inv', 'cust', 'nilai', 'plan', 'closeinfo', 'aksi']
     };
     // Tab Semua (MP-FR-19): satu baris per invoice, informasi digabung per kolom berlabel.
-    // Kolom ketiga tiap entri = judul grup header (mockup renderVC: header 2 baris); kolom tanpa grup memakai rowspan 2.
+    // Kolom ketiga tiap entri = judul grup header (mockup renderVC: header 2 baris, baris grup dibuat PiutangKolom).
     function allColumns() {
         var dash = '<span class="asof">–</span>';
         var num = function (k, b) { return {data: null, className: 'num', render: function (_, t, x) { var v = nf(x[k]); return b ? '<b>' + v + '</b>' : (k === 'terbayar' && !Number(x[k]) ? '–' : v); }}; };
         var txt = function (k) { return {data: null, render: function (_, t, x) { return x[k] ? esc(x[k]) : dash; }}; };
-        var c = [COL.no, ['Invoice · Customer<span class="sub">No SPK · TOP · Company</span>', {data: null, render: function (_, t, x) { return COL.inv[1].render(_, t, x) + '<div>' + COL.cust[1].render(_, t, x) + '</div>'; }}],
+        var c = [COL.no, ['Invoice · Customer<span class="sub">No SPK · TOP · Company</span>', {data: null, className: 'fu-pin fu-pin2', render: function (_, t, x) { return COL.inv[1].render(_, t, x) + '<div>' + COL.cust[1].render(_, t, x) + '</div>'; }}],
             ['No Faktur', txt('no_faktur'), 'Invoice & Pajak'], ['PO', txt('no_po'), 'Invoice & Pajak'], ['Konsultan', txt('konsultan'), 'Invoice & Pajak'],
             ['Tanggal', {data: null, render: function (_, t, x) {
                 return lbl('Invoice', dmy(x.tgl_invoice)) + '<br>' + lbl('Kirim', dmy(x.tgl_kirim)) + '<br>' + lbl('Terima', dmy(x.tgl_terima)) + '<br>' + lbl('Plan bayar', dmy(x.plan_bayar)); }}],
@@ -477,25 +500,19 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
         c.push(COL.aksi);
         return c;
     }
-    // Header 1 atau 2 baris (grup berurutan digabung dengan colspan), dan baris total untuk tab Semua.
+    // Satu baris judul saja: kolom bisa dipindah (ColReorder), jadi grup dititipkan di data-grp dan digambar PiutangKolom.
     function headHtml(cols) {
-        var thc = function (c) { return (c[1].className || '').indexOf('num') >= 0 ? ' class="num"' : ''; };
-        if (!cols.some(function (c) { return c[2]; })) { return '<tr>' + cols.map(function (c) { return '<th' + thc(c) + '>' + c[0] + '</th>'; }).join('') + '</tr>'; }
-        var top = '', sub = '';
-        for (var i = 0; i < cols.length; i++) {
-            if (!cols[i][2]) { top += '<th rowspan="2"' + thc(cols[i]) + '>' + cols[i][0] + '</th>'; continue; }
-            var n = 1; while (i + n < cols.length && cols[i + n][2] === cols[i][2]) { n++; }
-            top += '<th colspan="' + n + '">' + esc(cols[i][2]) + '</th>';
-            for (var k = i; k < i + n; k++) { sub += '<th' + thc(cols[k]) + '>' + cols[k][0] + '</th>'; }
-            i += n - 1;
-        }
-        return '<tr class="grp">' + top + '</tr><tr>' + sub + '</tr>';
+        return '<tr>' + cols.map(function (c) {
+            var cls = (c[1].className || '').split(' ').filter(function (k) { return k === 'num' || /pin/.test(k); }).join(' ');
+            return '<th' + (cls ? ' class="' + cls + '"' : '') + (c[2] ? ' data-grp="' + esc(c[2]) + '"' : '') + '>' + c[0] + '</th>';
+        }).join('') + '</tr>';
     }
     var TOT_COL = {'DPP': 'dpp', 'PPN': 'ppn', 'Total Invoice': 'nilai', 'Terbayar': 'terbayar', 'Sisa Piutang': 'saldo'};
     function footHtml(cols) {
         return '<tfoot><tr>' + cols.map(function (c, i) {
             var k = c[2] === 'Nilai' ? TOT_COL[c[0]] : '';
-            return '<td' + (k ? ' class="num" data-tot="' + k + '"' : (i === 1 ? ' id="fu-tot-label"' : '')) + '></td>';
+            var cls = ((i < 2 ? c[1].className : '') + (k ? ' num' : '')).trim(); // tfoot satu sel per kolom: ikut pindah bersama kolomnya
+            return '<td' + (cls ? ' class="' + cls + '"' : '') + (k ? ' data-tot="' + k + '"' : (i === 1 ? ' id="fu-tot-label"' : '')) + '></td>';
         }).join('') + '</tr></tfoot>';
     }
     function columnsFor(t) { return t === 'all' ? allColumns() : COLSETS[t].map(function (k) { return COL[k]; }); }
@@ -508,7 +525,9 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
             .append('<thead>' + headHtml(cols) + '</thead><tbody></tbody>' + (f.tab === 'all' ? footHtml(cols) : ''));
         table = $('#fu-table').DataTable({
             serverSide: true, processing: false, ordering: false, autoWidth: false, pageLength: 100, lengthMenu: [25, 50, 100, 250],
-            dom: 'rt<"fu-foot"<"dataTables_length_wrap"l><"dataTables_info_wrap"i>p>', searchDelay: 400,
+            // R = ColReorder: seret judul untuk memindah kolom; No dan Invoice terkunci. Urutan tidak disimpan (sama dengan mockup).
+            dom: 'Rrt<"fu-foot"<"dataTables_length_wrap"l><"dataTables_info_wrap"i>p>', searchDelay: 400,
+            colReorder: {iFixedColumns: 2}, columnDefs: [{targets: '_all', orderable: false}], // urutan baris tetap dari server
             language: {lengthMenu: 'Tampilkan _MENU_ invoice', processing: 'Memuat daftar invoice...',
                 info: 'Menampilkan _START_-_END_ dari _TOTAL_ invoice', infoEmpty: 'Tidak ada invoice', infoFiltered: '(dari _MAX_ di tab ini)',
                 zeroRecords: 'Tidak ada invoice yang cocok dengan tab, filter, atau kata cari ini. Hapus kata cari, ubah filter, atau pilih tab lain.',
@@ -518,6 +537,7 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
             columns: cols.map(function (c) { return c[1]; })
         });
         table.__tab = f.tab;
+        PiutangKolom.init('#fu-table');
         // Skeleton (MP-NFR-11): card dan tabel diganti kerangka saat dimuat ulang.
         table.on('preXhr.dt', function () { $('#fu-skel').prop('hidden', false); $('#fu-panel, #fu-cards').addClass('fu-loading'); });
         table.on('xhr.dt error.dt', function () { $('#fu-skel').prop('hidden', true); $('#fu-panel, #fu-cards').removeClass('fu-loading'); });
@@ -571,25 +591,32 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
     }
     function fileUrl(f) { return f._u || (f._u = URL.createObjectURL(f)); }
     function clearPicked() { picked.forEach(function (f) { if (f._u) { URL.revokeObjectURL(f._u); } }); picked = []; }
-    // Pratinjau: gambar tampil sebagai thumbnail, PDF sebagai ikon; nama file membuka file di tab baru.
+    // Satu kartu per file: gambar tampil sebagai thumbnail, PDF sebagai ikon; klik pratinjau atau nama membuka file di tab baru.
+    function buktiCard(url, nama, isImg, ket, aksi) {
+        var a = '<a href="' + esc(url) + '" target="_blank" rel="noopener"';
+        return '<li class="bukti-picked">' + a + ' class="th" tabindex="-1" aria-hidden="true">' + (isImg ? '<img src="' + esc(url) + '" alt="">' : ico('file-pdf-o')) + '</a>' +
+            '<span class="info">' + a + ' class="nm" title="' + esc(nama) + '">' + esc(nama) + '</a><span class="sub">' + ket + '</span></span>' + (aksi || '') + '</li>';
+    }
+    // File tersimpan (tidak bisa dihapus) diikuti file baru yang belum disimpan (bisa dibuang).
     function pickedHtml() {
-        return picked.map(function (f, i) {
-            var pv = /^image\//.test(f.type) ? '<img src="' + esc(fileUrl(f)) + '" alt="Pratinjau ' + esc(f.name) + '">' : '<span class="ic">' + ico('file-pdf-o') + '</span>';
-            return '<div class="bukti-picked">' + pv + '<span><a href="' + esc(fileUrl(f)) + '" target="_blank" rel="noopener">' + esc(f.name) + '</a> (' + Math.max(1, Math.round(f.size / 1024)) + ' KB)</span>' +
-                '<button type="button" class="bukti-del" data-i="' + i + '" title="Buang file ini" aria-label="Buang ' + esc(f.name) + '">' + ico('times') + '</button></div>';
-        }).join('');
+        return savedBukti(cur.row).map(function (b, i) {
+            return buktiCard(BUKTI + '/' + encodeURIComponent(cur.row.id) + '/' + i, b.nama || 'file', /\.(jpe?g|png)$/i.test(b.path), 'tersimpan');
+        }).concat(picked.map(function (f, i) {
+            return buktiCard(fileUrl(f), f.name, /^image\//.test(f.type), Math.max(1, Math.round(f.size / 1024)) + ' KB · belum disimpan',
+                '<button type="button" class="linkbtn bukti-del" data-i="' + i + '" aria-label="Hapus ' + esc(f.name) + '">' + ico('trash') + ' Hapus</button>');
+        })).join('');
     }
     function buktiHtml(r, locked) {
-        var h = '', saved = savedBukti(r);
-        saved.forEach(function (b) {
-            h += '<div>' + ico('paperclip') + ' <a href="' + esc(FILES + b.path) + '" target="_blank" rel="noopener">Lihat bukti: ' + esc(b.nama || 'file') + '</a></div>';
-        });
+        var h = '';
         if (!locked) {
-            h += '<input type="file" id="bukti-file" accept=".pdf,.jpg,.jpeg,.png" multiple>' +
-                '<div id="bukti-picked">' + pickedHtml() + '</div>' +
-                '<span class="hint" style="margin:0">Pilih beberapa file, seret file ke kotak ini, atau tekan Ctrl+V untuk menempel gambar dari clipboard (mis. screenshot). File baru ditambahkan ke daftar, bukan mengganti.</span>';
-        } else if (!saved.length) {
-            h += '<span class="hint" style="margin:0">Tidak ada file.</span>';
+            h += '<div class="bukti-drop">' + ico('paperclip') + ' Tekan <b>Ctrl+V</b> untuk menempel screenshot / gambar yang di-copy, seret file ke sini, atau ' +
+                '<button type="button" class="fu-btn g sm" id="bukti-pick">Pilih file</button><input type="file" id="bukti-file" accept=".pdf,.jpg,.jpeg,.png" multiple hidden></div>';
+        }
+        h += '<ul class="bukti-list" id="bukti-picked">' + pickedHtml() + '</ul>';
+        if (!locked) {
+            h += '<p class="hint" style="margin:4px 0 0">Ctrl+V bisa di mana saja di form ini; paste teks tetap masuk ke kotak isian. File baru ditambahkan ke daftar, bukan mengganti.</p>';
+        } else if (!savedBukti(r).length) {
+            h += '<p class="hint" style="margin:4px 0 0">Tidak ada bukti terima.</p>';
         }
         return h;
     }
@@ -624,7 +651,7 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
             '<label>Tanggal dilakukan<span class="ingrp">' + inp(N('aktual'), x.aktual, 'date', lkf) +
             (lkf ? '' : '<button type="button" class="fu-btn g sm fu-today" data-name="' + N('aktual') + '">Hari ini</button>') + '</span></label>' +
             '<label>Keterangan / jawaban customer' + inp(N('ket'), x.ket, 'text', lkf) + '</label></div>' +
-            '<div class="frow"><label>Status FU <span class="req">(wajib bila tanggal dilakukan diisi)</span><select name="' + N('status') + '"' + (lkf ? ' disabled' : '') + '><option value="">- Pilih -</option>' +
+            '<div class="frow"><label><span>Status FU <span class="req">(wajib bila tanggal dilakukan diisi)</span></span><select name="' + N('status') + '"' + (lkf ? ' disabled' : '') + '><option value="">- Pilih -</option>' +
             ((cur.status_opts && cur.status_opts[x.ke]) || []).map(function (v) { return '<option' + (x.status === v ? ' selected' : '') + '>' + esc(v) + '</option>'; }).join('') + '</select></label>' +
             (x.status === BM ? '<span class="hint" style="margin:0">Follow up berhenti; jelaskan masalahnya di keterangan.</span>' : '') + '</div>' +
             (lkf ? '' : '<p class="fu-warn" hidden>' + WARN_FU + '</p>' + BMWARN + '<div class="fu-next" hidden></div>');
@@ -642,7 +669,7 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
             '<div class="frow"><label>Jadwal follow up' + inp(n('plan'), plan || '', 'date') + '<span class="hint" style="margin:0">Otomatis: FU ' + (ke - 1) + ' dilakukan + 14 hari. Boleh diubah.</span></label>' +
             '<label>Tanggal dilakukan<span class="ingrp">' + inp(n('aktual'), '', 'date') + '<button type="button" class="fu-btn g sm fu-today" data-name="' + n('aktual') + '">Hari ini</button></span></label>' +
             '<label>Keterangan / jawaban customer' + inp(n('ket'), '', 'text') + '</label></div>' +
-            '<div class="frow"><label>Status FU <span class="req">(wajib bila tanggal dilakukan diisi)</span><select name="' + n('status') + '"><option value="">- Pilih -</option>' +
+            '<div class="frow"><label><span>Status FU <span class="req">(wajib bila tanggal dilakukan diisi)</span></span><select name="' + n('status') + '"><option value="">- Pilih -</option>' +
             ((cur.status_opts && cur.status_opts[ke]) || cur.extra_status_opts || []).map(function (v) { return '<option>' + esc(v) + '</option>'; }).join('') + '</select></label></div>' +
             '<p class="fu-warn" hidden>' + WARN_FU + '</p>' + BMWARN + '<div class="fu-next" hidden></div></div>';
     }
@@ -706,7 +733,7 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
                 VIA.map(function (v) { return '<option' + (r.kirim_via === v ? ' selected' : '') + '>' + v + '</option>'; }).join('') +
                 (r.kirim_via && VIA.indexOf(r.kirim_via) < 0 ? '<option selected>' + esc(r.kirim_via) + '</option>' : '') + '</select></label>' +
                 '<label id="ket-kirim-wrap"' + (r.kirim_via ? '' : ' hidden') + '><span id="ket-kirim-lbl">' + (r.kirim_via === 'Driver' ? 'Keterangan Driver (nama driver, dll)' : 'Keterangan JNE (layanan, dll)') + '</span>' + inp('ket_kirim', r.ket_kirim, 'text', lk) + '</label></div>' +
-                (lk && r.tgl_kirim ? '<p class="hint" style="margin-top:6px">' + ico('lock') + ' Terkunci: data pengiriman sudah disimpan.</p>' :
+                (lk && r.tgl_kirim ? '<p class="hint" style="margin-top:6px">' + ico('lock') + ' Data pengiriman terkunci karena invoice sudah dikirim.</p>' :
                     (ro ? '' : '<p class="hint" style="margin-top:6px">' + ico('pencil') + ' Setelah disimpan, data pengiriman terkunci. No resi diisi di tahap berikutnya (Konfirmasi Diterima).</p>'));
         }
         // 2 diterima (termasuk no resi)
@@ -714,23 +741,24 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
             var lt = ro || L.terima || stage > 2, jne = r.kirim_via === 'JNE';
             // Invoice lama yang sudah terima tapi belum punya bukti: bukti (wajib) tetap bisa dilengkapi walau data terima terkunci.
             var lb = lt && !(d.bukti_boleh && !ro);
-            h += '<h3>2. Diterima Customer</h3><div class="frow">' + (jne ? '<label>No resi' + (stage === 2 ? ' <span class="req">(wajib via JNE)</span>' : '') +
+            h += '<h3>2. Diterima Customer</h3><div class="frow"><label>Tanggal terima' + inp('tgl_terima', r.tgl_terima, 'date', lt) + '</label>' +
+                '<label class="span2">Keterangan' + inp('ket_terima', r.ket_terima, 'text', lt, ' placeholder="Nama penerima"') + '</label></div>' +
+                '<div class="frow" style="margin-top:8px">' + (jne ? '<label><span>No resi JNE' + (stage === 2 ? ' <b class="req">*</b>' : '') + '</span>' +
                 inp('no_resi', r.no_resi, 'text', ro || L.resi || stage > 2, ' maxlength="100"') + '</label>' : '') +
                 // No faktur bisa dikoreksi sampai FU 1 disimpan, juga di tahap 3 (MP-FR-18); server mengunci setelah FU 1.
-                '<label>No faktur <span class="req">(wajib)</span>' + inp('no_faktur', r.no_faktur, 'text', ro || !!L.faktur, ' maxlength="100"') +
-                (!ro && !L.faktur && r.tgl_terima ? '<span class="hint" style="margin:0">' + ico('pencil') + ' Bisa dikoreksi sampai FU 1 disimpan; koreksi ikut mengubah No faktur di Invoicing.</span>' : '') + '</label>' +
-                '<label>Tanggal terima' + inp('tgl_terima', r.tgl_terima, 'date', lt) + '</label>' +
-                '<label>Keterangan' + inp('ket_terima', r.ket_terima, 'text', lt, ' placeholder="Nama penerima"') + '</label></div>' +
-                '<div class="frow" style="margin-top:8px"><div class="bukti-box' + (lb ? '' : ' bukti-open') + '">Bukti terima <span class="req">(wajib minimal 1: PDF / JPG / PNG, maks 5 MB per file)</span>' + buktiHtml(r, lb) +
-                (lt && !lb ? '<span class="hint" style="margin:0">' + ico('exclamation-triangle') + ' Invoice ini belum punya bukti terima. Lengkapi bukti agar data bisa disimpan.</span>' : '') + '</div></div>' +
+                '<label><span>No faktur <b class="req">*</b></span>' + inp('no_faktur', r.no_faktur, 'text', ro || !!L.faktur, ' maxlength="100"') + '</label>' +
+                '<p class="hint' + (jne ? '' : ' span2') + '" style="margin:0;align-self:end">' + (jne ? 'No resi wajib untuk pengiriman via JNE.' : 'Dikirim via ' + esc(r.kirim_via || '–') + ': tidak perlu no resi.') +
+                (!ro && !L.faktur ? '<br>No faktur dari Invoicing; koreksi di sini sampai FU 1 disimpan ikut mengubah No faktur di Invoicing.' : '') + '</p></div>' +
+                '<div class="bukti-box' + (lb ? '' : ' bukti-open') + '">Bukti terima <span class="asof">(JPG / PNG / PDF, maks 5 MB per file, boleh lebih dari 1, <span class="req">wajib minimal 1</span>)</span>' + buktiHtml(r, lb) +
+                (lt && !lb ? '<p class="hint" style="margin:4px 0 0">' + ico('exclamation-triangle') + ' Invoice ini belum punya bukti terima. Lengkapi bukti agar data bisa disimpan.</p>' : '') + '</div>' +
                 (lt && r.tgl_terima ? '<p class="hint" style="margin-top:6px">' + ico('lock') + ' Terkunci: tanggal terima' + (jne ? ', no resi' : '') + ', dan keterangan sudah disimpan' +
                     (L.faktur ? '; no faktur terkunci karena FU 1 sudah disimpan' : '') + '.</p>'
                     : '<p class="hint" style="margin-top:6px">' + ico('pencil') + ' Umur piutang dihitung dari tanggal terima. Tanpa tanggal terima, invoice belum masuk Monitoring Piutang. No resi dan tanggal terima terkunci setelah disimpan.</p>');
         }
         // 3 follow up + 4 plan bayar
         if (stage === 3) {
-            h += '<h3>3. Follow Up</h3><div class="picbox"><div class="frow"><label>Nama PIC penerima follow up <span class="hint">(opsional)</span>' + inp('fu_pic_nama', r.fu_pic_nama, 'text', ro, ' placeholder="Nama orang yang dihubungi"') + '</label>' +
-                '<label>No WA / Telepon PIC <span class="hint">(opsional)</span>' + inp('fu_pic_telp', r.fu_pic_telp, 'tel', ro, ' placeholder="0812xxxxxxxx"') + '</label></div>' +
+            h += '<h3>3. Follow Up</h3><div class="picbox"><div class="frow"><label><span>Nama PIC penerima follow up <span class="asof">(opsional)</span></span>' + inp('fu_pic_nama', r.fu_pic_nama, 'text', ro, ' placeholder="Nama orang yang dihubungi"') + '</label>' +
+                '<label><span>No WA / Telepon PIC <span class="asof">(opsional)</span></span>' + inp('fu_pic_telp', r.fu_pic_telp, 'tel', ro, ' placeholder="0812xxxxxxxx"') + '</label></div>' +
                 '<p class="hint" style="margin:6px 0 0">Tidak wajib. Berlaku untuk semua FU; nomor harus 8–20 digit (boleh +, spasi, tanda -). Bisa diubah atau dikosongkan sampai plan bayar disimpan.</p></div>' +
                 '<p class="hint">Follow up berjalan satu per satu. Isi <b>tanggal dilakukan</b> setelah follow up benar-benar dilakukan, lalu FU berikutnya dijadwalkan otomatis.</p>';
             var doneHtml = '', activeHtml = '', shownCurrent = false, lastDone = -1;
@@ -771,7 +799,7 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
         var NEXT = {1: 'Isi tanggal kirim dan dikirim via, lalu Simpan. Bagian Diterima Customer muncul setelah data pengiriman tersimpan.',
             2: 'Isi tanggal terima' + (r.kirim_via === 'JNE' ? ', no resi JNE' : '') + ', no faktur, dan bukti terima, lalu Simpan. Follow up muncul setelah tanggal terima tersimpan.',
             3: 'Isi FU yang berjalan (tanggal dilakukan, status, keterangan), atau isi plan bayar bila customer sudah memberi rencana tanggal bayar.'};
-        if (!ro && !(stage === 3 && r.bermasalah)) { h += '<p class="hint" id="fu-nextstep" style="margin-top:12px">' + ico('arrow-right') + ' <b>Langkah berikutnya:</b> ' + NEXT[stage] + '</p>'; }
+        if (!ro && !(stage === 3 && r.bermasalah)) { h += '<p class="hint" id="fu-nextstep" style="margin-top:12px">' + ico('info-circle') + ' ' + NEXT[stage] + '</p>'; }
         $('#fu-modal-body').html(h + '</form>');
         $('#btn-save').toggle(!ro);
     }
@@ -812,7 +840,8 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
         }
         renderChrome(); load();
     });
-    $('#fu-table tbody').on('click', '[data-act=buka]', function () {
+    // Delegasi di #fu-table: initTable() mengganti thead/tbody tiap ganti tab, handler di tbody ikut terbuang.
+    $('#fu-table').on('click', 'tbody [data-act=buka]', function () {
         // tab tujuan + sorot baris; form Update langsung terbuka kecuali invoice bermasalah / close (mockup monBtn)
         var t = String($(this).data('tab')), id = $(this).data('id');
         goTab(t, id, !$(this).data('bm') && t !== 'close');
@@ -830,8 +859,8 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
     $('#f-customer').on('change', function () { load(); }); // nama harus persis: muat ulang saat pilihan dipastikan, bukan tiap ketikan
     $('#fu-search').on('input', function () { var v = this.value; clearTimeout(window.__fuS); window.__fuS = setTimeout(function () { table.search(v).draw(); }, 400); });
     $('#btn-export').on('click', function () { window.location = BASE + '/export?' + $.param($.extend(params(), {cari: table.search()})); });
-    $('#fu-table tbody').on('click', '[data-act=update]', function () { openForm($(this).data('id')); });
-    $('#fu-table tbody').on('click', '[data-act=close]', function () { openClose(table.row($(this).closest('tr')).data()); });
+    $('#fu-table').on('click', 'tbody [data-act=update]', function () { openForm($(this).data('id')); });
+    $('#fu-table').on('click', 'tbody [data-act=close]', function () { openClose(table.row($(this).closest('tr')).data()); });
     $('#btn-do-close').on('click', function () {
         var why = $.trim($('#fu-close-ket').val());
         if (!why) { $('#fu-close-err').text('Mohon isi keterangan close invoice.'); return; }
@@ -877,6 +906,7 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
         $('#ket-kirim-wrap').prop('hidden', !v);
         $('#ket-kirim-lbl').text(v === 'Driver' ? 'Keterangan Driver (nama driver, dll)' : 'Keterangan JNE (layanan, dll)');
     });
+    $('#fu-modal-body').on('click', '#bukti-pick', function () { $('#bukti-file').trigger('click'); });
     $('#fu-modal-body').on('change', '#bukti-file', function () {
         addPicked(this.files);
         this.value = ''; // pilihan berikutnya ditambahkan; daftar ada di `picked`
@@ -1005,7 +1035,7 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
     ];
     if (window.PiutangTour) {
         PiutangTour.mount(document.getElementById('fu-tour'), {title: 'Follow Up Piutang', page: FU_STEPS,
-            flows: [{title: 'Invoice sampai Close', steps: INV_STEPS.concat(FU_STEPS)}], cleanup: function () { tourOpenFirst = false; }});
+            flows: [{title: 'Invoice sampai Close', desc: 'Invoicing → Follow Up Piutang (Proses, Perlu Perhatian &amp; Selesai, Monitoring)', steps: INV_STEPS.concat(FU_STEPS)}], cleanup: function () { tourOpenFirst = false; }});
     }
     renderChrome(); applyTab();
 })();

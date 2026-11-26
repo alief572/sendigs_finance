@@ -1,5 +1,6 @@
 <?php $base = site_url('follow_up_piutang/plan_bayar'); ?>
 <link rel="stylesheet" href="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.css') ?>">
+<link rel="stylesheet" href="<?= base_url('assets/plugins/datatables/extensions/ColReorder/css/dataTables.colReorder.min.css') ?>">
 <style>
     /* Tampilan mengikuti specs/docs/review-monitoring-piutang/mockup; warna pill memakai varian lebih gelap agar teks putih lolos kontras 4.5:1. */
     .pb-page { --line: #dfe3e8; --row: #f7f9fb; --muted: #5b6670; --blue: #1d5f93; --green: #067647; --orange: #b54708; --red: #b42318; }
@@ -37,10 +38,10 @@
     .pb-pill.C { background: var(--blue); } .pb-pill.close { background: #4b5563; }
     .umur { font-weight: 700; font-variant-numeric: tabular-nums; }
     .umur.lancar { color: var(--green); } .umur.potensi { color: var(--orange); } .umur.macet { color: var(--red); }
-    table.pb-tbl { border-collapse: collapse; width: 100%; min-width: 760px; }
+    table.pb-tbl { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 760px; }
     .pb-tbl th, .pb-tbl td { padding: 8px 9px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
     .pb-tbl th { font-weight: 700; font-size: 13px; white-space: nowrap; border-top: 0; }
-    .pb-tbl th.grp { text-align: center; background: var(--row); }
+    .pb-tbl thead.kol-grp th { text-align: center; background: var(--row); }
     .pb-tbl tbody tr:nth-child(odd) { background: var(--row); }
     .pb-tbl td.num, .pb-tbl th.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
     .pb-tbl .no { white-space: nowrap; font-weight: 600; }
@@ -85,18 +86,20 @@
         <div class="table-responsive"><table id="pb-plan-tbl" class="pb-tbl">
             <thead><tr><th>No</th><th>Plan Bayar</th><th>Invoice</th><th>Customer</th><th>Company</th><th class="num">Nilai Invoice</th><th class="num">Nilai Plan<span class="sub">tidak berkurang walau sudah dibayar</span></th><th>Umur</th></tr></thead>
             <tbody></tbody>
-            <tfoot><tr><td colspan="5" id="pp-label">Total</td><td class="num" id="pp-nilai"></td><td class="num" id="pp-plan"></td><td></td></tr></tfoot>
+            <tfoot><tr><td></td><td id="pp-label">Total</td><td></td><td></td><td></td><td class="num" id="pp-nilai"></td><td class="num" id="pp-plan"></td><td></td></tr></tfoot>
         </table></div>
-        <p class="pb-hint" style="margin:8px 0 0">Nilai plan = sisa piutang saat plan bayar disimpan. Pembayaran yang sudah masuk dilihat di tabel Realisasi bayar. Klik baris untuk membuka invoice di Follow Up Piutang.</p>
+        <p class="pb-hint" style="margin:8px 0 0">Nilai plan = sisa piutang saat plan bayar disimpan. Pembayaran yang sudah masuk dilihat di tabel Realisasi bayar. Klik baris untuk membuka invoice di Follow Up Piutang. Seret judul kolom untuk memindahkannya, atau tepi kanan judul untuk mengubah lebarnya.</p>
     </div>
     <div class="pb-panel"><h2 id="pb-title-real">Realisasi bayar</h2>
         <p class="pb-hint">Setiap baris = satu pembayaran customer. Bandingkan <b>plan bayar</b> dengan <b>kapan benar-benar dibayar</b>, lalu lihat apakah invoicenya sudah lunas.</p>
         <p id="pr-sum" style="margin:0 0 10px"></p>
         <div class="table-responsive"><table id="pb-real-tbl" class="pb-tbl">
-            <thead><tr><th rowspan="2">No</th><th rowspan="2">Invoice</th><th rowspan="2">Customer / Project</th><th colspan="3" class="grp">Plan vs Bayar</th><th rowspan="2" class="num">Jumlah Dibayar</th><th colspan="2" class="grp">Posisi Invoice Sekarang</th></tr>
-                <tr><th>Plan Bayar<span class="sub">plan bayar</span></th><th>Tanggal Bayar<span class="sub">no penerimaan</span></th><th>Ketepatan</th><th class="num">Sisa Tagihan<span class="sub">dari nilai invoice</span></th><th>Status</th></tr></thead>
+            <thead><tr><th>No</th><th>Invoice</th><th>Customer / Project</th>
+                <th data-grp="Plan vs Bayar">Plan Bayar<span class="sub">plan bayar</span></th><th data-grp="Plan vs Bayar">Tanggal Bayar<span class="sub">no penerimaan</span></th><th data-grp="Plan vs Bayar">Ketepatan</th>
+                <th class="num">Jumlah Dibayar</th>
+                <th class="num" data-grp="Posisi Invoice Sekarang">Sisa Tagihan<span class="sub">dari nilai invoice</span></th><th data-grp="Posisi Invoice Sekarang">Status</th></tr></thead>
             <tbody></tbody>
-            <tfoot><tr><td colspan="6" id="pr-label">Total</td><td class="num" id="pr-nominal"></td><td colspan="2"></td></tr></tfoot>
+            <tfoot><tr><td></td><td id="pr-label">Total</td><td></td><td></td><td></td><td></td><td class="num" id="pr-nominal"></td><td></td><td></td></tr></tfoot>
         </table></div>
     </div>
 </div>
@@ -104,6 +107,8 @@
 <script src="<?= base_url('assets/plugins/datatables/jquery.dataTables.min.js') ?>"></script>
 <script src="<?= base_url('assets/js/company-multi.js') ?>"></script>
 <script src="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.min.js') ?>"></script>
+<script src="<?= base_url('assets/plugins/datatables/extensions/ColReorder/js/dataTables.colReorder.min.js') ?>"></script>
+<script src="<?= base_url('assets/js/piutang-kolom.js') ?>"></script>
 <link rel="stylesheet" href="<?= base_url('assets/plugins/driver/driver.css') ?>">
 <script src="<?= base_url('assets/plugins/driver/driver.js.iife.js') ?>"></script>
 <script src="<?= base_url('assets/js/piutang-tutorial.js') ?>"></script>
@@ -115,7 +120,7 @@
     function skelCards() { return '<div class="pbcard"><span class="pb-sk"></span><span class="pb-sk lg"></span><span class="pb-sk"></span></div>'.repeat(13).replace('class="pbcard"', 'class="pbcard pball"'); }
     var NAMA = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
     var KAT = {lancar: 'Lancar', potensi: 'Potensi', macet: 'Macet'};
-    function esc(s) { return $('<div>').text(s == null ? '' : String(s)).html(); }
+    function esc(s) { return $('<div>').text(s == null ? '' : String(s)).html().replace(/"/g, '&quot;').replace(/'/g, '&#39;'); } // dipakai juga di dalam atribut
     function rp(c) { return Number(c / 100).toLocaleString('id-ID', {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
     function nf(v) { return rp(Number(v || 0) * 100); }
     function dmy(d) { return d ? String(d).substr(8, 2) + '-' + String(d).substr(5, 2) + '-' + String(d).substr(0, 4) : ''; }
@@ -155,7 +160,8 @@
     function initTables() {
         $.fn.dataTable.ext.errMode = 'none'; // error ajax tampil sebagai banner, bukan alert bawaan
         var common = {serverSide: true, processing: true, ordering: false, autoWidth: false, pageLength: 25, lengthMenu: [10, 25, 50, 100], searchDelay: 400,
-            dom: 'frt<"pb-foot"<"pb-len"l><"pb-info"i>p>'};
+            // R = ColReorder: seret judul untuk memindah kolom; tabel Dashboard tidak punya kolom terkunci (mockup gridPB). Urutan tidak disimpan.
+            columnDefs: [{targets: '_all', orderable: false}], dom: 'Rfrt<"pb-foot"<"pb-len"l><"pb-info"i>p>'};
         var lang = function (empty, zero) {
             return {search: 'Cari:', searchPlaceholder: 'invoice, customer, tanggal, ...', lengthMenu: 'Tampilkan _MENU_ baris', processing: 'Memuat...',
                 info: 'Menampilkan _START_-_END_ dari _TOTAL_', infoEmpty: 'Tidak ada data', infoFiltered: '(dari _MAX_ pada periode ini)',
@@ -198,6 +204,8 @@
                 {data: null, render: function (_, t, x) { return pill(x.posisi === 'Lunas & close' ? 'close' : (x.posisi === 'Lunas, belum close' ? 'L' : 'P'), esc(x.posisi)); }}
             ]
         }));
+        PiutangKolom.init('#pb-plan-tbl');
+        PiutangKolom.init('#pb-real-tbl');
         // total dan ringkasan mengikuti hasil filter (bulan + cari), bukan hanya halaman yang tampil
         pt.on('xhr.dt', function (e, s, json) {
             if (!json || !json.agg) { return; }

@@ -3,6 +3,7 @@ $base = site_url('monitoring_piutang');
 $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember');
 ?>
 <link rel="stylesheet" href="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.css') ?>">
+<link rel="stylesheet" href="<?= base_url('assets/plugins/datatables/extensions/ColReorder/css/dataTables.colReorder.min.css') ?>">
 <style>
     /* Tampilan mengikuti specs/docs/monitoring-piutang/mockup-monitoring-piutang.html (menu Monitoring Piutang).
        Warna pill memakai varian lebih gelap agar teks putih lolos kontras 4.5:1. */
@@ -41,7 +42,7 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
     .mp-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; padding: 3px 10px; border-radius: 12px; background: var(--row); border: 1px solid var(--line); }
     .mp-chip button { border: 0; background: none; cursor: pointer; color: var(--muted); font-weight: 700; padding: 0; }
     .asof { font-size: 12.5px; color: var(--muted); }
-    table.mp-tbl { border-collapse: collapse; width: 100%; min-width: 860px; }
+    table.mp-tbl { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 860px; }
     .mp-tbl th, .mp-tbl td { padding: 8px 9px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
     .mp-tbl th { font-weight: 700; font-size: 13px; white-space: nowrap; border-top: 0; }
     .mp-tbl tbody tr:nth-child(odd) { background: var(--row); }
@@ -51,6 +52,13 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
     .mp-tbl tfoot td { font-weight: 700; background: var(--row); border-top: 2px solid var(--line); }
     .mp-tbl tr.bad > td { background-color: rgba(180, 35, 24, .08); } .mp-tbl tr.bad > td:first-child { box-shadow: inset 3px 0 0 var(--red); }
     .mp-tbl tr.click { cursor: pointer; } .mp-tbl tr.click:hover > td { background-color: rgba(63, 139, 186, .08); }
+    /* Kolom kunci (mockup pinned: 'left'): tidak bisa dipindah dan tetap terlihat saat tabel digeser ke samping */
+    .mp-page table.mp-tbl .mp-pin { position: sticky; left: 0; z-index: 1; background-color: #fff; }
+    .mp-page table.mp-tbl .mp-pinno { width: 52px; min-width: 52px; }
+    .mp-page table.mp-tbl .mp-pin2 { left: var(--kol-pin, 52px); }
+    .mp-page table.mp-tbl tbody tr:nth-child(odd) > .mp-pin, .mp-page table.mp-tbl tfoot .mp-pin { background-color: var(--row); }
+    .mp-page table.mp-tbl tbody tr.bad > td.mp-pin { background-color: #fff; background-image: linear-gradient(rgba(180, 35, 24, .08), rgba(180, 35, 24, .08)); }
+    .mp-page table.mp-tbl tbody tr.click:hover > td.mp-pin { background-color: #fff; background-image: linear-gradient(rgba(63, 139, 186, .08), rgba(63, 139, 186, .08)); }
     .mp-tbl a.inv { color: var(--blue); font-weight: 700; }
     .mp-pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11.5px; font-weight: 700; color: #fff; white-space: nowrap; }
     .mp-pill.L { background: var(--green); } .mp-pill.P { background: var(--orange); } .mp-pill.M { background: var(--red); } .mp-pill.A { background: var(--green); } .mp-pill.R { background: var(--red); }
@@ -114,16 +122,16 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
     <div class="mp-chips" id="mp-chips"></div>
     <div id="pane-list" class="table-responsive">
         <table id="mp-list" class="mp-tbl">
-            <thead><tr><th>No</th><th>No Invoice</th><th>Customer</th><th>Company</th><th class="num">Nilai Invoice</th><th class="num">Terbayar</th><th class="num">Sisa Piutang</th><th class="num">Umur</th><th>Kategori</th><th>Follow Up</th><th>Action</th></tr></thead>
+            <thead><tr><th class="mp-pin mp-pinno">No</th><th class="mp-pin mp-pin2">No Invoice</th><th>Customer</th><th>Company</th><th class="num">Nilai Invoice</th><th class="num">Terbayar</th><th class="num">Sisa Piutang</th><th class="num">Umur</th><th>Kategori</th><th>Follow Up</th><th>Action</th></tr></thead>
             <tbody></tbody>
-            <tfoot><tr><td colspan="4" id="tot-label">Total</td><td class="num" id="tot-nilai"></td><td class="num" id="tot-terbayar"></td><td class="num" id="tot-saldo"></td><td colspan="4"></td></tr></tfoot>
+            <tfoot><tr><td class="mp-pin mp-pinno"></td><td class="mp-pin mp-pin2" id="tot-label">Total</td><td></td><td></td><td class="num" id="tot-nilai"></td><td class="num" id="tot-terbayar"></td><td class="num" id="tot-saldo"></td><td></td><td></td><td></td><td></td></tr></tfoot>
         </table>
     </div>
     <div id="pane-rekap" class="table-responsive" style="display:none">
         <table id="mp-rekap" class="mp-tbl">
-            <thead><tr><th>Customer</th><th>Company</th><th class="num">Invoice</th><th class="num">Lancar<span class="sub">0–60 hari</span></th><th class="num">Potensi Macet<span class="sub">61–90 hari</span></th><th class="num">Macet<span class="sub">&gt; 90 hari</span></th><th class="num">Total Sisa Piutang</th><th class="num">Umur tertua</th></tr></thead>
+            <thead><tr><th class="mp-pin">Customer</th><th>Company</th><th class="num">Invoice</th><th class="num">Lancar<span class="sub">0–60 hari</span></th><th class="num">Potensi Macet<span class="sub">61–90 hari</span></th><th class="num">Macet<span class="sub">&gt; 90 hari</span></th><th class="num">Total Sisa Piutang</th><th class="num">Umur tertua</th></tr></thead>
             <tbody></tbody>
-            <tfoot><tr><td colspan="2" id="rk-label">Total</td><td class="num" id="rk-count"></td><td class="num" id="rk-lancar"></td><td class="num" id="rk-potensi"></td><td class="num" id="rk-macet"></td><td class="num" id="rk-total"></td><td></td></tr></tfoot>
+            <tfoot><tr><td class="mp-pin" id="rk-label">Total</td><td></td><td class="num" id="rk-count"></td><td class="num" id="rk-lancar"></td><td class="num" id="rk-potensi"></td><td class="num" id="rk-macet"></td><td class="num" id="rk-total"></td><td></td></tr></tfoot>
         </table>
     </div>
 </div>
@@ -138,16 +146,18 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
 <script src="<?= base_url('assets/plugins/datatables/jquery.dataTables.min.js') ?>"></script>
 <script src="<?= base_url('assets/js/company-multi.js') ?>"></script>
 <script src="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.min.js') ?>"></script>
+<script src="<?= base_url('assets/plugins/datatables/extensions/ColReorder/js/dataTables.colReorder.min.js') ?>"></script>
+<script src="<?= base_url('assets/js/piutang-kolom.js') ?>"></script>
 <link rel="stylesheet" href="<?= base_url('assets/plugins/driver/driver.css') ?>">
 <script src="<?= base_url('assets/plugins/driver/driver.js.iife.js') ?>"></script>
 <script src="<?= base_url('assets/js/piutang-tutorial.js') ?>"></script>
 <script>
 (function () {
-    var BASE = '<?= $base ?>', FU = '<?= site_url('follow_up_piutang') ?>', FILES = '<?= base_url() ?>', TODAY = '<?= date('Y-m-d') ?>', kat = 'all', tbl, rkTbl;
+    var BASE = '<?= $base ?>', FU = '<?= site_url('follow_up_piutang') ?>', TODAY = '<?= date('Y-m-d') ?>', kat = 'all', tbl, rkTbl;
     var NAMA = {all: 'Total Piutang', lancar: 'Lancar', potensi: 'Potensi Macet', macet: 'Macet'};
     var KET = {lancar: 'Umur 0 - 60 hari', potensi: 'Umur 61 - 90 hari', macet: 'Umur > 90 hari', all: 'Lancar + Potensi Macet + Macet (sudah diterima)'};
     var CODE = {lancar: 'L', potensi: 'P', macet: 'M'};
-    function esc(s) { return $('<div>').text(s == null ? '' : String(s)).html(); }
+    function esc(s) { return $('<div>').text(s == null ? '' : String(s)).html().replace(/"/g, '&quot;').replace(/'/g, '&#39;'); } // dipakai juga di dalam atribut
     function rp(c) { return Number(c / 100).toLocaleString('id-ID', {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
     function nf(v) { return rp(Number(v || 0) * 100); }
     function dmy(d) { return d ? String(d).substr(8, 2) + '-' + String(d).substr(5, 2) + '-' + String(d).substr(0, 4) : ''; }
@@ -194,8 +204,13 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
         }).join('') || '<span class="asof">Menampilkan semua piutang. Klik card untuk menyaring per kategori umur.</span>');
     }
 
-    // Kolom DataTable -> kunci urut di server (null = tidak bisa diurutkan)
-    var SORT = [null, 'no_invoice', 'customer', null, 'nilai', 'terbayar', 'saldo', 'umur', null, null, null];
+    // Kolom bisa dipindah (ColReorder), jadi isi baris dan kunci urut memakai nama kolom, bukan posisi.
+    // Nama kolom yang bisa diurutkan = kunci urut di server (Piutang_aging::PAGE_SORT_KEYS / REKAP_SORT_KEYS).
+    function cols(defs) { return defs.map(function (d) { return {data: d[0], orderable: !!d[1], className: d[2] || ''}; }); }
+    function toRow(columns, cells) { var row = {}; columns.forEach(function (c, i) { row[c.data] = cells[i]; }); return row; }
+    function listParams(d) { var o = d.order && d.order.length ? d.order[0] : null; return $.extend(params(), {draw: d.draw, start: d.start, length: d.length, sort: o ? d.columns[o.column].data : '', dir: o ? o.dir : ''}); }
+    var LIST_COLS = cols([['no', 0, 'mp-pin mp-pinno'], ['no_invoice', 1, 'mp-pin mp-pin2 no'], ['customer', 1], ['company'], ['nilai', 1, 'num'], ['terbayar', 1, 'num'], ['saldo', 1, 'num'], ['umur', 1, 'num'], ['kategori'], ['follow_up'], ['aksi']]);
+    var RK_COLS = cols([['customer', 1, 'mp-pin'], ['company'], ['count', 1, 'num'], ['lancar', 1, 'num'], ['potensi', 1, 'num'], ['macet', 1, 'num'], ['total', 1, 'num'], ['oldest', 1, 'num']]);
 
     function rowCells(x, i, start) {
         // Kolom Follow Up (mockup fuCell): pill status FU terakhir + "status FU n", lalu FU berikutnya "FU n (tambahan) · tgl" atau plan bayar.
@@ -220,7 +235,7 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
         return {emptyTable: empty, zeroRecords: empty, lengthMenu: 'Tampilkan _MENU_ baris', processing: '', info: 'Menampilkan _START_-_END_ dari _TOTAL_ invoice', infoEmpty: 'Tidak ada data',
             paginate: {previous: '&laquo;', next: '&raquo;'}};
     }
-    var DOM = 'rt<"mp-foot"<"mp-len"l><"mp-info"i>p>';
+    var DOM = 'Rrt<"mp-foot"<"mp-len"l><"mp-info"i>p>'; // R = ColReorder: seret judul untuk memindah kolom (urutan tidak disimpan, sama dengan mockup)
     function skelRows(sel, n) { $(sel + ' tbody').html('<tr><td colspan="11">' + '<span class="mp-sk row"></span>'.repeat(n) + '</td></tr>'); }
 
     function initTable() {
@@ -228,17 +243,15 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
         tbl = $('#mp-list').DataTable({
             serverSide: true, processing: false, searching: false, ordering: true, order: [], autoWidth: false, pageLength: 25, lengthMenu: [10, 25, 50, 100], dom: DOM,
             language: dtLang('Tidak ada piutang untuk filter ini.'),
-            columns: SORT.map(function (k) { return {orderable: !!k}; }), // urut di server (Piutang_aging::PAGE_SORT_KEYS)
+            columns: LIST_COLS, colReorder: {iFixedColumns: 2},
             createdRow: function (tr, data, idx) { $(tr).addClass('click'); },
-            columnDefs: [{targets: [4, 5, 6, 7], className: 'num'}, {targets: 1, className: 'no'}],
             ajax: function (d, cb) {
                 skelRows('#mp-list', 5);
-                var o = d.order && d.order.length ? d.order[0] : null;
-                $.getJSON(BASE + '/list_data', $.extend(params(), {draw: d.draw, start: d.start, length: d.length, sort: o ? SORT[o.column] : '', dir: o ? o.dir : ''})).done(function (r) {
+                $.getJSON(BASE + '/list_data', listParams(d)).done(function (r) {
                     $('#mp-err').hide();
                     $('#tot-label').text('Total ' + r.recordsFiltered + ' invoice');
                     $('#tot-nilai').text(nf(r.totals.nilai)); $('#tot-terbayar').text(nf(r.totals.terbayar)); $('#tot-saldo').text(nf(r.totals.saldo));
-                    cb({draw: r.draw, recordsTotal: r.recordsTotal, recordsFiltered: r.recordsFiltered, data: r.data.map(function (x, i) { return rowCells(x, i, d.start); })});
+                    cb({draw: r.draw, recordsTotal: r.recordsTotal, recordsFiltered: r.recordsFiltered, data: r.data.map(function (x, i) { return toRow(LIST_COLS, rowCells(x, i, d.start)); })});
                     $('#mp-list tbody tr').each(function (i) { if (r.data[i] && r.data[i].bermasalah) { $(this).addClass('bad'); } });
                 }).fail(function (x) {
                     $('#mp-err').text((x.responseJSON || {}).error || 'Gagal memuat daftar piutang. Periksa koneksi lalu coba lagi.').show();
@@ -246,27 +259,25 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
                 });
             }
         });
+        PiutangKolom.init('#mp-list'); // ubah lebar kolom (mockup resizable)
     }
 
     // Rekap dibuat saat tab pertama kali dibuka (DataTables butuh tabel terlihat untuk menghitung lebar kolom)
-    var RK_SORT = ['customer', null, 'count', 'lancar', 'potensi', 'macet', 'total', 'oldest'];
     function zc(v) { return '<span class="' + (v ? '' : 'z') + '">' + (v ? rp(v) : '–') + '</span>'; }
     function initRekap() {
         rkTbl = $('#mp-rekap').DataTable({
             serverSide: true, processing: false, searching: false, pageLength: 25, lengthMenu: [10, 25, 50, 100], order: [], autoWidth: false, dom: DOM,
             language: dtLang('Tidak ada piutang untuk filter ini.'),
-            columns: RK_SORT.map(function (k) { return {orderable: !!k}; }),
-            columnDefs: [{targets: [2, 3, 4, 5, 6, 7], className: 'num'}],
+            columns: RK_COLS, colReorder: {iFixedColumns: 1},
             ajax: function (d, cb) {
-                var o = d.order && d.order.length ? d.order[0] : null;
-                $.getJSON(BASE + '/rekap_data', $.extend(params(), {draw: d.draw, start: d.start, length: d.length, sort: o ? RK_SORT[o.column] : '', dir: o ? o.dir : ''})).done(function (r) {
+                $.getJSON(BASE + '/rekap_data', listParams(d)).done(function (r) {
                     $('#mp-err').hide();
                     var t = r.totals || {};
                     $('#rk-label').text('Total ' + r.recordsFiltered + ' customer'); $('#rk-count').text(t.count || 0);
                     ['lancar', 'potensi', 'macet', 'total'].forEach(function (k) { $('#rk-' + k).html(k === 'total' ? '<b>' + rp(t[k] || 0) + '</b>' : zc(t[k] || 0)); });
                     cb({draw: r.draw, recordsTotal: r.recordsTotal, recordsFiltered: r.recordsFiltered, data: r.data.map(function (x) {
-                        return ['<a href="#" data-cust="' + esc(x.customer) + '"><b>' + esc(x.customer) + '</b></a>', esc(x.company) || '–', x.count, zc(x.lancar), zc(x.potensi), zc(x.macet), '<b>' + rp(x.total) + '</b>',
-                            '<span class="mp-umur">' + x.oldest + ' hari</span>'];
+                        return toRow(RK_COLS, ['<a href="#" data-cust="' + esc(x.customer) + '"><b>' + esc(x.customer) + '</b></a>', esc(x.company) || '–', x.count, zc(x.lancar), zc(x.potensi), zc(x.macet), '<b>' + rp(x.total) + '</b>',
+                            '<span class="mp-umur">' + x.oldest + ' hari</span>']);
                     })});
                 }).fail(function (x) {
                     $('#mp-err').text((x.responseJSON || {}).error || 'Gagal memuat rekap piutang. Periksa koneksi lalu coba lagi.').show();
@@ -274,6 +285,7 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
                 });
             }
         });
+        PiutangKolom.init('#mp-rekap'); // ubah lebar kolom (mockup resizable)
     }
 
     function load(skipTable) {
@@ -342,8 +354,8 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
                 kv('Dikirim', dv(r.tgl_kirim) + (r.kirim_via ? ' via ' + esc(r.kirim_via) : '') + (r.ket_kirim ? '<span class="k">' + esc(r.ket_kirim) + '</span>' : '')) +
                 kv('No Resi', esc(r.no_resi) || '–') +
                 kv('Diterima customer', dv(r.tgl_terima) + (r.ket_terima ? '<span class="k">' + esc(r.ket_terima) + '</span>' : '') +
-                    (r.bukti_terima ? [{path: r.bukti_terima, nama: r.bukti_terima_nama}] : []).concat(r.bukti_extra || []).map(function (b) {
-                        return '<span class="k"><i class="fa fa-paperclip"></i> <a href="' + esc(FILES + b.path) + '" target="_blank" rel="noopener">Bukti terima: ' + esc(b.nama || 'file') + '</a></span>';
+                    (r.bukti_terima ? [{path: r.bukti_terima, nama: r.bukti_terima_nama}] : []).concat(r.bukti_extra || []).map(function (b, i) {
+                        return '<span class="k"><i class="fa fa-paperclip"></i> <a href="' + BASE + '/bukti/' + encodeURIComponent(r.id) + '/' + i + '" target="_blank" rel="noopener">Bukti terima: ' + esc(b.nama || 'file') + '</a></span>';
                     }).join('')) +
                 kv('PIC penerima FU', r.fu_pic_nama ? esc(r.fu_pic_nama) + (r.fu_pic_telp ? ' · ' + esc(r.fu_pic_telp) : '') : '–') +
                 kv('Plan bayar', dv(r.plan_bayar) + (r.ket_plan_bayar ? '<span class="k">' + esc(r.ket_plan_bayar) + '</span>' : '')) + '</div>';
@@ -368,7 +380,7 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
             {pg: 'Monitoring Piutang', go: listTab, el: '#mp-cards', t: '1. Card umur piutang', d: 'Total, Lancar (0-60 hari), Potensi Macet (61-90), Macet (&gt; 90), dan Belum Diterima Customer. Klik card untuk menyaring daftar.'},
             {el: '.mp-bar', t: '2. Filter', d: 'Company, Tahun / Bulan / Tanggal invoice (default Semua), Customer, dan Cari.'},
             {el: '#mp-cards [data-dl]', t: '3. Download per card', d: 'Unduh Excel invoice di kategori itu saja.'},
-            {el: '#pane-list', t: '4. List piutang per invoice', d: 'Klik judul kolom untuk mengurutkan, klik baris untuk detail. Invoice bermasalah ditandai merah beserta keterangannya.'},
+            {el: '#pane-list', t: '4. List piutang per invoice', d: 'Klik judul kolom untuk mengurutkan, seret judul untuk memindah kolom, seret tepi kanan judul untuk mengubah lebar, klik baris untuk detail. Invoice bermasalah ditandai merah beserta keterangannya.'},
             {pg: 'Detail invoice', go: function () { listTab(); var b = $('#mp-list tbody [data-id]').first(); if (b.length) { showDetail(b.data('id')); } }, wait: 1200,
                 el: '#mp-modal .modal-content', t: '5. Detail invoice', d: 'Data invoice, pengiriman, follow up, dan riwayat penerimaan. Tombol <b>Buka di Follow Up Piutang</b> membuka invoice ini di tab kerjanya.'},
             {pg: 'Rekap per Customer', go: function () { $('#mp-modal').modal('hide'); $('#mp-tabs button[data-pane=rekap]').click(); }, wait: 900, el: '#pane-rekap', t: '6. Rekap per customer', d: 'Total sisa piutang per customer per kategori umur, dengan company dan umur tertua.'},
