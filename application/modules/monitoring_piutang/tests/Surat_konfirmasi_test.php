@@ -30,16 +30,22 @@ same($S::lama_tagih('2025-11-06', $today), '12 bulan', 'tepat setahun = 12 bulan
 // teks
 same($S::tagihan(2, 'Proj'), 'Tagihan Kedua Proj', 'tagihan kedua'); same($S::tagihan(0, 'Proj'), 'Tagihan Proj', 'tanpa TOP');
 same($S::tagihan(11, 'Proj'), 'Tagihan ke-11 Proj', 'TOP di atas 10');
-same($S::nomor('STM', $today), '…/STM-Fnc/SK/XI/26', 'nomor placeholder'); same($S::tanggal_id('2026-05-05'), '5 Mei 2026', 'tanggal Indonesia');
+same($S::nomor('STM', '239/STM/2026', '2026-05-05'), '239/STM-Fnc/SK/V/26', 'nomor dari invoice + bulan/tahun tgl invoice');
+same($S::nomor('STM', '12345/STM/2025', '2025-12-31'), '123/STM-Fnc/SK/XII/25', 'ambil 3 digit awal');
+same($S::nomor('VSB', '7/VSB/2026', '2026-01-02'), '7/VSB-Fnc/SK/I/26', 'kurang dari 3 digit');
+same($S::nomor('STM', 'ABC', ''), '…/STM-Fnc/SK/…/…', 'data tidak valid'); same($S::tanggal_id('2026-05-05'), '5 Mei 2026', 'tanggal Indonesia');
 same($S::tanggal_id(''), '–', 'tanggal kosong'); same($S::rp(22200000.4), 'Rp. 22.200.000', 'rupiah');
 
 // render STM: kop gambar + footer; belum ada pembayaran -> tanpa baris Sudah dibayar
 $html = $S::render($S::data(inv(), $today), '/assets/images/surat/');
-ok(strpos($html, '/assets/images/surat/stm_kop_logo.jpg') !== false && strpos($html, 'Fnc/SK/XI/26') !== false, 'kop STM dan nomor');
+ok(strpos($html, '/assets/images/surat/stm_kop_logo.jpg') !== false && strpos($html, 'Fnc/SK/V/26') !== false, 'kop STM dan nomor');
 ok(strpos($html, 'Tagihan Kedua Inhouse Training') !== false && strpos($html, 'Rp. 22.200.000') !== false && strpos($html, '5 Mei 2026') !== false, 'isi data');
 ok(strpos($html, 'Sudah dibayar') === false, 'tanpa baris dibayar bila belum ada pembayaran');
 ok(strpos($html, 'sudah lebih dari 5 bulan') !== false, 'lama penagihan: ' . (preg_match('/sudah <\/b>|<b>sudah[^<]*/', $html, $m) ? $m[0] : ''));
 ok(strpos($html, 'Tati Rina') !== false && strpos($html, 'sspm@sentral-sistem.com') !== false, 'penandatangan dan footer STM');
+
+ok(strpos($html, 'class="toolbar"') === false && strpos($html, '<input') === false && strpos($html, 'window.print()') !== false, 'tanpa input, langsung print');
+ok(strpos($html, '239/STM-Fnc/SK/V/26') !== false, 'nomor di surat');
 
 // pembayaran sebagian -> ada baris Sudah dibayar dan Sisa tagihan
 $part = $S::render($S::data(inv(['saldo' => 8700000]), $today), '/x/');
@@ -48,17 +54,17 @@ ok(strpos($part, 'Sudah dibayar</td><td>: Rp. 13.500.000') !== false && strpos($
 // VUCA (4) dan Sustain (3): satu gambar kop penuh, kode nomor dan penandatangan sesuai contoh docx, footer ada
 $vuca = $S::render($S::data(inv(['company' => '4', 'company_name' => 'Vuca']), $today), '/x/');
 ok(strpos($vuca, 'src="/x/vuca_kop.png"') !== false && strpos($vuca, 'stm_kop_logo') === false && strpos($vuca, 'class="kop-default"') === false, 'kop VUCA');
-ok(strpos($vuca, 'VSB-Fnc/SK/XI/26') !== false && strpos($vuca, 'PT. VUCA STRATEGI BISNIS') !== false, 'nomor dan PT VUCA');
+ok(strpos($vuca, 'VSB-Fnc/SK/V/26') !== false && strpos($vuca, 'PT. VUCA STRATEGI BISNIS') !== false, 'nomor dan PT VUCA');
 ok(strpos($vuca, 'Imanuel Iman') !== false && strpos($vuca, 'Direktur') !== false && strpos($vuca, 'class="footer"') !== false, 'penandatangan dan footer VUCA');
 $sus = $S::render($S::data(inv(['company' => '3', 'company_name' => 'Sustain']), $today), '/x/');
-ok(strpos($sus, 'src="/x/sustain_kop.png"') !== false && strpos($sus, 'SSC-Fnc/SK/XI/26') !== false, 'kop dan nomor Sustain');
+ok(strpos($sus, 'src="/x/sustain_kop.png"') !== false && strpos($sus, 'SSC-Fnc/SK/V/26') !== false, 'kop dan nomor Sustain');
 ok(strpos($sus, 'PT. SENTRAL SUSTAINABILITY CONSULTING') !== false && strpos($sus, 'Cahyadi') !== false, 'PT dan penandatangan Sustain');
 ok(is_file(__DIR__ . '/../../../../assets/images/surat/vuca_kop.png') && is_file(__DIR__ . '/../../../../assets/images/surat/sustain_kop.png'), 'file gambar kop ada');
 
 // STM-Vuca (1) dan STM-Sustain (6): kop, kode nomor dan penandatangan STM
 foreach (['1' => 'STM-Vuca', '6' => 'STM-Sustain'] as $cid => $cname) {
     $g = $S::render($S::data(inv(['company' => $cid, 'company_name' => $cname]), $today), '/x/');
-    ok(strpos($g, '/x/stm_kop_logo.jpg') !== false && strpos($g, '/STM-Fnc/SK/XI/26') !== false && strpos($g, 'Tati Rina') !== false && strpos($g, 'class="footer"') !== false, 'kop STM untuk ' . $cname);
+    ok(strpos($g, '/x/stm_kop_logo.jpg') !== false && strpos($g, '/STM-Fnc/SK/V/26') !== false && strpos($g, 'Tati Rina') !== false && strpos($g, 'class="footer"') !== false, 'kop STM untuk ' . $cname);
 }
 
 // company tanpa profil -> kop teks nama company, tanpa gambar dan footer

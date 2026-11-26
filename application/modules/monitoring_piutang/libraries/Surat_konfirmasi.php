@@ -80,9 +80,14 @@ class Surat_konfirmasi
         return 'Tagihan' . $ord . ' ' . $project;
     }
 
-    public static function nomor($kode, $today)
+    /** Nomor surat: 3 digit awal nomor invoice (mis. 239/STM/2026 -> 239); bulan romawi dan tahun mengikuti tanggal invoice. */
+    public static function nomor($kode, $no_invoice, $tgl_invoice)
     {
-        return '…/' . $kode . '-Fnc/SK/' . self::ROMAWI[(int) substr($today, 5, 2) - 1] . '/' . substr($today, 2, 2);
+        $urut = preg_match('/^\s*(\d{1,3})/', (string) $no_invoice, $m) ? $m[1] : '…';
+        $ok = Piutang_aging::is_date(substr((string) $tgl_invoice, 0, 10));
+        $bln = $ok ? self::ROMAWI[(int) substr($tgl_invoice, 5, 2) - 1] : '…';
+        $thn = $ok ? substr($tgl_invoice, 2, 2) : '…';
+        return $urut . '/' . $kode . '-Fnc/SK/' . $bln . '/' . $thn;
     }
 
     public static function tanggal_id($iso)
@@ -103,7 +108,7 @@ class Surat_konfirmasi
         $pr = self::profile_for($r);
         $nilai = (float) ($r['nilai'] ?? 0);
         $sisa = (float) ($r['saldo'] ?? 0);
-        return ['profile' => $pr, 'today' => $today, 'nomor' => self::nomor($pr['kode'], $today), 'customer' => (string) ($r['customer'] ?? ''),
+        return ['profile' => $pr, 'today' => $today, 'nomor' => self::nomor($pr['kode'], $r['no_invoice'] ?? '', substr((string) ($r['tgl_invoice'] ?? ''), 0, 10)), 'customer' => (string) ($r['customer'] ?? ''),
             'tagihan' => self::tagihan($r['top_ke'] ?? 0, (string) ($r['project'] ?? '')), 'invoice' => (string) ($r['no_invoice'] ?? ''),
             'tgl_invoice' => (string) ($r['tgl_invoice'] ?? ''), 'nilai' => $nilai, 'terbayar' => max(0, $nilai - $sisa), 'sisa' => $sisa,
             'lama' => self::lama_tagih(substr((string) $r['tgl_terima'], 0, 10), $today)];
@@ -150,20 +155,11 @@ p{margin:0 0 12px;line-height:1.3}.just{text-align:justify}
 .data{margin:0 0 12px 52px;border-collapse:collapse}.data td{padding:0 0 1px;vertical-align:top}.data td:first-child{width:130px}
 .ttd{margin-top:44px}.ttd .ruang{height:62px}.ttd .nm{text-decoration:underline}
 .footer{position:absolute;left:25mm;right:25mm;bottom:10mm;text-align:center;font-family:"Times New Roman",serif;font-size:7.5pt;line-height:1.25}
-.toolbar{position:sticky;top:0;background:#fff;border-bottom:1px solid #ccd;padding:8px 14px;font-family:Arial,sans-serif;font-size:12px;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:flex-end}
-.toolbar label{display:flex;flex-direction:column;gap:2px;color:#555}.toolbar input{font-size:12px;padding:4px 6px;border:1px solid #bbb;border-radius:3px;min-width:150px}
-.toolbar button{font-size:13px;padding:6px 16px;background:#3c8dbc;color:#fff;border:0;border-radius:3px;cursor:pointer}.toolbar .note{flex-basis:100%;color:#8a6d3b}
-@media print{body{background:#fff}.toolbar{display:none}.page{margin:0;box-shadow:none;width:auto;min-height:0;padding:0 0 22mm;position:static}.footer{position:fixed;left:0;right:0;bottom:0}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+@media print{body{background:#fff}.page{margin:0;box-shadow:none;width:auto;min-height:0;padding:0 0 22mm;position:static}.footer{position:fixed;left:0;right:0;bottom:0}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 </style></head><body>
-<div class="toolbar">
-<label>No. surat<input data-bind="nomor" value="$nomor"></label><label>Ditujukan ke<input data-bind="tujuan" value="Finance Dept."></label>
-<label>Kota<input data-bind="kota" value="$kota"></label><label>Penandatangan<input data-bind="ttd" value="$ttd"></label><label>Jabatan<input data-bind="jabatan" value="$jab"></label>
-<button type="button" onclick="window.print()">Print</button>
-<span class="note">Isian di atas hanya untuk surat ini (tidak disimpan) dan tidak ikut tercetak. Lengkapi nomor urut surat sebelum print.</span>
-</div>
 <div class="page">$kop
-<table class="meta"><tr><td colspan="2"><span data-text="kota">$kota</span>, $tl</td></tr><tr><td>No.</td><td>: <span data-text="nomor">$nomor</span></td></tr><tr><td>Hal</td><td>: Konfirmasi Status Tagihan</td></tr></table><br>
-<p>Kepada yth:<br><b data-text="tujuan">Finance Dept.</b><br><b style="font-size:11.5pt">$cust</b></p>
+<table class="meta"><tr><td colspan="2">$kota, $tl</td></tr><tr><td>No.</td><td>: $nomor</td></tr><tr><td>Hal</td><td>: Konfirmasi Status Tagihan</td></tr></table><br>
+<p>Kepada yth:<br><b>Finance Dept.</b><br><b style="font-size:11.5pt">$cust</b></p>
 <p class="just">Dengan Hormat,<br>Sehubungan dengan adanya {$e($d['tagihan'])}, maka bersama ini kami bermaksud menanyakan status pembayaran yang sampai sekarang belum dipenuhi oleh $cust.</p>
 <p>Adapun datanya sebagai berikut :</p>
 <table class="data"><tr><td>Invoice</td><td>: {$e($d['invoice'])}</td></tr><tr><td>Tanggal Invoice</td><td>: {$e(self::tanggal_id($d['tgl_invoice']))}</td></tr><tr><td>Nilai</td><td>: {$e(self::rp($d['nilai']))}</td></tr>$paid</table>
@@ -171,10 +167,10 @@ p{margin:0 0 12px;line-height:1.3}.just{text-align:justify}
 <p class="just">Penagihan <b>sudah {$e($d['lama'])}</b> dan hingga saat ini belum ada kepastian kapan tagihan tersebut akan dibayarkan.</p>
 <p class="just">Maka kami mohon bantuan Bapak/Ibu untuk dapat memberikan informasi kepada kami mengenai status kekurangan bayar tersebut dengan tertulis, dan bila sudah melakukan pembayaran, maka surat ini diabaikan.</p>
 <p class="just">Demikianlah surat ini kami sampaikan, atas perhatian dan kerjasamanya kami ucapkan terima kasih.</p>
-<div class="ttd">Hormat kami,<br>$pt<div class="ruang"></div><span class="nm" data-text="ttd">$ttd</span><br><span data-text="jabatan">$jab</span></div>
+<div class="ttd">Hormat kami,<br>$pt<div class="ruang"></div><span class="nm">$ttd</span><br>$jab</div>
 $footer
 </div>
-<script>document.querySelectorAll('[data-bind]').forEach(function(i){i.addEventListener('input',function(){document.querySelectorAll('[data-text="'+i.dataset.bind+'"]').forEach(function(el){el.textContent=i.value;});});});</script>
+<script>window.addEventListener('load',function(){setTimeout(function(){window.print();},300);});</script>
 </body></html>
 HTML;
     }
