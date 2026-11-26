@@ -28,6 +28,10 @@ class Piutang_export
         if ($r > 1) {
             $r++;
         }
+        // 'pre' = blok di atas tabel (mis. ringkasan Monitoring); callback($ws, baris mulai) mengembalikan baris header tabel.
+        if (!empty($spec['pre'])) {
+            $r = (int) call_user_func($spec['pre'], $ws, $r);
+        }
         $head = $r;
         $cols = $spec['cols'];
         foreach ($cols as $i => $c) {
@@ -72,8 +76,15 @@ class Piutang_export
         if (!empty($spec['after'])) {
             call_user_func($spec['after'], $ws, $r); // $r = baris TOTAL (atau baris kosong pertama bila tanpa data)
         }
-        foreach (array_keys($cols) as $i) {
-            $ws->getColumnDimension(PHPExcel_Cell::stringFromColumnIndex($i))->setAutoSize(true);
+        foreach ($cols as $i => $c) {
+            $dim = $ws->getColumnDimension(PHPExcel_Cell::stringFromColumnIndex($i));
+            // Kolom No: lebar tetap, karena auto-size ikut mengukur judul panjang di kolom A (judul meluber ke kanan).
+            // Kecuali ada blok 'pre' (Monitoring) yang menaruh label di kolom itu.
+            if ($c['k'] === '#' && empty($spec['pre'])) {
+                $dim->setWidth(7);
+            } else {
+                $dim->setAutoSize(true);
+            }
         }
         $ws->freezePane('A' . ($head + 1));
         return $r;
@@ -82,28 +93,36 @@ class Piutang_export
     /**
      * Sheet Ringkasan Dashboard Plan Bayar (12 bulan). Jumlah dan total tiap bulan berupa rumus ke sheet Rincian
      * (kolom B = Bulan, K = Nilai Plan) dan Realisasi (B = Bulan Bayar, K = Jumlah Dibayar); baris Total menjumlah kolomnya.
-     * $np / $nr = jumlah baris data di Rincian / Realisasi; 0 baris = nilai 0 tanpa rumus.
+     * $np / $nr = jumlah baris data di Rincian / Realisasi; 0 baris = nilai 0 tanpa rumus. $from = baris data pertama di
+     * Rincian/Realisasi (2 tanpa judul; 5 bila sheet itu berjudul 2 baris). $info = baris info di bawah judul (mockup).
      */
-    public static function plan_summary_sheet(array $months, $np, $nr, $title)
+    public static function plan_summary_sheet(array $months, $np, $nr, $title, $from = 2, $info = '')
     {
         $rows = array_map(function ($m) {
             return ['nama' => $m['nama'], 'pc' => 0, 'pn' => 0, 'rc' => 0, 'rn' => 0];
         }, $months);
-        return ['title' => 'Ringkasan', 'heading' => ['Dashboard Plan Bayar - ' . $title], 'cols' => [['h' => 'Bulan', 'k' => 'nama'],
+        $heading = ['Dashboard Plan Bayar - ' . $title . ' - Ringkasan per Bulan'];
+        if ($info !== '') {
+            $heading[] = $info;
+        }
+        return ['title' => 'Ringkasan', 'heading' => $heading, 'cols' => [['h' => 'Bulan', 'k' => 'nama'],
             ['h' => 'Jumlah Invoice (Plan)', 'k' => 'pc', 't' => 'int'], ['h' => 'Total Nilai Plan', 'k' => 'pn', 't' => 'num'],
             ['h' => 'Jumlah Penerimaan', 'k' => 'rc', 't' => 'int'], ['h' => 'Total Realisasi', 'k' => 'rn', 't' => 'num']],
             'rows' => $rows, 'sum' => ['pc', 'pn', 'rc', 'rn'],
-            'after' => function ($ws, $total) use ($months, $np, $nr) {
-                $lp = $np + 1;
-                $lr = $nr + 1; // baris data terakhir (data mulai baris 2)
+            'after' => function ($ws, $total) use ($months, $np, $nr, $from) {
+                $f = (int) $from;
+                $lp = $np + $f - 1;
+                $lr = $nr + $f - 1; // baris data terakhir Rincian / Realisasi
                 foreach ($months as $i => $m) {
                     $r = $total - count($months) + $i;
                     $q = '"' . $m['nama'] . '"';
-                    $ws->setCellValue("B$r", $np ? "=COUNTIF(Rincian!\$B\$2:\$B\$$lp,$q)" : 0);
-                    $ws->setCellValue("C$r", $np ? "=SUMIF(Rincian!\$B\$2:\$B\$$lp,$q,Rincian!\$K\$2:\$K\$$lp)" : 0);
-                    $ws->setCellValue("D$r", $nr ? "=COUNTIF(Realisasi!\$B\$2:\$B\$$lr,$q)" : 0);
-                    $ws->setCellValue("E$r", $nr ? "=SUMIF(Realisasi!\$B\$2:\$B\$$lr,$q,Realisasi!\$K\$2:\$K\$$lr)" : 0);
+                    $ws->setCellValue("B$r", $np ? "=COUNTIF(Rincian!\$B\$$f:\$B\$$lp,$q)" : 0);
+                    $ws->setCellValue("C$r", $np ? "=SUMIF(Rincian!\$B\$$f:\$B\$$lp,$q,Rincian!\$K\$$f:\$K\$$lp)" : 0);
+                    $ws->setCellValue("D$r", $nr ? "=COUNTIF(Realisasi!\$B\$$f:\$B\$$lr,$q)" : 0);
+                    $ws->setCellValue("E$r", $nr ? "=SUMIF(Realisasi!\$B\$$f:\$B\$$lr,$q,Realisasi!\$K\$$f:\$K\$$lr)" : 0);
                 }
+                $ws->setCellValueExplicit('A' . ($total + 2), 'Kolom B-C menghitung dari sheet Rincian (plan = sisa piutang saat plan dibuat, termasuk invoice yang sudah close), '
+                    . 'kolom D-E dari sheet Realisasi (penerimaan).', PHPExcel_Cell_DataType::TYPE_STRING);
             }];
     }
 

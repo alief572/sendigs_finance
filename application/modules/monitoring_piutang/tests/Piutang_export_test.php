@@ -42,4 +42,24 @@ $sheet0 = (new PHPExcel())->getActiveSheet();
 Piutang_export::fill($sheet0, Piutang_export::plan_summary_sheet($months, 0, 0, 'Tahun 2026'));
 ok($sheet0->getCell('B4')->getValue() == 0 && $sheet0->getCell('B4')->getDataType() === 'n' && $sheet0->getCell('E5')->getDataType() === 'n','tanpa data: nilai 0 tanpa rumus ke range kosong');
 
+// Rincian/Realisasi berjudul (2 baris + kosong): data mulai baris 5, rumus Ringkasan ikut; info + catatan tampil (mockup).
+$s5 = (new PHPExcel())->getActiveSheet();
+$t5 = Piutang_export::fill($s5, Piutang_export::plan_summary_sheet($months, 3, 2, 'Tahun 2026', 5, 'Company: Semua'));
+ok($s5->getCell('A2')->getValue() === 'Company: Semua', 'info di bawah judul');
+ok($s5->getCell('B5')->getValue() === '=COUNTIF(Rincian!$B$5:$B$7,"Januari")', 'COUNTIF data mulai baris 5: ' . $s5->getCell('B5')->getValue());
+ok($s5->getCell('E5')->getValue() === '=SUMIF(Realisasi!$B$5:$B$6,"Januari",Realisasi!$K$5:$K$6)', 'SUMIF realisasi baris 5');
+ok(strpos((string) $s5->getCell('A' . ($t5 + 2))->getValue(), 'Kolom B-C') === 0, 'catatan kolom setelah Total');
+// blok 'pre' di atas tabel (Monitoring: ringkasan kategori sebelum daftar)
+$sp = (new PHPExcel())->getActiveSheet();
+Piutang_export::fill($sp, ['title' => 'P', 'heading' => ['Judul'], 'pre' => function ($ws, $r) { $ws->setCellValue('A' . $r, 'Ringkas'); return $r + 2; },
+    'cols' => [['h' => 'Inv', 'k' => 'inv']], 'rows' => [['inv' => 'X']]]);
+ok($sp->getCell('A3')->getValue() === 'Ringkas' && $sp->getCell('A5')->getValue() === 'Inv' && $sp->getCell('A6')->getValue() === 'X', 'pre: blok sebelum header tabel');
+
+// kolom No sempit walau judul di kolom A panjang; kolom lain tetap auto; sheet dengan 'pre' tidak diubah
+ok(!$ws->getColumnDimension('A')->getAutoSize() && $ws->getColumnDimension('A')->getWidth() == 7, 'kolom No lebar tetap');
+ok($ws->getColumnDimension('B')->getAutoSize(), 'kolom lain auto-size');
+$spNo = (new PHPExcel())->getActiveSheet();
+Piutang_export::fill($spNo, ['title' => 'P', 'pre' => function ($ws, $r) { return $r + 1; }, 'cols' => $cols, 'rows' => []]);
+ok($spNo->getColumnDimension('A')->getAutoSize(), 'dengan blok pre kolom A tetap auto-size');
+
 echo "PASS: $n assertions\n";

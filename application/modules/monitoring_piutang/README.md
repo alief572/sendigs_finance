@@ -10,17 +10,30 @@ Spec: `specs/docs/review-monitoring-piutang/` (`fr-nfr.md`, `use-case.md`, mocku
 
 ## Struktur
 - `libraries/Piutang_aging.php`: **satu-satunya** tempat aturan (umur, kategori, tahap, jadwal FU, validasi, kunci step, syarat close, filter, plan vs realisasi). PHP murni tanpa CI/DB; layar dan Excel memanggil fungsi yang sama.
-- Tab "List Piutang per Invoice" memakai DataTables server-side (`Monitoring_piutang::list_data`, DataTables 2.3.2 dari CDN seperti modul lain). Filter sama dengan `data()`/Excel; paging dan urutan (`Piutang_aging::page_rows`, kunci urut di daftar putih `PAGE_SORT_KEYS`) dikerjakan di server, maks 500 baris per halaman, baris TOTAL = seluruh hasil filter. Tab "Rekap per Customer" juga server-side (`Monitoring_piutang::rekap_data`, urut lewat `Piutang_aging::REKAP_SORT_KEYS`; tabel dibuat saat tab pertama dibuka, nominal dalam sen). `data()` hanya mengirim ringkasan, daftar nama customer (datalist filter), dan opsi company (tanpa `rows`/`rekap`).
+- Tab "List Piutang per Invoice" memakai DataTables server-side (`Monitoring_piutang::list_data`, DataTables 1.10.7 lokal). Filter sama dengan `data()`/Excel; paging dan urutan (`Piutang_aging::page_rows`, kunci urut di daftar putih `PAGE_SORT_KEYS`) dikerjakan di server, maks 500 baris per halaman, baris TOTAL = seluruh hasil filter. Tab "Rekap per Customer" juga server-side (`Monitoring_piutang::rekap_data`, urut lewat `Piutang_aging::REKAP_SORT_KEYS`; tabel dibuat saat tab pertama dibuka, nominal dalam sen). `data()` hanya mengirim ringkasan, daftar nama customer (datalist filter), dan opsi company (tanpa `rows`/`rekap`).
 - Batas mulai Monitoring: `Piutang_aging::eligible_invoice_date()` memuat tanggal invoice valid sejak 2026-10-01 atau salah satu dari 20 nomor `FOLLOW_UP_INVOICES`, sama dengan Follow Up Piutang. Status close dan filter lain tetap berlaku; kartu, list, rekap, dan Excel mengikuti basis ini. Nomor target boleh memiliki beberapa baris invoice; setiap ID tetap diproses sendiri.
 - Dashboard Plan Bayar juga mengecualikan 20 nomor tersebut dari batas periode Oktober 2026, termasuk realisasi. Pilihan tahun mengikuti tanggal plan/penerimaan target paling awal; seluruh bulan dapat dipilih. Tanpa plan tersimpan, invoice tidak masuk tabel plan. Tujuh nomor yang belum diinput tidak dibuat otomatis; rincian verifikasi: `docs/invoice-follow-up-targets-2026-11-19.json`.
 - Card Total Piutang (`summary()['semua']`) = diterima + belum diterima + lunas belum close, jadi jumlah invoice sama dengan tab Semua Follow Up Piutang; nominal hanya dari yang bersisa. Lancar/Potensi/Macet tetap hanya yang sudah diterima dan persennya terhadap card Total Piutang. List, rekap, dan Excel tetap hanya invoice bersisa yang sudah diterima.
+- Ubah lebar kolom: seret tepi kanan judul (kecuali No, min 70px), `assets/js/piutang-kolom.js` (dipakai juga Follow Up dan Dashboard Plan Bayar); lebar tidak disimpan.
+- Geser kolom (kedua tab Monitoring): ColReorder 1.1.3 lokal; No + No Invoice (rekap: Customer) terkunci di kiri; urutan tidak disimpan. Karena posisi berubah, isi baris dan kunci urut memakai nama kolom, dan tfoot harus satu sel per kolom (tanpa `colspan`). Seret lewat sentuhan tidak didukung.
 - `libraries/Piutang_export.php`: pembuat `.xlsx` bersama (PHPExcel).
 - `libraries/Surat_konfirmasi.php`: aturan dan HTML Surat Konfirmasi. Profil kop per company di `profiles()` (kunci = id company; baru STM id 7).
 - `models/Monitoring_piutang_model.php`: query dan transaksi simpan/close. Hanya membaca `tr_invoicing.saldo_piutang`.
 - `migrations/`: urutan pemasangan ada di `fr-nfr.md` bagian "Urutan pemasangan", **ditambah `019_align_id_invoice_collation.sql` setelah 015 dan sebelum 017** (menyamakan collation `id_invoice` dengan `tr_invoicing.id`; tanpa ini join gagal di MySQL 8 default). Rollback 019 = 020. Sudah dijalankan di DB dev 6 Nov 2026.
 - Bukti terima (file wajib di step Diterima Customer): migrasi `021_add_bukti_terima.sql` (rollback 022), file disimpan di `uploads/bukti_terima_invoice/` (PDF/JPG/PNG, maks 5 MB per file), diunggah lewat `Follow_up_piutang::save()`.
-  Boleh banyak file (maks 10 per simpan) dan bisa ditempel dengan Ctrl+V. File pertama di kolom `bukti_terima`; file ke-2 dst di tabel `tr_invoice_ar_bukti` (migrasi `031`, rollback `032` — jalankan 031 sebelum deploy kode). File hanya bisa ditambah selama tanggal terima belum tersimpan (`Piutang_aging::bukti_boleh_ditambah`), setelah itu terkunci.
-- `application/config/piutang.php`: `tanggal_mulai_follow_up` (go-live, kosong). Folder config di-`.gitignore`, perlu `git add -f`.
+  Boleh banyak file (maks 20 per simpan) dan bisa ditempel dengan Ctrl+V. File pertama di kolom `bukti_terima`; file ke-2 dst di tabel `tr_invoice_ar_bukti` (migrasi `031`, rollback `032` — jalankan 031 sebelum deploy kode). File hanya bisa ditambah selama tanggal terima belum tersimpan (`Piutang_aging::bukti_boleh_ditambah`), setelah itu terkunci. Invoice lama yang sudah terima tanpa bukti tetap bisa melengkapi bukti di form (flag `bukti_boleh`).
+- `application/config/piutang.php`: `tanggal_mulai_follow_up` (go-live, `2026-11-01` per MP-R-33; aturan invoice lunas belum dikirim) dan `tanggal_mulai_daftar` (`2026-10-01`, batas daftar Monitoring / Follow Up / Dashboard, dibaca `Piutang_aging::tanggal_mulai()`; dipertahankan Oktober agar 34 invoice Oktober 2026 yang sudah berjalan tidak hilang). Folder config di-`.gitignore`, perlu `git add -f`.
+- **Beda dari specs (keputusan user, specs belum diperbarui):** bukti terima wajib (spec: opsional); tanggal terima + no resi terkunci begitu tanggal terima disimpan (spec: setelah FU 1); keterangan plan bayar wajib; tampilan tetap DataTables (spec: AG Grid).
+- Tutorial (driver.js lokal, `assets/js/piutang-tutorial.js`): tombol Tutorial di Follow Up (halaman + alur Invoice sampai Close), Monitoring, dan Dashboard. Tidak menyimpan data.
+- Tautan: Follow Up menerima `?tab=<tab>&open=<id invoice>` (dipakai Monitoring, Dashboard) dan `?open=<id>` tanpa tab (dipakai nomor invoice di Invoicing tab Invoiced).
+
+## Keamanan
+
+- File bukti terima hanya dibuka lewat `monitoring_piutang/bukti/{id invoice}/{urutan}` (izin Monitoring atau Follow Up). Akses langsung ke `uploads/bukti_terima_invoice/` ditolak di `.htaccess` root; bila server bukan Apache, pasang aturan yang sama di web server.
+- `detail` dan `surat` menolak (404) invoice yang tidak bisa muncul di daftar: close, deposit, atau sebelum tanggal mulai.
+- `esc()` di view piutang juga meng-escape kutip karena hasilnya dipakai di dalam atribut.
+- Follow Up: `form`, `history`, `save`, `close` menolak invoice deposit atau sebelum tanggal mulai (`Piutang_aging::in_scope`); `save` dan `close` hanya menerima request AJAX.
+- Tes: `tests/Security_test.php`, `tests/Esc_client_test.js`, `../follow_up_piutang/tests/Security_test.php`.
 
 ## Test (tanpa database)
 ```
@@ -28,6 +41,9 @@ scratch/runtime/php74/php.exe application/modules/monitoring_piutang/tests/Piuta
 scratch/runtime/php74/php.exe application/modules/monitoring_piutang/tests/Piutang_export_test.php
 scratch/runtime/php74/php.exe application/modules/monitoring_piutang/tests/Surat_konfirmasi_test.php
 scratch/runtime/php74/php.exe application/modules/monitoring_piutang/tests/Follow_up_targets_test.php
+node application/modules/follow_up_piutang/tests/Bukti_client_test.js
+node application/modules/follow_up_piutang/tests/Tutorial_client_test.js
+node application/modules/monitoring_piutang/tests/Kolom_client_test.js   # butuh jsdom (JSDOM_PATH)
 ```
 
 ## Belum ada / diketahui

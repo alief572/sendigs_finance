@@ -1,5 +1,6 @@
 <?php $base = site_url('follow_up_piutang/plan_bayar'); ?>
 <link rel="stylesheet" href="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.css') ?>">
+<link rel="stylesheet" href="<?= base_url('assets/plugins/datatables/extensions/ColReorder/css/dataTables.colReorder.min.css') ?>">
 <style>
     /* Tampilan mengikuti specs/docs/review-monitoring-piutang/mockup; warna pill memakai varian lebih gelap agar teks putih lolos kontras 4.5:1. */
     .pb-page { --line: #dfe3e8; --row: #f7f9fb; --muted: #5b6670; --blue: #1d5f93; --green: #067647; --orange: #b54708; --red: #b42318; }
@@ -37,10 +38,10 @@
     .pb-pill.C { background: var(--blue); } .pb-pill.close { background: #4b5563; }
     .umur { font-weight: 700; font-variant-numeric: tabular-nums; }
     .umur.lancar { color: var(--green); } .umur.potensi { color: var(--orange); } .umur.macet { color: var(--red); }
-    table.pb-tbl { border-collapse: collapse; width: 100%; min-width: 760px; }
+    table.pb-tbl { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 760px; }
     .pb-tbl th, .pb-tbl td { padding: 8px 9px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
     .pb-tbl th { font-weight: 700; font-size: 13px; white-space: nowrap; border-top: 0; }
-    .pb-tbl th.grp { text-align: center; background: var(--row); }
+    .pb-tbl thead.kol-grp th { text-align: center; background: var(--row); }
     .pb-tbl tbody tr:nth-child(odd) { background: var(--row); }
     .pb-tbl td.num, .pb-tbl th.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
     .pb-tbl .no { white-space: nowrap; font-weight: 600; }
@@ -53,36 +54,52 @@
     .pb-page .dataTables_filter input { margin-left: 6px; width: 260px; background: #fff; border: 1px solid #c8d0d8; border-radius: 3px; padding: 5px 7px; font-size: 13px; color: #333a40; }
     .pb-foot { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; margin-top: 10px; font-size: 13px; }
     .pb-foot .dataTables_length select { width: auto; display: inline-block; }
+    #pb-plan-tbl tbody tr[data-inv] { cursor: pointer; }
+    #pb-plan-tbl tbody tr[data-inv]:hover td { background: rgba(29, 95, 147, .06); }
+    .pb-pill.P { background: var(--orange); }
+    /* Skeleton loading (MP-NFR-11): 13 card + tabel saat dimuat ulang */
+    .pb-sk { display: block; border-radius: 4px; height: 12px; margin: 6px 0; background: linear-gradient(90deg, #eceff2 25%, #f6f8fa 37%, #eceff2 63%); background-size: 400% 100%; animation: pbmove 1.2s ease infinite; }
+    .pb-sk.lg { height: 22px; width: 70%; }
+    .pb-loading table { opacity: .35; }
+    @keyframes pbmove { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+    @media (prefers-reduced-motion: reduce) { .pb-sk { animation: none; } }
     .pb-msg { background: rgba(180, 35, 24, .08); border: 1px solid rgba(180, 35, 24, .45); border-radius: 3px; padding: 8px 12px; margin-bottom: 12px; font-size: 13px; }
 </style>
 
 <div class="pb-page">
+    <div id="pb-tour"></div>
     <div class="pb-panel">
         <div class="pb-filters">
             <label class="fl">Tahun Plan Bayar<select id="f-tahun"><?php foreach ($years as $y) echo '<option' . ($y == date('Y') ? ' selected' : '') . '>' . $y . '</option>'; ?></select></label>
+            <label class="fl">Bulan<select id="f-bulan"><option value="">Semua (All)</option><?php foreach (['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'] as $i => $b) echo '<option value="' . ($i + 1) . '"' . (($i + 1) == date('n') ? ' selected' : '') . '>' . $b . '</option>'; ?></select></label>
             <label class="fl">Company<select id="f-company" multiple></select></label>
+            <label class="fl">Plan / bayar dari<input type="date" id="f-dari" style="width:auto;min-width:150px"></label>
+            <label class="fl">sampai<input type="date" id="f-sampai" style="width:auto;min-width:150px"></label>
             <div class="sp"></div>
             <button type="button" class="pb-btn" id="btn-export"><i class="fa fa-file-excel-o" aria-hidden="true"></i> Export Excel <span id="exp-label"></span></button>
         </div>
     </div>
     <div id="pb-msg" class="pb-msg" role="alert" style="display:none"></div>
-    <div class="pbcards" id="pb-cards"><div class="pb-empty" style="grid-column:1/-1">Memuat ringkasan plan bayar...</div></div>
+    <div class="pbcards" id="pb-cards"></div>
 
     <div class="pb-panel"><h2 id="pb-title-plan">Plan bayar</h2>
         <div class="table-responsive"><table id="pb-plan-tbl" class="pb-tbl">
-            <thead><tr><th>No</th><th>Plan Bayar</th><th>Invoice</th><th>Customer</th><th>Company</th><th class="num">Nilai Invoice</th><th class="num">Nilai Plan<span class="sub">sisa saat plan dibuat</span></th><th class="num">Sisa Sekarang</th><th>Umur</th></tr></thead>
+            <thead><tr><th>No</th><th>Plan Bayar</th><th>Invoice</th><th>Customer</th><th>Company</th><th class="num">Nilai Invoice</th><th class="num">Nilai Plan<span class="sub">tidak berkurang walau sudah dibayar</span></th><th>Umur</th></tr></thead>
             <tbody></tbody>
-            <tfoot><tr><td colspan="5" id="pp-label">Total</td><td class="num" id="pp-nilai"></td><td class="num" id="pp-plan"></td><td class="num" id="pp-saldo"></td><td></td></tr></tfoot>
+            <tfoot><tr><td></td><td id="pp-label">Total</td><td></td><td></td><td></td><td class="num" id="pp-nilai"></td><td class="num" id="pp-plan"></td><td></td></tr></tfoot>
         </table></div>
+        <p class="pb-hint" style="margin:8px 0 0">Nilai plan = sisa piutang saat plan bayar disimpan. Pembayaran yang sudah masuk dilihat di tabel Realisasi bayar. Klik baris untuk membuka invoice di Follow Up Piutang. Seret judul kolom untuk memindahkannya, atau tepi kanan judul untuk mengubah lebarnya.</p>
     </div>
     <div class="pb-panel"><h2 id="pb-title-real">Realisasi bayar</h2>
-        <p class="pb-hint">Setiap baris = satu pembayaran customer. Bandingkan <b>janji bayar</b> (plan) dengan <b>kapan benar-benar dibayar</b>, lalu lihat apakah invoicenya sudah lunas.</p>
+        <p class="pb-hint">Setiap baris = satu pembayaran customer. Bandingkan <b>plan bayar</b> dengan <b>kapan benar-benar dibayar</b>, lalu lihat apakah invoicenya sudah lunas.</p>
         <p id="pr-sum" style="margin:0 0 10px"></p>
         <div class="table-responsive"><table id="pb-real-tbl" class="pb-tbl">
-            <thead><tr><th rowspan="2">No</th><th rowspan="2">Invoice</th><th rowspan="2">Customer / Project</th><th colspan="3" class="grp">Plan vs Bayar</th><th rowspan="2" class="num">Jumlah Dibayar</th><th colspan="2" class="grp">Posisi Invoice Sekarang</th></tr>
-                <tr><th>Plan Bayar<span class="sub">plan bayar</span></th><th>Tanggal Bayar<span class="sub">no penerimaan</span></th><th>Ketepatan</th><th class="num">Sisa Tagihan<span class="sub">dari nilai invoice</span></th><th>Status</th></tr></thead>
+            <thead><tr><th>No</th><th>Invoice</th><th>Customer / Project</th>
+                <th data-grp="Plan vs Bayar">Plan Bayar<span class="sub">plan bayar</span></th><th data-grp="Plan vs Bayar">Tanggal Bayar<span class="sub">no penerimaan</span></th><th data-grp="Plan vs Bayar">Ketepatan</th>
+                <th class="num">Jumlah Dibayar</th>
+                <th class="num" data-grp="Posisi Invoice Sekarang">Sisa Tagihan<span class="sub">dari nilai invoice</span></th><th data-grp="Posisi Invoice Sekarang">Status</th></tr></thead>
             <tbody></tbody>
-            <tfoot><tr><td colspan="6" id="pr-label">Total</td><td class="num" id="pr-nominal"></td><td colspan="2"></td></tr></tfoot>
+            <tfoot><tr><td></td><td id="pr-label">Total</td><td></td><td></td><td></td><td></td><td class="num" id="pr-nominal"></td><td></td><td></td></tr></tfoot>
         </table></div>
     </div>
 </div>
@@ -90,16 +107,24 @@
 <script src="<?= base_url('assets/plugins/datatables/jquery.dataTables.min.js') ?>"></script>
 <script src="<?= base_url('assets/js/company-multi.js') ?>"></script>
 <script src="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.min.js') ?>"></script>
+<script src="<?= base_url('assets/plugins/datatables/extensions/ColReorder/js/dataTables.colReorder.min.js') ?>"></script>
+<script src="<?= base_url('assets/js/piutang-kolom.js') . '?v=' . @filemtime(FCPATH . 'assets/js/piutang-kolom.js') ?>"></script>
+<link rel="stylesheet" href="<?= base_url('assets/plugins/driver/driver.css') ?>">
+<script src="<?= base_url('assets/plugins/driver/driver.js.iife.js') ?>"></script>
+<script src="<?= base_url('assets/js/piutang-tutorial.js') ?>"></script>
 <script>
 (function () {
-    var BASE = '<?= $base ?>', bulan = 'all', D = null, pt = null, rt = null;
+    var BASE = '<?= $base ?>', FU = '<?= site_url('follow_up_piutang') ?>', NOW_M = <?= (int) date('n') ?>, bulan = NOW_M, D = null, pt = null, rt = null;
+    // Bulan bawaan = bulan berjalan saat halaman dibuka (MP-FR-21). Ganti tahun = All; ganti company / tanggal: bulan tetap (mockup).
+    function setBulan(b) { bulan = b; $('#f-bulan').val(b === 'all' ? '' : String(b)); }
+    function skelCards() { return '<div class="pbcard"><span class="pb-sk"></span><span class="pb-sk lg"></span><span class="pb-sk"></span></div>'.repeat(13).replace('class="pbcard"', 'class="pbcard pball"'); }
     var NAMA = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
     var KAT = {lancar: 'Lancar', potensi: 'Potensi', macet: 'Macet'};
-    function esc(s) { return $('<div>').text(s == null ? '' : String(s)).html(); }
+    function esc(s) { return $('<div>').text(s == null ? '' : String(s)).html().replace(/"/g, '&quot;').replace(/'/g, '&#39;'); } // dipakai juga di dalam atribut
     function rp(c) { return Number(c / 100).toLocaleString('id-ID', {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
     function nf(v) { return rp(Number(v || 0) * 100); }
     function dmy(d) { return d ? String(d).substr(8, 2) + '-' + String(d).substr(5, 2) + '-' + String(d).substr(0, 4) : ''; }
-    function q() { return {tahun: $('#f-tahun').val(), company: CompanyMulti.val('#f-company')}; }
+    function q() { return {tahun: $('#f-tahun').val(), company: CompanyMulti.val('#f-company'), dari: $('#f-dari').val(), sampai: $('#f-sampai').val()}; }
     function umurCell(x) { return x.kategori && x.umur != null ? '<span class="umur ' + x.kategori + '">' + x.umur + ' hari</span> <span class="pb-pill ' + x.kategori + '">' + (KAT[x.kategori] || x.kategori) + '</span>' : '<span class="sub">–</span>'; }
 
     function rentang() { return 'Januari – Desember'; }
@@ -135,7 +160,8 @@
     function initTables() {
         $.fn.dataTable.ext.errMode = 'none'; // error ajax tampil sebagai banner, bukan alert bawaan
         var common = {serverSide: true, processing: true, ordering: false, autoWidth: false, pageLength: 25, lengthMenu: [10, 25, 50, 100], searchDelay: 400,
-            dom: 'frt<"pb-foot"<"pb-len"l><"pb-info"i>p>'};
+            // R = ColReorder: seret judul untuk memindah kolom; tabel Dashboard tidak punya kolom terkunci (mockup gridPB). Urutan tidak disimpan.
+            columnDefs: [{targets: '_all', orderable: false}], dom: 'Rfrt<"pb-foot"<"pb-len"l><"pb-info"i>p>'};
         var lang = function (empty, zero) {
             return {search: 'Cari:', searchPlaceholder: 'invoice, customer, tanggal, ...', lengthMenu: 'Tampilkan _MENU_ baris', processing: 'Memuat...',
                 info: 'Menampilkan _START_-_END_ dari _TOTAL_', infoEmpty: 'Tidak ada data', infoFiltered: '(dari _MAX_ pada periode ini)',
@@ -143,6 +169,12 @@
         };
         pt = $('#pb-plan-tbl').DataTable($.extend({}, common, {
             ajax: {url: BASE + '/plan_data', type: 'GET', data: tparams},
+            // klik baris membuka invoice di Follow Up Piutang (tab sesuai tahapnya, form hanya lihat)
+            createdRow: function (tr, x) {
+                var tab = x.status === 'close' ? 'close' : (x.bermasalah ? 'bermasalah' : '4');
+                $(tr).attr('data-inv', FU + '?tab=' + tab + '&open=' + encodeURIComponent(x.id) + (tab === 'close' && x.close_date ? '&close_tahun=' + String(x.close_date).substr(0, 4) : ''))
+                    .attr('title', 'Buka invoice ' + x.no_invoice + ' di Follow Up Piutang');
+            },
             language: lang('Belum ada plan bayar pada periode ini. Plan bayar muncul setelah invoice di menu Follow Up Piutang diberi tanggal rencana bayar.', 'Tidak ada plan bayar yang cocok dengan kata cari. Hapus kata cari atau pilih bulan lain.'),
             columns: [
                 {data: null, render: rowNo},
@@ -152,8 +184,6 @@
                 {data: null, render: function (_, t, x) { return esc(x.company_name); }},
                 {data: null, className: 'num', render: function (_, t, x) { return nf(x.nilai); }},
                 {data: null, className: 'num', render: function (_, t, x) { return '<b>' + nf(x.nilai_plan) + '</b>'; }},
-                {data: null, className: 'num', render: function (_, t, x) {
-                    return nf(x.saldo) + (x.sts_close === '1' ? ' ' + pill('close', 'Close') : (+x.saldo === 0 ? ' ' + pill('L', 'Lunas') : '')); }},
                 {data: null, render: function (_, t, x) { return umurCell(x); }}
             ]
         }));
@@ -168,31 +198,35 @@
                 {data: null, render: function (_, t, x) { return '<b>' + dmy(x.tgl_bayar) + '</b><span class="sub">' + esc(x.no_penerimaan) + '</span>'; }},
                 {data: null, render: function (_, t, x) {
                     var d = x.ketepatan_days;
-                    return d === null || d === undefined ? '<span class="sub">–</span>' : (+d === 0 ? pill('L', 'Sesuai janji') : (+d < 0 ? pill('C', 'Lebih cepat ' + (-d) + ' hari') : pill('M', 'Telat ' + d + ' hari'))); }},
+                    return d === null || d === undefined ? '<span class="sub">–</span>' : (+d === 0 ? pill('L', 'Sesuai plan') : (+d < 0 ? pill('C', 'Lebih cepat ' + (-d) + ' hari') : pill('M', 'Telat ' + d + ' hari'))); }},
                 {data: null, className: 'num', render: function (_, t, x) { return '<b>' + nf(x.nominal) + '</b>'; }},
                 {data: null, className: 'num', render: function (_, t, x) { return nf(x.saldo) + '<span class="sub">dari ' + nf(x.nilai) + '</span>'; }},
-                {data: null, render: function (_, t, x) { return pill(x.posisi === 'Lunas & close' ? 'close' : (x.posisi === 'Lunas, belum close' ? 'L' : 'C'), esc(x.posisi)); }}
+                {data: null, render: function (_, t, x) { return pill(x.posisi === 'Lunas & close' ? 'close' : (x.posisi === 'Lunas, belum close' ? 'L' : 'P'), esc(x.posisi)); }}
             ]
         }));
+        PiutangKolom.init('#pb-plan-tbl');
+        PiutangKolom.init('#pb-real-tbl');
         // total dan ringkasan mengikuti hasil filter (bulan + cari), bukan hanya halaman yang tampil
         pt.on('xhr.dt', function (e, s, json) {
             if (!json || !json.agg) { return; }
             $('#pp-label').text('Total ' + json.recordsFiltered + ' invoice');
-            $('#pp-nilai').text(nf(json.agg.nilai)); $('#pp-plan').text(nf(json.agg.nilai_plan)); $('#pp-saldo').text(nf(json.agg.saldo));
+            $('#pp-nilai').text(nf(json.agg.nilai)); $('#pp-plan').text(nf(json.agg.nilai_plan));
         });
         rt.on('xhr.dt', function (e, s, json) {
             if (!json || !json.agg) { return; }
             $('#pr-label').text('Total ' + json.recordsFiltered + ' pembayaran'); $('#pr-nominal').text(nf(json.agg.nominal));
             $('#pr-sum').html(json.recordsFiltered ? 'Total dibayar <b>' + nf(json.agg.nominal) + '</b> dari ' + json.recordsFiltered + ' pembayaran · <span class="pb-ok"><b>' + json.agg.tepat +
-                '</b> tepat waktu / lebih cepat</span> · <span class="pb-late"><b>' + json.agg.telat + '</b> telat dari janji</span>' : '');
+                '</b> tepat waktu / lebih cepat</span> · <span class="pb-late"><b>' + json.agg.telat + '</b> telat dari plan</span>' : '');
         });
         $.each([pt, rt], function (i, t) {
+            t.on('preXhr.dt', function () { $(t.table().container()).closest('.pb-panel').addClass('pb-loading'); });
+            t.on('xhr.dt error.dt', function () { $(t.table().container()).closest('.pb-panel').removeClass('pb-loading'); });
             t.on('error.dt', function () { $('#pb-msg').text('Tabel rincian gagal dimuat. Ganti tahun, company, atau bulan untuk mencoba lagi, atau muat ulang halaman.').show(); });
         });
     }
 
     function load() {
-        $('#pb-msg').hide();
+        $('#pb-msg').hide(); $('#pb-cards').html(skelCards());
         $.getJSON(BASE + '/data', q()).done(function (r) {
             if (r.status !== 'success') { $('#pb-msg').text(r.msg || 'Data plan bayar tidak dapat dimuat.').show(); return; }
             if (!$('#f-company option').length) { r.companies.forEach(function (c) { $('#f-company').append($('<option>').val(c.id).text(c.nm_company)); }); CompanyMulti.init('#f-company'); }
@@ -202,12 +236,25 @@
         });
     }
     $('#pb-cards').on('click', '.pbcard', function () {
-        var b = $(this).data('b'); bulan = (b === 'all' || b === bulan) ? 'all' : b; cards(); titles(); reloadTables();
+        var b = $(this).data('b'); setBulan((b === 'all' || b === bulan) ? 'all' : b); cards(); titles(); reloadTables();
         $('#pb-cards [data-b="' + bulan + '"]').focus(); // kartu dirender ulang: kembalikan fokus keyboard
     });
-    $('#pb-title-plan').on('click', '#pb-show-all', function () { bulan = 'all'; cards(); titles(); reloadTables(); });
-    $('#f-tahun, #f-company').on('change', function () { bulan = 'all'; load(); reloadTables(); });
+    $('#pb-title-plan').on('click', '#pb-show-all', function () { setBulan('all'); cards(); titles(); reloadTables(); });
+    $('#f-bulan').on('change', function () { bulan = $(this).val() ? Number($(this).val()) : 'all'; if (D) { cards(); titles(); } reloadTables(); });
+    $('#f-tahun').on('change', function () { setBulan('all'); load(); reloadTables(); });
+    $('#f-company, #f-dari, #f-sampai').on('change', function () { load(); reloadTables(); });
+    $('#pb-plan-tbl tbody').on('click', 'tr[data-inv]', function () { window.location = $(this).attr('data-inv'); });
     $('#btn-export').on('click', function () { window.location = BASE + '/export?' + $.param($.extend(q(), {bulan: bulan === 'all' ? '' : bulan, cari_plan: pt.search(), cari_real: rt.search()})); });
+    // Tutorial halaman (mockup TOUR_CFG flow "Dashboard Plan Bayar", 5 langkah). Tidak mengubah data.
+    if (window.PiutangTour) {
+        PiutangTour.mount(document.getElementById('pb-tour'), {title: 'Dashboard Plan Bayar', page: [
+            {pg: 'Dashboard Plan Bayar', el: '.pb-filters', t: '1. Company & Tahun', d: 'Pilih tahun plan bayar, bulan, company, dan rentang tanggal plan / bayar.'},
+            {el: '#pb-cards', t: '2. Card bulan', d: 'Card All = total setahun; 12 card berisi plan bayar dan realisasi per bulan. Klik card untuk menyaring.'},
+            {el: '#pb-plan-tbl', t: '3. Rincian plan bayar', d: 'Invoice yang dijanjikan dibayar pada bulan terpilih. Nilai plan tidak berkurang walau sudah dibayar. Klik baris untuk membuka invoice di Follow Up Piutang.'},
+            {el: '#pb-real-tbl', t: '4. Realisasi', d: 'Penerimaan yang sudah masuk dibandingkan dengan plan bayarnya.'},
+            {el: '#btn-export', t: '5. Export Excel', d: 'All: sheet Ringkasan + Rincian + Realisasi; bulan: Rincian + Realisasi bulan itu.'}
+        ]});
+    }
     initTables(); load();
 })();
 </script>

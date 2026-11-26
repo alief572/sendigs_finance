@@ -34,22 +34,30 @@ class Plan_bayar extends Admin_Controller
     /** Tahun dan Company divalidasi; dipakai layar dan Excel. */
     private function load_data()
     {
-        $year = (string) $this->input->get('tahun', true);
-        $company = trim((string) $this->input->get('company', true));
+        $year = Piutang_aging::param($this->input->get('tahun', true));
+        $company = Piutang_aging::param($this->input->get('company', true));
         if ($year === '') {
             $year = date('Y');
         }
         if (!ctype_digit($year) || $year < 2000 || $year > 2100) {
             throw new InvalidArgumentException('Tahun tidak valid.');
         }
+        // Tanggal dari-sampai: menyaring tanggal plan bayar (plan) dan tanggal bayar (realisasi), MP-FR-21.
+        $range = ['dari' => Piutang_aging::param($this->input->get('dari', true)), 'sampai' => Piutang_aging::param($this->input->get('sampai', true))];
+        Piutang_aging::period_check($range);
         $today = Piutang_aging::today();
         $all = $this->Monitoring_piutang_model->get_rows(true); // termasuk invoice close
+        $sebelum = $this->Monitoring_piutang_model->get_bayar_sebelum_terima();
+        foreach ($all as &$row) {
+            $row['bayar_sebelum_terima'] = $sebelum[$row['id']] ?? 0;
+        }
+        unset($row);
         $byId = [];
         foreach ($all as $r) {
             $byId[$r['id']] = $r;
         }
-        $plan = Piutang_aging::plan_rows($all, $year, $company, $today);
-        $real = Piutang_aging::realisasi_rows($this->Monitoring_piutang_model->get_realisasi($year), $byId, $year, $company, $today);
+        $plan = Piutang_aging::plan_rows($all, $year, $company, $today, $range);
+        $real = Piutang_aging::realisasi_rows($this->Monitoring_piutang_model->get_realisasi($year), $byId, $year, $company, $today, $range);
         // Periode lama hanya untuk target; kartu, tabel, dan Excel memakai hasil yang sama.
         $dariMulai = function ($r) use ($year) {
             return Piutang_aging::dari_mulai($year, $r['bulan'], $r);
@@ -122,14 +130,14 @@ class Plan_bayar extends Admin_Controller
         $rows = Piutang_aging::by_month($isPlan ? $plan : $real, (int) $this->input->get('bulan'));
         $total = count($rows);
         $search = $this->input->get('search');
-        $q = is_array($search) && isset($search['value']) ? trim((string) $search['value']) : '';
+        $q = is_array($search) && isset($search['value']) ? Piutang_aging::param($search['value'], Piutang_aging::CARI_MAKS) : '';
         $rows = $this->search_rows($rows, $isPlan, $q);
         // Total mengikuti hasil filter (bulan + cari), bukan hanya halaman yang tampil.
         $sum = function ($k) use ($rows) {
             return round(array_sum(array_map('floatval', array_column($rows, $k))), 2);
         };
         if ($isPlan) {
-            $agg = ['nilai' => $sum('nilai'), 'nilai_plan' => $sum('nilai_plan'), 'saldo' => $sum('saldo')];
+            $agg = ['nilai' => $sum('nilai'), 'nilai_plan' => $sum('nilai_plan')];
         } else {
             $tepat = 0;
             $telat = 0;
@@ -168,11 +176,12 @@ class Plan_bayar extends Admin_Controller
         $month = $bulan >= 1 && $bulan <= 12;
         $plan = Piutang_aging::by_month($plan, $bulan);
         $real = Piutang_aging::by_month($real, $bulan);
-        $plan = $this->search_rows($plan, true, trim((string) $this->input->get('cari_plan')));
-        $real = $this->search_rows($real, false, trim((string) $this->input->get('cari_real')));
+        $plan = $this->search_rows($plan, true, Piutang_aging::param($this->input->get('cari_plan'), Piutang_aging::CARI_MAKS));
+        $real = $this->search_rows($real, false, Piutang_aging::param($this->input->get('cari_real'), Piutang_aging::CARI_MAKS));
         $nm =Piutang_aging::BULAN;
         $plan = array_map(function ($r) use ($nm) {
             $r['bulan_nama'] = $nm[$r['bulan']];
+            $r['kategori'] = Piutang_aging::kategori_label($r['kategori']);
             return $r;
         }, $plan);
         $real = array_map(function ($r) use ($nm) {
@@ -180,21 +189,25 @@ class Plan_bayar extends Admin_Controller
             return $r;
         }, $real);
         $title = $month ? $nm[$bulan] . ' ' . $year : 'Tahun ' . $year;
+        // Judul + info di setiap sheet (mockup): data Rincian/Realisasi mulai baris 5, rumus Ringkasan mengikuti.
+        $comp = Piutang_aging::param($this->input->get('company', true));
+        $info = 'Company: ' . ($comp !== '' ? $comp : 'Semua Company') . ' | Posisi per ' . date('d-m-Y') . ' | Plan = nilai saat plan dibuat, tidak berkurang walau sudah dibayar / close; Realisasi = semua penerimaan (sheet Realisasi)';
+        $judul = 'Dashboard Plan Bayar - ' . $title;
 
-        $rincian = ['title' => 'Rincian', 'cols' => [['h' => 'No', 'k' => '#', 't' => 'int'], ['h' => 'Bulan', 'k' => 'bulan_nama'], ['h' => 'Tgl Plan Bayar', 'k' => 'plan_bayar', 't' => 'date'],
+        $rincian = ['title' => 'Rincian', 'heading' => [$judul . ' - Rincian Invoice', $info], 'cols' => [['h' => 'No', 'k' => '#', 't' => 'int'], ['h' => 'Bulan', 'k' => 'bulan_nama'], ['h' => 'Tgl Plan Bayar', 'k' => 'plan_bayar', 't' => 'date'],
             ['h' => 'Ket Plan Bayar', 'k' => 'ket_plan_bayar'], ['h' => 'No Invoice', 'k' => 'no_invoice'], ['h' => 'Tgl Invoice', 'k' => 'tgl_invoice', 't' => 'date'],
             ['h' => 'Customer', 'k' => 'customer'], ['h' => 'Project', 'k' => 'project'], ['h' => 'Company', 'k' => 'company_name'], ['h' => 'Nilai Invoice', 'k' => 'nilai', 't' => 'num'],
-            ['h' => 'Nilai Plan', 'k' => 'nilai_plan', 't' => 'num'], ['h' => 'Sisa Piutang Sekarang', 'k' => 'saldo', 't' => 'num'], ['h' => 'Umur', 'k' => 'umur', 't' => 'int'],
-            ['h' => 'Kategori', 'k' => 'kategori'], ['h' => 'Status Invoice', 'k' => 'posisi']], 'rows' => $plan, 'sum' => ['nilai', 'nilai_plan', 'saldo']];
-        $realisasi = ['title' => 'Realisasi', 'cols' => [['h' => 'No', 'k' => '#', 't' => 'int'], ['h' => 'Bulan Bayar', 'k' => 'bulan_nama'], ['h' => 'No Invoice', 'k' => 'no_invoice'],
+            ['h' => 'Nilai Plan', 'k' => 'nilai_plan', 't' => 'num'], ['h' => 'Umur (hari)', 'k' => 'umur', 't' => 'int'],
+            ['h' => 'Kategori', 'k' => 'kategori']], 'rows' => $plan, 'sum' => ['nilai', 'nilai_plan']];
+        $realisasi = ['title' => 'Realisasi', 'heading' => [$judul . ' - Realisasi Bayar (Penerimaan)', $info], 'cols' => [['h' => 'No', 'k' => '#', 't' => 'int'], ['h' => 'Bulan Bayar', 'k' => 'bulan_nama'], ['h' => 'No Invoice', 'k' => 'no_invoice'],
             ['h' => 'Tgl Invoice', 'k' => 'tgl_invoice', 't' => 'date'], ['h' => 'Customer', 'k' => 'customer'], ['h' => 'Project', 'k' => 'project'], ['h' => 'Company', 'k' => 'company_name'],
             ['h' => 'Plan Bayar', 'k' => 'plan_bayar', 't' => 'date'], ['h' => 'Tanggal Bayar', 'k' => 'tgl_bayar', 't' => 'date'], ['h' => 'Ketepatan', 'k' => 'ketepatan'],
             ['h' => 'Jumlah Dibayar', 'k' => 'nominal', 't' => 'num'], ['h' => 'No Penerimaan', 'k' => 'no_penerimaan'], ['h' => 'Sisa Tagihan Sekarang', 'k' => 'saldo', 't' => 'num'],
-            ['h' => 'Nilai Invoice', 'k' => 'nilai', 't' => 'num'], ['h' => 'Status Invoice', 'k' => 'posisi']], 'rows' => $real, 'sum' => ['nominal', 'saldo', 'nilai']];
+            ['h' => 'Nilai Invoice', 'k' => 'nilai', 't' => 'num'], ['h' => 'Status Invoice', 'k' => 'posisi']], 'rows' => $real, 'sum' => ['nominal']]; // saldo/nilai per invoice bisa berulang per pembayaran: tidak dijumlah
         $sheets = [$rincian, $realisasi];
 
         if (!$month) {
-            array_unshift($sheets, Piutang_export::plan_summary_sheet($summary, count($plan), count($real), $title));
+            array_unshift($sheets, Piutang_export::plan_summary_sheet($summary, count($plan), count($real), $title, 5, $info));
         }
         Piutang_export::send($sheets, 'Dashboard_Plan_Bayar_' . ($month ? $nm[$bulan] . '_' : '') . $year . '_' . date('Ymd') . '.xlsx');
     }
