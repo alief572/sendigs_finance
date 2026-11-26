@@ -1479,8 +1479,10 @@ class Pembayaran_material extends Admin_Controller
 			$search = is_array($search) && is_string($search['value'] ?? null) ? trim($search['value']) : '';
 			$order = $this->input->post('order');
 			$start = max(0, (int) $this->input->post('start'));
-			$page = Rp_transfer_payment::queuePage($this->db, $search, $start, (int) $this->input->post('length'),
-				isset($order[0]['column']) ? (int) $order[0]['column'] : null, ($order[0]['dir'] ?? '') === 'desc' ? 'desc' : 'asc');
+			$length = min(100, max(1, (int) $this->input->post('length')));
+			$column = isset($order[0]['column']) ? (int) $order[0]['column'] : null;
+			$direction = ($order[0]['dir'] ?? '') === 'desc' ? 'desc' : 'asc';
+			$page = Rp_transfer_payment::queuePage($this->db, $search, $start, $length, $column, $direction);
 			$data = array();
 			foreach ($page['rows'] as $i => $row) {
 				$total = Rp_transfer::totals(Rp_transfer::cents($row['net']), Rp_transfer::cents($row['admin']), $row['bearer']);
@@ -1501,7 +1503,27 @@ class Pembayaran_material extends Admin_Controller
 						html_escape($row['no_pengajuan']) . ' Transfer ' . (int) $row['urutan'] . '">',
 				);
 			}
-			echo json_encode(array('draw' => $draw, 'recordsTotal' => $page['total'], 'recordsFiltered' => $page['filtered'], 'data' => $data));
+			// Setelah baris transfer, halaman yang sama diisi dokumen jalur lama periode baru.
+			$room = $length - count($data);
+			$query = array(
+				'jenis_payment' => 2, 'periode' => 'baru', 'search' => array('value' => $search),
+				'start' => max(0, $start - $page['filtered']), 'length' => $room, 'count_only' => $room < 1,
+				'order_by' => array(array(2 => 'created_on', 8 => 'jumlah')[$column] ?? '', strtoupper($direction)),
+			);
+			$legacy = $this->Pembayaran_material_model->list_req_payment_rows($query, $legacyAudit);
+			$data = array_merge($data, $this->legacyQueueRows($legacy, $start + count($data)));
+			$legacyTotal = $legacy['count'];
+			if ($search !== '') {
+				$all = $this->Pembayaran_material_model->list_req_payment_rows(
+					array('jenis_payment' => 2, 'periode' => 'baru', 'search' => array('value' => ''), 'count_only' => true), $totalAudit);
+				$legacyTotal = $all['count'];
+			}
+			if (empty($legacyAudit['queries_ok']) && $legacy['selection_error'] === '') {
+				throw new RuntimeException('Daftar dokumen tidak lengkap.');
+			}
+			echo json_encode(array('draw' => $draw, 'recordsTotal' => $page['total'] + $legacyTotal,
+				'recordsFiltered' => $page['filtered'] + $legacy['count'], 'selection_error' => $legacy['selection_error'], 'data' => $data)
+				+ (isset($legacy['selected_count']) ? array('selected_count' => $legacy['selected_count']) : array()));
 			$this->completeAudit('Menyiapkan daftar transfer', 1, array('row_count' => count($data)));
 		} catch (Throwable $e) {
 			echo json_encode(array('draw' => $draw, 'recordsTotal' => 0, 'recordsFiltered' => 0, 'data' => array(), 'error' => 'Daftar transfer gagal dimuat.'));
@@ -1509,16 +1531,86 @@ class Pembayaran_material extends Admin_Controller
 		}
 	}
 
+	/** Dokumen jalur lama dalam bentuk kolom tabel atas. Centangnya memakai pilihan dan form payment lama. */
+	private function legacyQueueRows(array $list, $offset)
+	{
+		$numbers = $this->Pembayaran_material_model->pengajuan_numbers(array_map(function ($row) { return $row['no_dokumen']; }, $list['data']));
+		$rows = array();
+		foreach ($list['data'] as $i => $row) {
+			$item = $list['items'][$i];
+			$rows[] = array(
+				'no' => $offset + $i + 1,
+				'no_pengajuan' => '<b>' . html_escape($numbers[$row['no_dokumen']] ?? '-') . '</b>',
+				'tgl' => $item->created_on ? date('d-M-Y', strtotime($item->created_on)) : '-',
+				'company' => html_escape($row['company']),
+				'penerima' => '-',
+				'dokumen' => html_escape($row['no_dokumen']) . '<br><small class="text-muted">' . html_escape((string) $row['keperluan']) . '</small>',
+				'currency' => html_escape($row['currency']),
+				'admin' => '-',
+				'jumlah' => '<span class="rp-amount">Rp ' . number_format((float) $item->jumlah, 2, ',', '.') . '</span>',
+				'option' => $row['option'],
+			);
+		}
+		return $rows;
+	}
+
 	public function list_request_payment($jenis_payment)
 	{
 		$this->beginAudit(__FUNCTION__, array('jenis_payment' => $jenis_payment));
 		$reset = $this->Pembayaran_material_model->refresh_list();
 		$this->template->set('jenis_payment', $jenis_payment);
-		$this->template->set('rp_transfer_count', (string) $jenis_payment === '2' && Rp_transfer::installed($this->db) && has_permission($this->viewPermission)
-			? Rp_transfer_payment::queuePage($this->db, '', 0, 1)['total'] : 0);
+		// Tabel transfer tetap tampil walau antreannya kosong, supaya kedua format selalu terlihat.
+		$this->template->set('rp_transfer_show', (string) $jenis_payment === '2' && Rp_transfer::installed($this->db) && has_permission($this->viewPermission));
 		$this->template->title('List Request Payment');
 		$this->template->render('list_request_payment');
 		$this->completeAudit('Reset pilihan dan membuka daftar request pembayaran', $reset ? 1 : 0);
+	}
+
+	/** Isian rekening tujuan untuk dokumen jalur lama; belum menulis apa pun. */
+	public function transfer_draft()
+	{
+		$this->auth->restrict($this->viewPermission);
+		$this->beginAudit(__FUNCTION__, [], ['document_count']);
+		try {
+			if (!Rp_transfer::installed($this->db)) {
+				throw new DomainException('Fitur transfer belum tersedia.');
+			}
+			$ids = $this->draftIds($this->input->get('ids'));
+			if (Rp_transfer_payment::target($this->db, $ids, $this->Pembayaran_material_model::PERIODE_BARU_MULAI) !== 'transfer') {
+				throw new DomainException('Dokumen ini dibayar lewat form lama.');
+			}
+			$documents = Rp_transfer::write($this->db->where_in('id', $ids)->get('payment_approve'))->result_array();
+			$carried = Rp_transfer_payment::carriedAdmin($this->db, $ids, $this->Pembayaran_material_model::PERIODE_BARU_MULAI);
+			$this->template->set(['ids' => implode(';', $ids), 'documents' => $documents, 'carried' => Rp_transfer::money($carried), 'locked' => $carried > 0]);
+			$this->template->title('Rekening Tujuan Transfer');
+			$this->template->page_icon('fa fa-table');
+			$this->template->render('transfer_draft');
+			$this->completeAudit('Membuka isian rekening transfer', 1, ['document_count' => count($documents)]);
+		} catch (Throwable $e) {
+			$this->completeAudit('Isian rekening transfer gagal dimuat', 0, ['reason' => 'draft_unavailable']);
+			show_error($e instanceof DomainException ? $e->getMessage() : 'Gagal membuka pembayaran transfer.', 400);
+		}
+	}
+
+	private function draftIds($value)
+	{
+		return is_string($value) ? array_values(array_unique(array_filter(explode(';', $value), 'strlen'))) : [];
+	}
+
+	/** id 0 = draft dari dokumen jalur lama (dikirim sebagai draft[...]). */
+	private function loadTransfer($id)
+	{
+		if ((int) $id !== 0) {
+			return Rp_transfer_payment::find($this->db, (int) $id);
+		}
+		if (!Rp_transfer::installed($this->db)) {
+			throw new DomainException('Fitur transfer belum tersedia.');
+		}
+		$input = $this->input->post('draft');
+		if (!is_array($input)) {
+			throw new DomainException('Isian rekening tujuan tidak ditemukan. Ulangi dari daftar pembayaran.');
+		}
+		return Rp_transfer_payment::draft($this->db, $this->draftIds($input['ids'] ?? null), $input, $this->Pembayaran_material_model::PERIODE_BARU_MULAI);
 	}
 
 	public function transfer_payment($id)
@@ -1526,7 +1618,7 @@ class Pembayaran_material extends Admin_Controller
 		$this->auth->restrict($this->viewPermission);
 		$this->beginAudit(__FUNCTION__, [], ['transfer_id', 'document_count']);
 		try {
-			$transfer = Rp_transfer_payment::find($this->db, (int) $id);
+			$transfer = $this->loadTransfer($id);
 			if ($transfer['status'] !== 'approved') {
 				throw new DomainException('Transfer sudah dibayar.');
 			}
@@ -1534,6 +1626,7 @@ class Pembayaran_material extends Admin_Controller
 			$this->template->set([
 				'transfer' => $transfer, 'banks' => Rp_transfer_payment::banks($this->db, $refill ? '7' : $transfer['company_id']),
 				'planned' => Rp_transfer_payment::planned($transfer),
+				'draft' => (int) $id === 0 ? $this->input->post('draft') : null,
 			]);
 			$this->template->title('Payment List');
 			$this->template->page_icon('fa fa-table');
@@ -1550,7 +1643,7 @@ class Pembayaran_material extends Admin_Controller
 		$this->auth->restrict($this->viewPermission);
 		$this->beginAudit(__FUNCTION__, [], ['transfer_id', 'journal_count']);
 		try {
-			$transfer = Rp_transfer_payment::find($this->db, (int) $id);
+			$transfer = $this->loadTransfer($id);
 			$journal = Rp_transfer_payment::journal($this, $transfer, $this->input->post());
 			$this->completeAudit('Membaca preview jurnal transfer', 1, ['transfer_id' => (int) $id, 'journal_count' => count($journal['rows'])]);
 			echo json_encode(['status' => 1, 'rows' => $journal['rows']]);
@@ -1581,6 +1674,12 @@ class Pembayaran_material extends Admin_Controller
 			Payment_reference::transactional($this->db, ['tr_rp_transfer','tr_rp_transfer_file','tr_rp_pengajuan_d','tr_rp_pengajuan_h',
 				'payment_approve','tr_payment_paid','tr_jurnal','tr_jurnal_payment_reference_aliases']);
 			Rp_transfer::write($this->db->trans_begin());
+			if ((int) $id === 0) {
+				// Draft baru ditulis di sini, di dalam transaksi pembayaran: gagal apa pun = tidak ada transfer tersisa.
+				$input = $this->input->post('draft');
+				Rp_transfer_payment::lock($this->db, $this->draftIds(is_array($input) ? ($input['ids'] ?? null) : null) ?: ['']);
+				$id = Rp_transfer_payment::create($this->db, $this->loadTransfer(0));
+			}
 			$transfer = Rp_transfer_payment::find($this->db, (int) $id, true);
 			if ($transfer['status'] !== 'approved' || $transfer['id_payment']) {
 				throw new DomainException('Transfer sudah dibayar. Periksa Record Payment.');
@@ -1725,13 +1824,18 @@ class Pembayaran_material extends Admin_Controller
 				}
 			}
 
+			// Dokumen periode baru yang memenuhi syarat dibayar lewat form transfer.
+			$target = $arr_choosed_payment && Rp_transfer::installed($this->db) && has_permission($this->viewPermission)
+				? Rp_transfer_payment::target($this->db, $arr_choosed_payment, $this->Pembayaran_material_model::PERIODE_BARU_MULAI) : 'legacy';
+
 			$this->completeAudit('Memproses pilihan pembayaran', $this->auditQueriesOk ? 1 : 0, array('document_count' => count($arr_choosed_payment), 'has_admin_fee' => $has_admin_fee));
 			echo json_encode([
 				'status' => $this->auditQueriesOk ? 1 : 0,
 				'pesan' => $this->auditQueriesOk ? '' : 'Pilihan pembayaran gagal diperiksa.',
 				'count_choosed_payment' => count($arr_choosed_payment),
 				'arr_choosed_payment' => implode(';', $arr_choosed_payment),
-				'has_admin_fee' => $has_admin_fee
+				'has_admin_fee' => $has_admin_fee,
+				'target' => $target
 			]);
 		} catch (Throwable $e) {
 			$this->completeAudit('Pilihan pembayaran ditolak', 0, array('reason' => $e instanceof DomainException ? 'incompatible_selection' : 'operation_failure'));

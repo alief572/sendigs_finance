@@ -7,6 +7,8 @@ class Pembayaran_material_model extends BF_Model
 	protected $accounting;
 	protected $hris;
 	private $auditReadState = null;
+	// Dokumen jalur lama mulai tanggal ini (kolom TGL = created_on) tampil di tabel atas List Request Payment.
+	const PERIODE_BARU_MULAI = '2026-11-01';
 
 	public function __construct()
 	{
@@ -336,9 +338,35 @@ class Pembayaran_material_model extends BF_Model
 
 	public function get_list_req_payment(&$auditSummary = null)
 	{
+		$post = $this->input->post();
+		$list = $this->list_req_payment_rows($post, $auditSummary);
+		echo json_encode([
+			'draw' => intval($post['draw']),
+			'recordsTotal' => $list['count'],
+			'recordsFiltered' => $list['count'],
+			'selection_error' => $list['selection_error'],
+			'selected_count' => $list['selected_count'],
+			'data' => $list['data']
+		]);
+	}
+
+	/** No. PGJ terbaru per nomor dokumen, untuk dokumen jalur lama yang tampil di tabel atas. */
+	public function pengajuan_numbers(array $documents)
+	{
+		if (!$documents) { return []; }
+		$rows = $this->auditTrackQuery($this->db->select('no_dokumen, no_pengajuan')->where_in('no_dokumen', $documents)
+			->order_by('id', 'ASC')->get('tr_rp_record'), $this->db)->result();
+		return array_column(array_map('get_object_vars', $rows), 'no_pengajuan', 'no_dokumen');
+	}
+
+	/**
+	 * Baris daftar request payment. $post['periode']: 'baru' | 'lama' | kosong (semua).
+	 * $post['count_only'] hanya menghitung; $post['order_by'] = ['created_on'|'jumlah', 'ASC'|'DESC'].
+	 */
+	public function list_req_payment_rows(array $post, &$auditSummary = null)
+	{
 		$auditSummary = array('queries_ok' => true, 'row_count' => 0);
 		$this->auditReadState =& $auditSummary;
-		$post = $this->input->post();
 		$jenis_payment = $post['jenis_payment'];
 		$search = $post['search']['value'];
 
@@ -356,20 +384,42 @@ class Pembayaran_material_model extends BF_Model
 			$this->db->where('is_po_payment <>', 1);
 		}
 
+		$periode = $post['periode'] ?? '';
+		if ($periode === 'baru') {
+			$this->db->where('created_on >=', self::PERIODE_BARU_MULAI);
+		} elseif ($periode === 'lama') {
+			$this->db->where("(created_on < '" . self::PERIODE_BARU_MULAI . "' OR created_on IS NULL)", null, false);
+		}
+
 		// Global Search
 		if (!empty($search)) {
 			$this->db->group_start()
 				->like('no_doc', $search)
 				->or_like('requestor', $search)
-				->or_like('keperluan', $search)
-				->group_end();
+				->or_like('keperluan', $search);
+			// Tabel atas menampilkan No. Pengajuan, jadi nomor PGJ ikut bisa dicari.
+			if ($periode === 'baru') {
+				$this->db->or_where('BINARY no_doc IN (SELECT BINARY no_dokumen FROM tr_rp_record WHERE no_pengajuan LIKE '
+					. $this->db->escape('%' . $search . '%') . ')', null, false);
+			}
+			$this->db->group_end();
+		}
+
+		if (!empty($post['count_only'])) {
+			return ['count' => (int) $this->auditTrackQuery($this->db->count_all_results(), $this->db),
+				'data' => [], 'items' => [], 'selection_error' => ''];
 		}
 
 		// Clone untuk count total
 		$count_all = $this->auditTrackQuery($this->db->count_all_results('', FALSE), $this->db);
 
 		// Order & Limit
-		$this->db->order_by('created_on', 'DESC');
+		$order = $post['order_by'] ?? [];
+		if (is_array($order) && in_array($order[0] ?? '', ['created_on', 'jumlah'], true)) {
+			$this->db->order_by($order[0], ($order[1] ?? '') === 'ASC' ? 'ASC' : 'DESC');
+		} else {
+			$this->db->order_by('created_on', 'DESC');
+		}
 		$this->db->limit($post['length'], $post['start']);
 		$get_data = $this->auditTrackQuery($this->db->get(), $this->db)->result();
 		$selectionError = '';
@@ -428,7 +478,7 @@ class Pembayaran_material_model extends BF_Model
 			$hasil[] = [
 				'no' => $no,
 				'no_dokumen' => $item->no_doc,
-				'tgl' => date('d F Y', strtotime($item->created_on)),
+				'tgl' => $item->created_on ? date('d F Y', strtotime($item->created_on)) : '-',
 				'company' => $company_name,
 				'keperluan' => $item->keperluan,
 				'total_invoice' => number_format($item->jumlah),
@@ -441,13 +491,7 @@ class Pembayaran_material_model extends BF_Model
 		}
 
 		$auditSummary['row_count'] = count($hasil);
-		echo json_encode([
-			'draw' => intval($post['draw']),
-			'recordsTotal' => $count_all,
-			'recordsFiltered' => $count_all,
-			'selection_error' => $selectionError,
-			'data' => $hasil
-		]);
+		return ['count' => $count_all, 'data' => $hasil, 'items' => $get_data, 'selection_error' => $selectionError, 'selected_count' => count($selectedIds)];
 	}
 
 	public static function payment_cents($value)

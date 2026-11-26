@@ -142,7 +142,9 @@ class Record_request_payment_model extends BF_Model
 		$this->db->select('h.*, (SELECT COUNT(*) FROM tr_rp_record r WHERE r.id_pengajuan = h.id) as jumlah_approved');
 		if (Rp_transfer::installed($this->db)) {
 			$this->db->select("(SELECT COUNT(*) FROM tr_rp_transfer t WHERE t.id_pengajuan=h.id AND t.status IN ('approved','paid')) AS transfer_count,
-				(SELECT COUNT(*) FROM tr_rp_transfer t WHERE t.id_pengajuan=h.id AND t.status='paid') AS transfer_paid", false);
+				(SELECT COUNT(*) FROM tr_rp_transfer t WHERE t.id_pengajuan=h.id AND t.status='paid') AS transfer_paid,
+				(SELECT COUNT(*) FROM tr_rp_pengajuan_d o WHERE o.id_pengajuan=h.id AND o.decision='approved' AND o.id_transfer IS NULL
+					AND REPLACE(REPLACE(REPLACE(LOWER(o.kategori),' ',''),'_',''),'-','') NOT IN ('pettycashhutang','hutangpettycash')) AS docs_outside", false);
 		}
 		$this->db->order_by('h.decided_at', 'desc');
 		$this->db->limit($length, $start);
