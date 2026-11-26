@@ -29,6 +29,7 @@ class Jurnal_Invoicing extends Admin_Controller
 
     public function index()
     {
+        show_404(); // diganti Jurnal All
 
         $get_cust_jurnal = $this->Jurnal_invoicing_model->get_cust_jurnal();
         $get_no_invoice_jurnal = $this->Jurnal_invoicing_model->get_no_invoice_jurnal();
@@ -47,6 +48,7 @@ class Jurnal_Invoicing extends Admin_Controller
 
     public function add_jurnal()
     {
+        show_404(); // diganti Jurnal All
         $id = $this->input->post('id');
 
         $get_jurnal = $this->db->get_where('tr_jurnal', ['id' => $id])->row();
@@ -130,6 +132,7 @@ class Jurnal_Invoicing extends Admin_Controller
 
     public function modal_posting_jurnal()
     {
+        show_404(); // diganti Jurnal All
         $id = $this->input->post('id');
         $no_transaksi = $this->input->post('no_transaksi');
         $jenis_transaksi = $this->input->post('jenis_transaksi');
@@ -146,6 +149,7 @@ class Jurnal_Invoicing extends Admin_Controller
 
     public function download_excel()
     {
+        show_404(); // diganti Jurnal All
         $klien = $this->input->get('klien');
         $no_invoice = $this->input->get('no_invoice');
         $company = $this->input->get('company');
@@ -169,6 +173,7 @@ class Jurnal_Invoicing extends Admin_Controller
 
     public function get_data_jurnal_invoicing()
     {
+        show_404(); // diganti Jurnal All
         $this->Jurnal_invoicing_model->get_data_jurnal_invoicing();
     }
     private function allowJournalAction()

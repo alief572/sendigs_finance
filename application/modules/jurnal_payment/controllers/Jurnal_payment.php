@@ -29,6 +29,7 @@ class Jurnal_payment extends Admin_Controller
 
     public function index()
     {
+        show_404(); // diganti Jurnal All
 
         $get_no_payment_jurnal = $this->Jurnal_payment_model->get_no_payment_jurnal();
         $get_company = $this->Jurnal_payment_model->get_company();
@@ -45,6 +46,7 @@ class Jurnal_payment extends Admin_Controller
 
     public function add_jurnal()
     {
+        show_404(); // diganti Jurnal All
         $id = $this->input->post('id');
 
         $get_jurnal = $this->db->get_where('tr_jurnal', ['id' => $id])->row();
@@ -553,6 +555,7 @@ class Jurnal_payment extends Admin_Controller
 
     public function get_data_jurnal()
     {
+        show_404(); // diganti Jurnal All
         $this->Jurnal_payment_model->get_data_jurnal();
     }
     /**
@@ -597,6 +600,7 @@ class Jurnal_payment extends Admin_Controller
 
     public function export_jurnal()
     {
+        show_404(); // diganti Jurnal All
         $tgl_jurnal = $this->input->get('tgl_jurnal');
         $tgl_from = '';
         $tgl_to = '';
