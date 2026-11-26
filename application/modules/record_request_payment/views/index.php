@@ -281,7 +281,7 @@ if (!is_string($record_tab) || !in_array($record_tab, ['batch', 'items', 'legacy
 				<?php endif; ?>
 
 				<div class="tab-pane<?= $record_tab === 'items' ? ' active' : ''; ?>" id="tab_items">
-					<?php $this->load->view('items'); ?>
+					<?php $this->load->view('items'); $this->load->view('document_modal'); ?>
 				</div>
 
 				<!-- TAB 2: HISTORI LAMA -->
