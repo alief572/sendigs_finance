@@ -76,8 +76,15 @@ class Piutang_export
         if (!empty($spec['after'])) {
             call_user_func($spec['after'], $ws, $r); // $r = baris TOTAL (atau baris kosong pertama bila tanpa data)
         }
-        foreach (array_keys($cols) as $i) {
-            $ws->getColumnDimension(PHPExcel_Cell::stringFromColumnIndex($i))->setAutoSize(true);
+        foreach ($cols as $i => $c) {
+            $dim = $ws->getColumnDimension(PHPExcel_Cell::stringFromColumnIndex($i));
+            // Kolom No: lebar tetap, karena auto-size ikut mengukur judul panjang di kolom A (judul meluber ke kanan).
+            // Kecuali ada blok 'pre' (Monitoring) yang menaruh label di kolom itu.
+            if ($c['k'] === '#' && empty($spec['pre'])) {
+                $dim->setWidth(7);
+            } else {
+                $dim->setAutoSize(true);
+            }
         }
         $ws->freezePane('A' . ($head + 1));
         return $r;
