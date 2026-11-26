@@ -39,6 +39,9 @@ $shortTitles = ['INV' => 'Invoicing', 'RCV' => 'Penerimaan', 'PAY' => 'Pembayara
                 <label id="ja-category">Kategori Transaksi<select name="category" class="form-control">
                         <option value="">Semua Kategori</option>
                     </select></label>
+                <?php if ($posted): ?><label id="ja-bank">Bank<select name="bank" class="form-control">
+                        <option value="">Semua Bank</option>
+                    </select></label><?php endif; ?>
                 <div class="ja-buttons"><button type="submit" id="ja-apply" class="btn btn-primary">Terapkan filter</button><button type="button" id="ja-reset" class="btn btn-default">Reset</button></div>
             </form>
             <p id="ja-invoice-period-hint" class="ja-hint" hidden>Filter Invoicing mencocokkan tanggal baris jurnal. Satu invoice tetap satu transaksi lengkap; Tgl Jurnal dan Tertua memakai tanggal pertamanya. Pilih Semua Tahun untuk melihat seluruh periode.</p>
