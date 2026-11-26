@@ -73,7 +73,7 @@ final class Rp_transfer_payment
         }
         $columns = [1 => 'h.no_pengajuan', 2 => 'h.decided_at', 3 => 'h.company_nama', 4 => 't.nama',
             8 => "SUM(d.dibayarkan) - CASE WHEN t.bearer='recipient' THEN t.admin ELSE 0 END"];
-        $order = isset($columns[$orderColumn])
+        $order = $orderColumn !== null && isset($columns[$orderColumn])
             ? $columns[$orderColumn] . ($direction === 'desc' ? ' DESC' : ' ASC') . ', t.id' : 'h.no_pengajuan, t.urutan';
         $rows = Rp_transfer::write($db->query(
             "SELECT t.id, h.no_pengajuan, h.company_nama, h.decided_at, t.urutan, t.bank, t.no_rek, t.nama, t.admin, t.bearer,
