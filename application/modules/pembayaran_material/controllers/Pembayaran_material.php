@@ -1508,7 +1508,7 @@ class Pembayaran_material extends Admin_Controller
 			$query = array(
 				'jenis_payment' => 2, 'periode' => 'baru', 'search' => array('value' => $search),
 				'start' => max(0, $start - $page['filtered']), 'length' => $room, 'count_only' => $room < 1,
-				'order_by' => array(array(2 => 'created_on', 8 => 'jumlah')[$column] ?? '', strtoupper($direction)),
+				'order_by' => array(array(2 => 'created_on', 8 => 'jumlah')[$column ?? -1] ?? '', strtoupper($direction)),
 			);
 			$legacy = $this->Pembayaran_material_model->list_req_payment_rows($query, $legacyAudit);
 			$data = array_merge($data, $this->legacyQueueRows($legacy, $start + count($data)));
