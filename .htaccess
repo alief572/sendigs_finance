@@ -1,4 +1,6 @@
 RewriteEngine On
+# Bukti terima invoice hanya lewat monitoring_piutang/bukti (butuh login)
+RewriteRule ^uploads/bukti_terima_invoice(/|$) - [F,L,NC]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^(.*)$ index.php/$1 [L]

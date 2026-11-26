@@ -3,6 +3,7 @@
 // Tanpa DB. Jalankan: php application/modules/invoicing/tests/Invoiced_export_test.php
 define('BASEPATH', __DIR__);
 define('DBCNL', 'consultant_fixture');
+#[\AllowDynamicProperties]
 class BF_Model {}
 require dirname(__DIR__) . '/libraries/Invoice_consulting.php';
 require dirname(__DIR__) . '/models/Invoicing_model.php';
@@ -30,7 +31,7 @@ $wb = PHPExcel_IOFactory::createReader('Excel2007')->load($path); $ws = $wb->get
 xe($ws->getTitle() === 'Invoiced' && $ws->getCell('A1')->getValue() === 'Daftar Invoice (Invoiced)', 'judul sheet');
 xe($ws->getCell('A2')->getValue() === 'Tahun: 2026 | Bulan: Oktober | Company: STM', 'baris filter');
 $head = array('No', 'No. Invoice', 'Tanggal Invoice', 'No. SPK', 'No. PO', 'No. Faktur', 'Customer', 'Project', 'Project Leader', 'Sales', 'Company', 'TOP', 'Persen TOP', 'Perlakuan PPN', 'Penjualan', 'DPP Lain-lain', 'PPN', 'Total Tagihan', 'Saldo Piutang', 'Status');
-foreach ($head as $i => $h) xe($ws->getCellByColumnAndRow($i, 4)->getValue() === $h, "header kolom $i $h");
+foreach ($head as $i => $h) xe($ws->getCell([$i + 1, 4])->getValue() === $h, "header kolom $i $h");
 xe($ws->getCell('N5')->getValue() === 'UMKM Non-PKP' && $ws->getCell('N6')->getValue() === 'PKP', 'Perlakuan PPN berupa label');
 xe($ws->getCell('E5')->getValue() === '=CMD()' && $ws->getCell('E5')->getDataType() === 's', 'input user yang berawalan = tetap teks, bukan rumus');
 xe(abs($ws->getCell('O5')->getValue() - 615000) < 0.001 && abs($ws->getCell('Q5')->getValue() - 0) < 0.001 && abs($ws->getCell('R5')->getValue() - 615000) < 0.001, 'UMKM: penjualan 615.000, PPN 0, tagihan 615.000');

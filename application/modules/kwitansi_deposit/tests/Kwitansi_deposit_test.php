@@ -9,7 +9,7 @@ $db = createFixtures();
 $ci = new MockCi($db);
 $engine = new Consulting_receipt($ci);
 $refS = new ReflectionProperty('Consulting_receipt', 's');
-$refS->setAccessible(true);
+if (PHP_VERSION_ID < 80100) { $refS->setAccessible(true); }
 $refS->setValue($engine, new CustomService($ci));
 
 $kwModel = new Kwitansi_deposit_model();

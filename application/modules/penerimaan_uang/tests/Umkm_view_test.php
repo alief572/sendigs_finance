@@ -9,7 +9,7 @@ function umkmViewHtml($tax, $choice) {
     $db->alloc_details[0]['nominal_debit'] = '1997500.00'; $db->alloc_splits[0]['nominal'] = '1997500.00';
     $db->invoices[] = makeInvoice(1, 'V-1', $tax, 200000000, 183333333, $tax === 'PKP' ? 24000000 : 0, 0, $tax === 'PKP' ? 224000000 : 200000000, $tax === 'PKP' ? 224000000 : 200000000);
     $ci = new MockCi($db); $engine = new Consulting_receipt($ci);
-    $ref = new ReflectionProperty('Consulting_receipt', 's'); $ref->setAccessible(true); $ref->setValue($engine, new CustomService($ci));
+    $ref = new ReflectionProperty('Consulting_receipt', 's'); if (PHP_VERSION_ID < 80100) { $ref->setAccessible(true); } $ref->setValue($engine, new CustomService($ci));
     $preview = $engine->preview(array('choose_inv' => array(1), 'id_alokasi' => 100, 'pph23_dipotong' => $choice));
     extract($preview);
     ob_start(); include dirname(__DIR__) . '/views/consulting_process.php'; return ob_get_clean();

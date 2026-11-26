@@ -701,7 +701,7 @@ class Incoming_stok extends Admin_Controller
           $d_Header .= "<td align='left'>" . $value['id_stock'] . "</td>";
           $d_Header .= "<td align='left'>" . $value['namamaterial'] . "</td>";
           $d_Header .= "<td align='center'>" . number_format($value['qty_po'], 2) . "</td>";
-          $d_Header .= "<td align='center'>" . strtoupper($value['satuan_packing']) . "</td>";
+           $d_Header .= "<td align='center'>" . strtoupper($value['satuan_packing'] ?? '') . "</td>";
           $d_Header .= "<td align='center'>" . number_format($value['qty_in'], 2) . "</td>";
           $d_Header .= "<td align='center' class='qty_max'>" . number_format($value['qty_po'] - $value['qty_in'], 2) . "</td>";
           $d_Header .= "<td align='left'>";

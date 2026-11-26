@@ -8,6 +8,7 @@ function is_php($version) { return version_compare(PHP_VERSION, $version, '>=');
 function show_error($message) { throw new RuntimeException($message); }
 require BASEPATH . 'core/Model.php';
 require APPPATH . 'core/BF_Model.php';
+#[\AllowDynamicProperties]
 class Admin_Controller {}
 class TestAuth { function user_id() { return 42; } }
 class TestInput { public $values=[]; function post($key=null) { return $key===null ? $this->values : ($this->values[$key] ?? null); } }
@@ -43,7 +44,7 @@ function payload($qty, $doc = 'CASH1', $detail = 11) {
         'jurnal'=>[['debit'=>99999,'credit'=>99999]]];
 }
 function receiptModel($db) {
-    $model = (new ReflectionClass('Incoming_cash_model'))->newInstanceWithoutConstructor();
+    $model = (new ReflectionClass('TestIncomingCashModel'))->newInstanceWithoutConstructor();
     $model->db = $db;
     $GLOBALS['ci'] = (object)['db'=>$db, 'auth'=>new TestAuth];
     return $model;
@@ -56,6 +57,8 @@ require BASEPATH . 'database/DB.php';
 require dirname(__DIR__).'/models/Incoming_cash_model.php';
 require dirname(__DIR__).'/models/Incoming_stok_model.php';
 require dirname(__DIR__).'/controllers/Incoming_stok.php';
+class TestIncomingCashModel extends Incoming_cash_model { public $db; }
+class TestIncomingStockModel extends Incoming_stok_model { public $db, $uri, $load, $incoming_cash_model; }
 $cfg = ['dbdriver'=>'mysqli','hostname'=>'127.0.0.1','port'=>3307,'username'=>'root',
     'password'=>getenv('INCOMING_TEST_PASSWORD') ?: 'sendigs_root_local','database'=>'',
     'db_debug'=>false,'char_set'=>'utf8mb4','dbcollat'=>'utf8mb4_unicode_ci'];
@@ -178,9 +181,9 @@ try {
     $controller->auth=new TestAuth;$controller->session=new TestSession;
     $controller->load=new TestLoader($controller);$controller->incoming_cash_model=$model;
     foreach (['id_user'=>42,'datetime'=>date('Y-m-d H:i:s')] as $field=>$value) {
-        $property=new ReflectionProperty('Incoming_stok',$field);$property->setAccessible(true);$property->setValue($controller,$value);
+        $property=new ReflectionProperty('Incoming_stok',$field);if (PHP_VERSION_ID < 80100) { $property->setAccessible(true); }$property->setValue($controller,$value);
     }
-    $legacy=(new ReflectionClass('Incoming_stok_model'))->newInstanceWithoutConstructor();
+    $legacy=(new ReflectionClass('TestIncomingStockModel'))->newInstanceWithoutConstructor();
     $legacy->db=$db;$legacy->uri=$controller->uri;$legacy->load=new TestLoader($legacy);
     $controller->incoming_stok_model=$legacy;
     $controller->input->values=['kode_supplier'=>'cash'];

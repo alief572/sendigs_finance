@@ -1,6 +1,6 @@
 <?php
 // Start with only the controller's declared dependencies, as an HTTP request does.
-define('BASEPATH',__DIR__);class Admin_Controller{}
+define('BASEPATH',__DIR__);class Admin_Controller{ public $input, $auth, $db; }
 require dirname(__DIR__).'/controllers/Penerimaan_uang.php';
 class LookupInput { public $values=array('id_customer'=>'C1','id_company'=>'7');function post($key){return $this->values[$key]??null;} }
 class LookupAuth {function restrict($p){}}

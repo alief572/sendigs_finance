@@ -3,6 +3,7 @@
 define('BASEPATH', __DIR__);
 define('DBACC', 'fixture_accounting');
 function check($condition, $message) { if (!$condition) { throw new RuntimeException($message); } }
+#[\AllowDynamicProperties]
 class BF_Model {}
 require dirname(__DIR__) . '/models/Request_payment_model.php';
 

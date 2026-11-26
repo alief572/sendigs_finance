@@ -7,6 +7,7 @@ function log_message($level, $message) {}
 function show_error($message) { throw new RuntimeException($message); }
 function load_class($name, $directory) { return null; }
 function check($ok, $message) { global $checks; $checks++; if (!$ok) { throw new RuntimeException($message); } }
+#[\AllowDynamicProperties]
 class BF_Model { public function __construct() {} }
 class QueryInput { public $values = []; public function post() { return $this->values; } }
 // Production uses mysqli's numeric error code; PDO reports success as SQLSTATE 00000.

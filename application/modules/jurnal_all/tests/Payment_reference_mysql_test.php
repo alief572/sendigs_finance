@@ -1,7 +1,7 @@
 <?php
 define('BASEPATH',dirname(__DIR__,4).'/system/');define('APPPATH',dirname(__DIR__,3).'/');
 function log_message($level,$message){} function show_error($message){throw new RuntimeException($message);} function load_class($name,$directory){return null;}
-function is_php($version){return version_compare(PHP_VERSION,$version,'>=');} class BF_Model {} class CI_Model {}
+function is_php($version){return version_compare(PHP_VERSION,$version,'>=');} class BF_Model {} class CI_Model { public $db; }
 require BASEPATH.'database/DB.php';
 require dirname(__DIR__).'/libraries/Payment_patch.php';require dirname(__DIR__).'/libraries/Payment_posting.php';
 require dirname(__DIR__).'/libraries/Payment_normalization.php';

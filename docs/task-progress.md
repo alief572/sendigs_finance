@@ -4696,3 +4696,11 @@ Catatan awal: working tree membawa perubahan belum di-commit milik pekerjaan lai
 - Build ulang image lokal, lint seluruh PHP di artefak, dan smoke HTTP untuk HMVC, sesi lama dan baru, commit, serta rollback lulus. Validasi tidak memakai browser.
 - File berubah: controller Detail Expense, model Invoicing dan Penerimaan Uang, controller/model/view Incoming Stok, dua generator stok di `application/helpers/json_helper.php`, fixture modul, dan laporan `docs/php85-regression-audit.md`.
 - Sisa: lingkungan lokal belum memiliki fixture impor aset, report penerimaan, dan dua tes material. Lima belas kasus yang juga gagal pada PHP 7.4 dicatat di laporan. Branch tetap lokal dan status rilis menunggu verifikasi staging.
+
+## Verifikasi modul aktif pada PHP 8.5
+
+- Selesai: inventaris menu lokal read-only, pemetaan rute HMVC, pemulihan kompatibilitas modul aktif, perbaikan dependensi yang terlewat, dan pengujian final pada Docker PHP 8.5.13.
+- File: modul di `application/modules`, helper override company, aset Payment/Jurnal/Piutang, `.htaccess`, rencana, dan laporan `docs/php85-active-modules.md`.
+- Keputusan: bawa kembali perubahan kompatibilitas dengan merge per file dari basis bersama. Jalankan tes tulis dengan DB sementara agar pengujian tidak menyentuh data kerja.
+- Validasi: 107 dari 107 rute sidebar dapat dipetakan, lint 1.740 file PHP lulus, 167 dari 185 skrip PHP dan delapan tes klien lulus. Build, Composer, HTTP, sesi, PDF/XLSX, commit dan rollback lulus.
+- Sisa: 10 tes juga gagal di snapshot lama, delapan membutuhkan fixture aplikasi, dan empat rute lama di luar sidebar tidak menemukan controller. Rincian dan tindak lanjut tercatat di laporan.

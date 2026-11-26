@@ -19,7 +19,7 @@ class InvoiceTestDb extends TestDb {
 function invoiceController($db) {
     $model=(new ReflectionClass('Invoicing_model'))->newInstanceWithoutConstructor(); $model->db=$db; $model->auth=new TestAuth;
     $c=(new ReflectionClass('Invoicing'))->newInstanceWithoutConstructor(); $c->db=$db; $c->auth=new TestAuth; $c->input=new TestInput; $c->Invoicing_model=$model;
-    $p=new ReflectionProperty('Invoicing','accounting'); $p->setAccessible(true); $p->setValue($c,$db);
+    $p=new ReflectionProperty('Invoicing','accounting'); if (PHP_VERSION_ID < 80100) { $p->setAccessible(true); } $p->setValue($c,$db);
     return $c;
 }
 function callInvoice($c,$endpoint,$post) { $c->input->values=$post; ob_start(); $c->$endpoint(); $r=json_decode(ob_get_clean(),true); expect(is_array($r),'JSON response'); return $r; }

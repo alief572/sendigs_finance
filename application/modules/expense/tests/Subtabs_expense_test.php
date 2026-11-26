@@ -22,10 +22,12 @@ if (!defined('FCPATH')) {
 }
 
 if (!class_exists('Admin_Controller')) {
+    #[\AllowDynamicProperties]
     class Admin_Controller {}
 }
 
 if (!class_exists('BF_Model')) {
+    #[\AllowDynamicProperties]
     class BF_Model {}
 }
 

@@ -3,7 +3,9 @@
 define('BASEPATH', __DIR__);
 define('DBCNL', 'consultant_fixture');
 set_error_handler(function ($severity, $message, $file, $line) { throw new ErrorException($message, 0, $severity, $file, $line); });
+#[\AllowDynamicProperties]
 class Admin_Controller {}
+#[\AllowDynamicProperties]
 class BF_Model { public $db; public function __construct() {} }
 function has_permission($p) { return true; }
 function int_to_roman($m) { return array(1=>'I',2=>'II',3=>'III',4=>'IV',5=>'V',6=>'VI',7=>'VII',8=>'VIII',9=>'IX',10=>'X',11=>'XI',12=>'XII')[(int)$m]; }

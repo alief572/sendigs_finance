@@ -1,7 +1,7 @@
 (function (root) {
     'use strict';
     const tabs = ['INV', 'RCV', 'PAY', 'EXP', 'PCS'];
-    const defaults = () => ({ year: String(new Date().getFullYear()), month: '', company: '', category: '', q: '', start: 0, length: 10 });
+    const defaults = () => ({ year: String(new Date().getFullYear()), month: '', company: '', category: '', bank: '', q: '', start: 0, length: 10 });
     const escape = value => String(value == null ? '' : value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const money = value => {
         const match = String(value == null ? '0' : value).match(/^(-?)(\d+)(?:\.(\d{1,2}))?$/);
@@ -49,7 +49,9 @@
         const values = () => ({ ...state[active], tab: active });
         // Company boleh lebih dari satu: <select multiple> -> string "STM,VUCA" ('' = semua).
         const readField = select => select.multiple ? Array.from(select.options).filter(option => option.selected).map(option => option.value).filter(Boolean).join(',') : select.value;
-        function saveFilters() { ['year', 'month', 'company', 'category'].forEach(key => { state[active][key] = readField(form.elements[key]); }); }
+        // Filter Bank hanya dirender di Report Jurnal, jadi field yang tidak ada di form dilewati.
+        const fields = () => ['year', 'month', 'company', 'category', 'bank'].filter(key => form.elements[key]);
+        function saveFilters() { fields().forEach(key => { state[active][key] = readField(form.elements[key]); }); }
         function fillMulti(select, options, selectedValue) {
             const wanted = String(selectedValue || '').split(',').map(item => item.trim()).filter(Boolean);
             select.replaceChildren();
@@ -67,7 +69,7 @@
             loading = value;
             find('#ja-loading').hidden = !value;
             find('#ja-table').setAttribute('aria-busy', String(value));
-            ['year', 'month', 'company', 'category'].forEach(key => { form.elements[key].disabled = value; });
+            fields().forEach(key => { form.elements[key].disabled = value; });
             ['#ja-apply', '#ja-reset', '#ja-length'].forEach(selector => { find(selector).disabled = value; });
         }
         async function load() {
@@ -93,6 +95,7 @@
                 fill(form.elements.year, Object.fromEntries(options.years.map(year => [year, year])), 'Semua Tahun', state[tab].year);
                 if (form.elements.company.multiple) fillMulti(form.elements.company, options.companies, state[tab].company); else fill(form.elements.company, options.companies, 'Semua Company', state[tab].company);
                 fill(form.elements.category, Object.fromEntries(options.categories.map(category => [category, category])), 'Semua Kategori', state[tab].category);
+                if (form.elements.bank) fill(form.elements.bank, options.banks || {}, 'Semua Bank', state[tab].bank);
                 form.elements.month.value = state[tab].month;
                 find('#ja-search').value = state[tab].q; find('#ja-length').value = String(state[tab].length);
                 render(page, tab);
@@ -151,7 +154,7 @@
                 if (button.classList.contains('ja-tab')) { button.setAttribute('aria-selected', String(on)); button.tabIndex = on ? 0 : -1; }
             });
             find('#ja-panel').setAttribute('aria-labelledby', 'ja-tab-' + tab);
-            find('#ja-category').hidden = tab !== 'PAY'; find('#ja-invoice-period-hint').hidden = tab !== 'INV'; load();
+            find('#ja-category').hidden = tab !== 'PAY'; if (find('#ja-bank')) find('#ja-bank').hidden = tab !== 'PAY';find('#ja-invoice-period-hint').hidden = tab !== 'INV'; load();
         }
         async function openDetail(button) {
             if (busy || loading) return;

@@ -1,5 +1,6 @@
 <?php
 define('BASEPATH',dirname(__DIR__,4).'/system/'); define('APPPATH',dirname(__DIR__,3).'/');
+#[\AllowDynamicProperties]
 class Admin_Controller {}
 function log_message($level,$message) {}
 function history($message) {}

@@ -49,8 +49,9 @@ class Jurnal_pembayaran_xlsx
         $sheet->setTitle(substr(preg_replace('/[\\\\\/?*\[\]:]/', '_', $sheetName), 0, 31));
         $last = 'P';
         foreach (self::HEADERS as $i => $title) {
-            $sheet->setCellValueExplicit(PHPExcel_Cell::stringFromColumnIndex($i) . '1', $title, PHPExcel_Cell_DataType::TYPE_STRING);
-            $sheet->getColumnDimensionByColumn($i)->setWidth(self::WIDTHS[$i]);
+            $column = PHPExcel_Cell::stringFromColumnIndex($i);
+            $sheet->setCellValueExplicit($column . '1', $title, PHPExcel_Cell_DataType::TYPE_STRING);
+            $sheet->getColumnDimension($column)->setWidth(self::WIDTHS[$i]);
         }
         $sheet->getStyle("A1:{$last}1")->applyFromArray([
             'font' => ['bold' => true],

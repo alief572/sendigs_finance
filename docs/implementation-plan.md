@@ -228,3 +228,9 @@ Publikasi atas permintaan user: siapkan commit terisolasi dari tip terbaru devel
 1. Reproduksi 33 kegagalan dan 18 warning dari kandidat `e6b218a6`. Bandingkan terhadap snapshot commit dasar `ccd47e6e` di Docker PHP 7.4, dengan Node dan isolasi jaringan yang sama.
 2. Perbaiki regresi runtime PHP 8.5 yang terbukti, termasuk test double yang gagal karena perubahan bahasa. Untuk tes yang membutuhkan database atau akses tulis, gunakan fixture lokal sementara jika skemanya tersedia.
 3. Ulangi kasus terdampak, suite Docker lokal, serta pemeriksaan artefak yang relevan. Catat hasil per tes, batas fixture, dan keputusan di checkpoint. Pertahankan perubahan di `upgrade/php-8.5`.
+
+## Verifikasi modul aktif pada PHP 8.5
+
+1. Ambil inventaris menu dari MySQL lokal dengan operasi baca dan cocokkan rutenya dengan branch upgrade.
+2. Uji snapshot branch pada PHP 8.5.13. Jalankan smoke test aplikasi dengan database sementara, lint modul aktif, dan tes regresi yang tersedia. Bandingkan kegagalan dengan snapshot sebelum sinkronisasi bila relevan.
+3. Perbaiki regresi kompatibilitas yang terbukti, lalu ulangi pengujian terdampak. Catat cakupan dan rute yang masih memerlukan pengujian dengan data aplikasi di `docs/php85-active-modules.md`.
