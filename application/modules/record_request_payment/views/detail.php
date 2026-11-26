@@ -150,7 +150,7 @@ foreach ($records as $r) {
 							<td class="text-right-imp"><?= number_format($r->dibayarkan, 0, ',', '.'); ?></td>
 							<td class="text-center">
 								<?php if (!empty($rpDoc['has_files']) || !empty($r->print_url)): ?>
-									<a href="<?= html_escape(!empty($rpDoc['has_files']) ? site_url('record_request_payment/print_transfer_document/' . $rpDoc['detail_id']) : $r->print_url) ?>" target="_blank" rel="noopener" class="btn btn-sm btn-info" title="Print Dokumen"><i class="fa fa-print"></i></a>
+									<button type="button" class="btn btn-sm btn-info" title="Print Dokumen" aria-label="Cetak dokumen <?= html_escape($r->no_dokumen) ?>" data-pengajuan="<?= (int) $header->id ?>" data-pdoc="<?= html_escape($r->no_dokumen) ?>"><i class="fa fa-print"></i></button>
 									<?php if (!empty($rpDoc['has_files'])): ?><i class="fa fa-paperclip" title="Lampiran tambahan"></i><?php endif; ?>
 								<?php else: ?>
 									<span class="text-muted" title="Tidak ada dokumen print untuk tipe ini">-</span>
@@ -171,3 +171,4 @@ foreach ($records as $r) {
 
 	</div>
 </div>
+<?php $this->load->view('document_modal'); ?>

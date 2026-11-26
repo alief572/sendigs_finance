@@ -1,5 +1,6 @@
 <?php if (!defined('BASEPATH')) exit('No direct script access allowed');
 require_once dirname(__DIR__).'/libraries/Rp_transfer_record.php';
+require_once dirname(__DIR__).'/libraries/Rp_document_attachments.php';
 
 /*
  * Controller: Record Request Payment (histori final snapshot - FSD 2026-09)
@@ -680,6 +681,52 @@ class Record_request_payment extends Admin_Controller
 		]))->result_array();
 		$this->load->view('print_transfer_document', compact('doc', 'files', 'original'));
 		$this->completeAudit('Mencetak dokumen transfer', 1, ['row_count' => count($files)]);
+	}
+
+	/** Isi modal Cetak Dokumen: ringkasan, lampiran awal, lampiran tambahan dan alamat cetak. Hanya membaca. */
+	public function document_info()
+	{
+		$this->beginAudit(__FUNCTION__, [], ['id_pengajuan', 'row_count']);
+		$this->auth->restrict($this->viewPermission);
+		$batch = (int) $this->input->get('id_pengajuan');
+		$number = $this->input->get('no_dokumen');
+		try {
+			if ($batch < 1 || !is_string($number) || $number === '' || strlen($number) > 100) {
+				throw new DomainException('Dokumen tidak valid.');
+			}
+			$doc = Rp_transfer::write($this->db->query(
+				"SELECT d.*, h.company_nama FROM tr_rp_pengajuan_d d JOIN tr_rp_pengajuan_h h ON h.id=d.id_pengajuan
+				 WHERE h.id=? AND d.no_dokumen=? AND h.status='done' AND h.deleted=0 AND d.decision='approved' ORDER BY d.id LIMIT 1", [$batch, $number]
+			))->row();
+			if (!$doc) {
+				throw new DomainException('Dokumen tidak ditemukan.');
+			}
+			$additional = [];
+			if (!empty($doc->id_transfer) && Rp_transfer::installed($this->db)) {
+				foreach (Rp_transfer::write($this->db->select('id,nama')->order_by('id')->get_where('tr_rp_transfer_file', [
+					'id_transfer' => $doc->id_transfer, 'id_detail' => $doc->id,
+				]))->result_array() as $file) {
+					$additional[] = ['name' => $file['nama'], 'url' => site_url('record_request_payment/transfer_file/' . $file['id'])];
+				}
+			}
+			if ($additional) {
+				$print = site_url('record_request_payment/print_transfer_document/' . $doc->id);
+			} else {
+				$this->load->model('request_payment/Request_payment_model');
+				$source = clone $doc;
+				$source->id = $doc->id_dokumen ?: $doc->no_dokumen;
+				$print = $this->Request_payment_model->build_print_url($source);
+			}
+			echo json_encode(['status' => 1, 'document' => [
+				'no_dokumen' => $doc->no_dokumen, 'kategori' => Rp_transfer_record::category($doc->kategori), 'request_by' => $doc->request_by,
+				// Keterangan asli dokumen (as is), bukan yang dilengkapi finance.
+				'company' => $doc->company_nama, 'keperluan' => $doc->keperluan, 'dibayarkan' => $doc->dibayarkan,
+			], 'initial' => Rp_document_attachments::initial($this->db, $doc->kategori, $doc->no_dokumen), 'additional' => $additional, 'print_url' => $print]);
+			$this->completeAudit('Membuka pratinjau cetak dokumen', 1, ['id_pengajuan' => $batch, 'row_count' => 1]);
+		} catch (Throwable $e) {
+			$this->completeAudit('Pratinjau cetak dokumen gagal', 0, ['reason' => 'document_unavailable']);
+			echo json_encode(['status' => 0, 'msg' => $e instanceof DomainException ? $e->getMessage() : 'Gagal memuat dokumen.']);
+		}
 	}
 
 	private function send_workbook($workbook, $filename, $count)
