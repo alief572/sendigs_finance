@@ -551,56 +551,6 @@ class Jurnal_payment extends Admin_Controller
         echo json_encode($param);
     }
 
-    public function fix_company()
-
-    {
-        $get_jurnal = $this->db->get_where('tr_jurnal', ['jenis_transaksi' => 'Penerimaan Piutang'])->result();
-
-        $arr_update_jurnal = [];
-        foreach ($get_jurnal as $item_jurnal) {
-            $get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $item_jurnal->no_transaksi])->row();
-
-            $get_penawaran = $this->consultant->get_where('kons_tr_penawaran', ['id_quotation' => $get_invoicing->id_penawaran])->row();
-            $get_company = $this->consultant->get_where('kons_tr_company', ['id' => $get_penawaran->company])->row();
-
-            $id_company = (!empty($get_company)) ? $get_company->id : '';
-            $nm_company = (!empty($get_company)) ? $get_company->nm_company : '';
-
-
-            $arr_update_jurnal[] = [
-                'id' => $item_jurnal->id,
-                'id_company' => $id_company,
-                'nm_company' => $nm_company
-            ];
-        }
-
-        $this->db->trans_begin();
-
-        $update_jurnal = $this->db->update_batch('tr_jurnal', $arr_update_jurnal, 'id');
-        if (!$update_jurnal) {
-            $this->db->trans_rollback();
-
-            print_r($this->db->last_query());
-            exit;
-        }
-
-        if ($this->db->trans_status() === FALSE) {
-            $this->db->trans_rollback();
-
-            echo json_encode([
-                'status' => 1,
-                'msg' => 'Data has not been updated !'
-            ]);
-        } else {
-            $this->db->trans_commit();
-
-            echo json_encode([
-                'status' => 1,
-                'msg' => 'Data has been updated !'
-            ]);
-        }
-    }
-
     public function get_data_jurnal()
     {
         $this->Jurnal_payment_model->get_data_jurnal();

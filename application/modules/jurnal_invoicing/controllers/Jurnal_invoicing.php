@@ -128,60 +128,6 @@ class Jurnal_Invoicing extends Admin_Controller
         echo $hasil;
     }
 
-    public function fix_company()
-    {
-
-        $get_jurnal = $this->db->get_where('tr_jurnal', ['jenis_transaksi' => 'Penerimaan Piutang'])->result();
-
-        $arr_update_jurnal = [];
-        foreach ($get_jurnal as $item_jurnal) {
-            $snapshotHeader=$this->db->get_where('tr_penerimaan_piutang',array('no_surat'=>$item_jurnal->no_transaksi))->row_array();
-            if((int)($snapshotHeader['consulting_batch']??0)===3)continue;
-
-            $get_invoicing = $this->db->get_where('tr_invoicing', ['id' => $item_jurnal->no_transaksi])->row();
-
-            $get_penawaran = $this->consultant->get_where('kons_tr_penawaran', ['id_quotation' => $get_invoicing->id_penawaran])->row();
-            $get_company = $this->consultant->get_where('kons_tr_company', ['id' => $get_penawaran->company])->row();
-
-            $id_company = (!empty($get_company)) ? $get_company->id : '';
-            $nm_company = (!empty($get_company)) ? $get_company->nm_company : '';
-
-
-            $arr_update_jurnal[] = [
-                'id' => $item_jurnal->id,
-                'id_company' => $id_company,
-                'nm_company' => $nm_company
-            ];
-        }
-
-        if (!$arr_update_jurnal) { echo json_encode(array('status'=>1,'msg'=>'Tidak ada jurnal legacy untuk diperbarui.')); return; }
-        $this->db->trans_begin();
-
-        $update_jurnal = $this->db->update_batch('tr_jurnal', $arr_update_jurnal, 'id');
-        if (!$update_jurnal) {
-            $this->db->trans_rollback();
-
-            print_r($this->db->last_query());
-            exit;
-        }
-
-        if ($this->db->trans_status() === FALSE) {
-            $this->db->trans_rollback();
-
-            echo json_encode([
-                'status' => 1,
-                'msg' => 'Data has not been updated !'
-            ]);
-        } else {
-            $this->db->trans_commit();
-
-            echo json_encode([
-                'status' => 1,
-                'msg' => 'Data has been updated !'
-            ]);
-        }
-    }
-
     public function modal_posting_jurnal()
     {
         $id = $this->input->post('id');
