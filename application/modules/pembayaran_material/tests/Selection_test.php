@@ -8,6 +8,8 @@ class SelectionResult {
     public function result() { return $this->rows; }
     public function row() { return $this->rows[0] ?? null; }
     public function num_rows() { return count($this->rows); }
+    public function result_array() { return array_map('get_object_vars', $this->rows); }
+    public function row_array() { return $this->result_array()[0] ?? null; }
 }
 class SelectionDb extends MaterialDb {
     public $data, $filters = array(), $reads = 0, $failRead = 0, $snapshot, $locked = false;
@@ -32,6 +34,8 @@ class SelectionDb extends MaterialDb {
             $field = preg_replace('/^\w+\./', '', $field);
             if (substr($field, -3) === ' <>') { if (in_array($row[substr($field, 0, -3)] ?? null, $values, false)) { return false; } continue; }
             if (substr($field, -2) === ' >') { if (($row[substr($field, 0, -2)] ?? 0) <= $values[0]) { return false; } continue; }
+            if (substr($field, -3) === ' >=') { if (($row[substr($field, 0, -3)] ?? '') < $values[0]) { return false; } continue; }
+            if (preg_match("/^\(created_on < '([\d-]+)' OR created_on IS NULL\)$/", $field, $m)) { if (($row['created_on'] ?? null) !== null && $row['created_on'] >= $m[1]) { return false; } continue; }
             if (!in_array($row[$field] ?? null, $values, false)) { return false; }
         }
         return true;
@@ -221,6 +225,76 @@ selection_run($db, 'check_payment', array('id' => 'B', 'checked' => 0));
 list($event, $output) = selection_run($db, 'check_payment', array('id' => 'C'));
 check(json_decode($output, true)['status'] === 1, 'Removing all choices permits a new group');
 
+// Batas periode tabel bawah/atas memakai created_on; tidak ada baris yang hilang atau dobel.
+$dates = array('A' => '2026-10-31 23:59:59', 'B' => '2026-11-01 00:00:00', 'C' => '2026-12-05 08:00:00', 'D' => null);
+foreach (array('baru' => 'B,C', 'lama' => 'A,D', '' => 'A,B,C,D', 'lain' => 'A,B,C,D') as $periode => $expected) {
+    $db = new SelectionDb();
+    foreach ($dates as $id => $date) { $db->add($id, 'periodik'); $db->data['v_list_payment'][count($db->data['v_list_payment']) - 1]['created_on'] = $date; }
+    list($event, $output) = selection_run($db, 'get_list_req_payment', array('jenis_payment' => 2, 'periode' => $periode, 'search' => array('value' => '')));
+    $shown = implode(',', array_map(function ($row) { return substr($row['no_dokumen'], 4); }, json_decode($output, true)['data']));
+    check($shown === $expected, 'Period ' . $periode . ' lists ' . $expected . ', got ' . $shown);
+}
+
+// Tabel atas: baris transfer dulu, lalu dokumen periode baru; paging menyambung tanpa hilang/dobel.
+if (!function_exists('html_escape')) { function html_escape($value) { return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8'); } }
+class QueueResult {
+    private $rows;
+    public function __construct($rows) { $this->rows = $rows; }
+    public function row_array() { return $this->rows[0] ?? null; }
+    public function result_array() { return $this->rows; }
+}
+class QueueDb extends SelectionDb {
+    public function table_exists($table) { return true; }
+    public function __call($name, $args) {
+        if ($name === 'query' && strpos($args[0], 'tr_rp_transfer') !== false) {
+            $this->calls[] = $name;
+            if (strpos($args[0], 'COUNT(DISTINCT t.id)') !== false) { return new QueueResult(array(array('total' => 2))); }
+            preg_match('/LIMIT (\d+), (\d+)/', $args[0], $m);
+            $rows = array();
+            foreach (array(1, 2) as $id) {
+                $rows[] = array('id' => $id, 'no_pengajuan' => 'PGJ-T' . $id, 'company_nama' => 'STM', 'decided_at' => '2026-11-20', 'urutan' => 1,
+                    'bank' => 'BCA', 'no_rek' => '1', 'nama' => 'X', 'admin' => '0', 'bearer' => 'company', 'numbers' => 'T-' . $id, 'categories' => 'Kasbon', 'net' => '10.00');
+            }
+            return new QueueResult(array_slice($rows, (int) $m[1], (int) $m[2]));
+        }
+        if ($name === 'limit') { $this->window = array($args[1] ?? 0, $args[0]); return $this; }
+        $result = parent::__call($name, $args);
+        if ($name === 'get' && ($args[0] ?? null) === null && $this->table === 'v_list_payment' && $this->window) {
+            $result = new SelectionResult(array_map('get_object_vars', array_slice($result->result(), $this->window[0], $this->window[1])));
+            $this->window = null;
+        }
+        if ($name === 'count_all_results') { return count(array_filter($this->data['v_list_payment'], function ($r) { return $r['created_on'] >= '2026-11-01'; })); }
+        return $result;
+    }
+    public $window;
+}
+$seen = array();
+foreach (array(0, 2, 4) as $start) {
+    $db = new QueueDb();
+    foreach (array('OLD' => '2026-10-01', 'N1' => '2026-11-03', 'N2' => '2026-11-02', 'N3' => '2026-11-01') as $id => $date) {
+        $db->add($id, 'periodik'); $db->data['v_list_payment'][count($db->data['v_list_payment']) - 1]['created_on'] = $date;
+    }
+    list($event, $output) = selection_run($db, 'get_list_rp_transfer', array('draw' => 1, 'start' => $start, 'length' => 2, 'search' => array('value' => '')));
+    $json = json_decode($output, true);
+    check($event['status'] === 1 && $json['recordsTotal'] === 5 && $json['recordsFiltered'] === 5, 'Queue counts transfers plus new documents: ' . $output);
+    foreach ($json['data'] as $row) {
+        $seen[] = $row['no'] . ':' . (preg_match('/value="(\d+)"[^>]*data-label/', $row['option']) ? 'T' : (strpos($row['option'], 'check_payment') !== false ? substr(strip_tags(strstr($row['dokumen'], '<br>', true)), 4) : '?'));
+    }
+}
+check(implode(' ', $seen) === '1:T 2:T 3:N1 4:N2 5:N3', 'Queue pages continue without gaps or duplicates: ' . implode(' ', $seen));
+
+// Proses: server menentukan form transfer atau form lama.
+foreach (array('2026-11-05' => 'transfer', '2026-10-05' => 'legacy') as $date => $target) {
+    $db = (new QueueDb())->add('A', 'periodik')->choose('A');
+    $db->data['payment_approve'][0]['created_on'] = $date;
+    $db->data['tr_rp_pengajuan_d'] = array(array('id' => 1, 'id_pengajuan' => 9, 'no_dokumen' => 'DOC-A', 'kategori' => 'Periodik', 'decision' => 'approved',
+        'dpp' => 100, 'nilai_ppn' => 0, 'nilai_pph' => 0, 'admin' => 0, 'dibayarkan' => 100, 'id_transfer' => null, 'payment_approval_id' => null));
+    $db->data['tr_rp_pengajuan_h'] = array(array('id' => 9, 'status' => 'done', 'deleted' => 0));
+    list($event, $output) = selection_run($db, 'proses_payment');
+    $json = json_decode($output, true);
+    check($json['status'] === 1 && $json['target'] === $target, 'Process routes ' . $date . ' to ' . $target . ': ' . $output);
+}
+
 $db = new SelectionDb(); $ids = array();
 for ($i = 0; $i < 100; $i++) { $ids[] = 'P-' . $i; $db->add('P-' . $i, $i % 2 ? 'kasbon' : 'expense'); }
 $model = new MaterialModel($db, new MaterialInput());
@@ -228,6 +302,14 @@ check(count($model->payment_groups($ids)) === 100 && $db->reads === 3, 'Batch me
 $jenis_payment = '2';
 ob_start(); require dirname(__DIR__) . '/views/list_request_payment.php'; $html = ob_get_clean();
 check(strpos($html, 'data-jenis-payment="2"') !== false && strpos($html, 'assets/js/pembayaran_material/payment_selection.js') !== false, 'View loads tested client with payment category');
+check(strpos($html, 'rp-tabs') === false && substr_count($html, 'proses_payment"') === 1, 'Without transfer feature: one list, no tabs');
+if (!function_exists('site_url')) { function site_url($path = '') { return '/fixture/' . $path; } }
+$rp_transfer_show = true;
+ob_start(); require dirname(__DIR__) . '/views/list_request_payment.php'; $tabbed = ob_get_clean();
+check(strpos($tabbed, 'Pengajuan Baru<') !== false && strpos($tabbed, 'Dokumen Lama<') !== false && strpos($tabbed, 'data-periode="lama"') !== false
+    && substr_count($tabbed, 'btn-success proses_payment') === 1 && substr_count($tabbed, 'id="table_list_req_payment"') === 1 && strpos($tabbed, 'id="table_rp_transfer"') !== false,
+    'Two tabs share one set of buttons');
+$rp_transfer_show = false;
 $modelSource = file_get_contents(dirname(__DIR__) . '/models/Pembayaran_material_model.php');
 preg_match_all('/->([a-zA-Z_]\w*)\b(?!\s*\()/', $modelSource, $propertyMatches);
 $GLOBALS['materialRowDefaults'] = array_fill_keys($propertyMatches[1], 0);

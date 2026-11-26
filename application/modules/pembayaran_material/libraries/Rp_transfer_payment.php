@@ -86,6 +86,159 @@ final class Rp_transfer_payment
         return ['total' => $total, 'filtered' => $filtered, 'rows' => $rows];
     }
 
+    /**
+     * Dokumen jalur lama yang dicentang: dibayar lewat form transfer ('transfer') atau form lama ('legacy').
+     * Campuran, atau layak tetapi tidak bisa jadi satu transfer, ditolak dengan alasannya.
+     */
+    public static function target($db, array $paymentIds, $since)
+    {
+        $found = self::candidates($db, $paymentIds, $since);
+        if (!$found['eligible']) {
+            return 'legacy';
+        }
+        self::sameTransfer($found);
+        return 'transfer';
+    }
+
+    /** Transfer yang belum disimpan, bentuknya sama dengan find() sehingga preview dan jurnal memakai jalur yang sama. */
+    public static function draft($db, array $paymentIds, array $input, $since)
+    {
+        $found = self::candidates($db, $paymentIds, $since);
+        $header = self::sameTransfer($found);
+        // Admin yang dulu sudah dipotong per dokumen dibawa apa adanya, supaya uang yang diterima tidak berubah.
+        $carried = array_sum(array_column($found['eligible'], 'legacy_admin'));
+        if ($carried) {
+            $input = array_merge($input, ['admin' => Rp_transfer::money($carried), 'bearer' => 'recipient']);
+        }
+        $bearer = $input['bearer'] ?? '';
+        if (!in_array($bearer, ['company', 'recipient'], true)) {
+            throw new DomainException('Penanggung admin wajib dipilih.');
+        }
+        $admin = Rp_transfer::cents(($input['admin'] ?? '') === '' ? '0' : $input['admin']);
+        $last = Rp_transfer::write($db->select('urutan')->order_by('urutan', 'DESC')
+            ->get_where('tr_rp_transfer', ['id_pengajuan' => $header['id']]))->row_array();
+        $transfer = Rp_transfer::account($input) + [
+            'id' => 0, 'id_pengajuan' => (int) $header['id'], 'urutan' => (int) ($last['urutan'] ?? 0) + 1,
+            'admin' => Rp_transfer::money($admin), 'bearer' => $bearer, 'status' => 'approved', 'id_payment' => null,
+            'no_pengajuan' => $header['no_pengajuan'], 'company_id' => $header['company_id'], 'company_nama' => $header['company_nama'],
+            'docs' => $found['eligible'],
+        ];
+        Rp_transfer::totals(self::planned($transfer)['net'], $admin, $bearer);
+        return $transfer;
+    }
+
+    /** Kunci dokumen draft sampai transaksi selesai, supaya tidak dibayar dua kali. */
+    public static function lock($db, array $paymentIds)
+    {
+        $marks = implode(',', array_fill(0, count($paymentIds), '?'));
+        Rp_transfer::write($db->query('SELECT id FROM payment_approve WHERE id IN (' . $marks . ') FOR UPDATE', array_values($paymentIds)));
+    }
+
+    /** Simpan draft menjadi transfer. Wajib dipanggil di dalam transaksi pembayaran. */
+    public static function create($db, array $transfer)
+    {
+        Rp_transfer::write($db->insert('tr_rp_transfer', [
+            'id_pengajuan' => $transfer['id_pengajuan'], 'urutan' => $transfer['urutan'], 'bank' => $transfer['bank'],
+            'no_rek' => $transfer['no_rek'], 'nama' => $transfer['nama'], 'admin' => $transfer['admin'],
+            'bearer' => $transfer['bearer'], 'status' => 'approved',
+        ]));
+        $id = (int) $db->insert_id();
+        if ($id < 1) {
+            throw new RuntimeException('Transfer gagal dibuat.');
+        }
+        foreach ($transfer['docs'] as $doc) {
+            // ID approval lama dipakai apa adanya; hanya dihubungkan ke transfer.
+            $change = ['id_transfer' => $id, 'payment_approval_id' => $doc['payment_approval_id']];
+            if (!empty($doc['legacy_admin'])) {
+                // Admin pindah dari dokumen ke transfer: DIBAYARKAN kembali DPP + PPN - PPh.
+                $change += ['admin' => 0, 'dibayarkan' => $doc['dibayarkan']];
+            }
+            Rp_transfer::write($db->where('id', $doc['id'])->where('id_transfer', null)->update('tr_rp_pengajuan_d', $change));
+            if ($db->affected_rows() !== 1) {
+                throw new DomainException('Dokumen sudah masuk transfer lain. Muat ulang daftar.');
+            }
+        }
+        return $id;
+    }
+
+    /** Total admin lama (sen) yang sudah dipotong per dokumen pada pilihan ini. */
+    public static function carriedAdmin($db, array $paymentIds, $since)
+    {
+        return array_sum(array_column(self::candidates($db, $paymentIds, $since)['eligible'], 'legacy_admin'));
+    }
+
+    private static function sameTransfer(array $found)
+    {
+        if ($found['rejected']) {
+            throw new DomainException('Pilihan tidak bisa digabung. Bayar terpisah: ' . implode(', ', $found['rejected']) . '.');
+        }
+        if (count($found['headers']) !== 1) {
+            throw new DomainException('1 payment = 1 transfer. Pilih dokumen dari No. Pengajuan yang sama.');
+        }
+        if (count($found['eligible']) > 1) {
+            foreach ($found['eligible'] as $doc) {
+                if (Rp_transfer::groupType($doc['kategori']) === 'refill') {
+                    throw new DomainException('Refill Petty Cash harus dibayar sendiri.');
+                }
+            }
+        }
+        return reset($found['headers']);
+    }
+
+    private static function candidates($db, array $paymentIds, $since)
+    {
+        $paymentIds = array_values(array_unique(array_filter(array_map('strval', $paymentIds), 'strlen')));
+        if (!$paymentIds || count($paymentIds) > 100) {
+            throw new DomainException('Pilih minimal satu transaksi pembayaran.');
+        }
+        $payments = Rp_transfer::write($db->where_in('id', $paymentIds)->get('payment_approve'))->result_array();
+        if (count($payments) !== count($paymentIds)) {
+            throw new DomainException('Dokumen pembayaran tidak ditemukan. Kosongkan pilihan dan pilih ulang.');
+        }
+        $details = [];
+        $rows = Rp_transfer::write($db->where_in('no_dokumen', array_column($payments, 'no_doc'))->where('decision', 'approved')
+            ->get('tr_rp_pengajuan_d'))->result_array();
+        foreach ($rows as $row) {
+            $details[$row['no_dokumen']][] = $row;
+        }
+        $headers = [];
+        if ($rows) {
+            foreach (Rp_transfer::write($db->where_in('id', array_values(array_unique(array_column($rows, 'id_pengajuan'))))
+                ->get('tr_rp_pengajuan_h'))->result_array() as $row) {
+                $headers[$row['id']] = $row;
+            }
+        }
+        $found = ['eligible' => [], 'rejected' => [], 'headers' => []];
+        $cents = static function ($value) {
+            return (int) round((float) $value * 100);
+        };
+        foreach ($payments as $payment) {
+            $detail = count($details[$payment['no_doc']] ?? []) === 1 ? $details[$payment['no_doc']][0] : null;
+            $header = $detail ? ($headers[$detail['id_pengajuan']] ?? null) : null;
+            // Selain syarat ini (periode lama, Hutang Petty Cash) tetap di form lama.
+            $gross = $detail ? $cents($detail['dpp']) + $cents($detail['nilai_ppn']) - $cents($detail['nilai_pph']) : 0;
+            $admin = $detail ? $cents($detail['admin']) : 0;
+            if (!$header || $header['status'] !== 'done' || (int) $header['deleted'] !== 0
+                || (string) $payment['status'] !== '1' || !empty($payment['id_payment']) || (string) $payment['created_on'] < $since
+                || !empty($detail['id_transfer']) || !empty($detail['payment_approval_id'])
+                || Rp_transfer::groupType($detail['kategori']) === 'debt' || Rp_transfer::groupType($payment['tipe']) === 'debt'
+                || $cents($payment['jumlah']) !== $cents($detail['dpp'])
+                || $admin < 0 || $cents($detail['dibayarkan']) !== $gross - $admin) {
+                $found['rejected'][] = $payment['no_doc'];
+                continue;
+            }
+            $detail['dibayarkan'] = Rp_transfer::money($gross);
+            $found['eligible'][] = $detail + [
+                'legacy_admin' => $admin,
+                'payment_status' => $payment['status'], 'voucher' => null, 'tgl_bayar' => null, 'payment_bank' => null,
+                'keterangan_pembayaran' => null, 'coa_bank' => null,
+            ];
+            $found['eligible'][count($found['eligible']) - 1]['payment_approval_id'] = (string) $payment['id'];
+            $found['headers'][$header['id']] = $header;
+        }
+        return $found;
+    }
+
     public static function banks($db, $company)
     {
         $rows = Rp_transfer::write($db->select('a.id, a.nama, a.rekening, a.coa_bank, b.nama_bank')

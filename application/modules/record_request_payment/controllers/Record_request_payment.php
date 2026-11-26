@@ -215,7 +215,8 @@ class Record_request_payment extends Admin_Controller
 		set_time_limit(0);
 		ini_set('memory_limit', '512M');
 		$transfers = Rp_transfer_record::groups($this->db, $id_pengajuan);
-		if ($transfers) {
+		// Format transfer hanya bila lengkap; kalau sebagian, format lama supaya tidak ada dokumen yang hilang.
+		if ($transfers && !Rp_transfer_record::hasDocumentsOutside($this->db, $id_pengajuan)) {
 			$first = reset($transfers);
 			$this->export_plan_cash_flow($transfers,
 				'Pengajuan Pembayaran ' . $first['no_pengajuan'] . ' (' . tgl_indo(date('Y-m-d', strtotime($first['decided_at']))) . ') - Pengajuan',
