@@ -41,8 +41,8 @@ foreach ($kasus as $modul => list($izin, $methods)) {
             $c->input->method = 'GET';
             ok($jalan($method) === 403, "$class::$method GET ditolak");
             $c->input->method = 'POST';
-            // lolos pemeriksaan izin: jalan sampai menyentuh input/model tiruan (payment membaca input dulu)
-            ok($jalan($method) === 'lolos', "$class::$method dengan $punya diteruskan");
+            // lolos pemeriksaan izin: tidak dijawab 403 (handler lanjut menyentuh input/model/lock tiruan)
+            ok($jalan($method) !== 403, "$class::$method dengan $punya diteruskan");
         }
     }
 }
