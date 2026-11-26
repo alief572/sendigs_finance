@@ -519,6 +519,7 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
 
     function initTable() {
         $.fn.dataTable.ext.errMode = 'none'; // error ajax ditampilkan lewat banner #fu-msg
+        $('#fu-panel').next('.fu-foot').remove(); // footer lama yang dipindah keluar area geser (lihat di bawah)
         if (table) { table.destroy(); }
         var cols = columnsFor(f.tab);
         $('#fu-table').empty().toggleClass('wide', f.tab === 'all')
@@ -537,6 +538,9 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
             columns: cols.map(function (c) { return c[1]; })
         });
         table.__tab = f.tab;
+        // Info + paginasi dipindah ke luar #fu-panel (area geser horizontal) supaya tetap diam saat tabel digeser.
+        // DataTables memperbarui node ini lewat referensi, jadi tetap berfungsi setelah dipindah.
+        $('#fu-panel').after($('#fu-table_wrapper > .fu-foot'));
         PiutangKolom.init('#fu-table');
         // Skeleton (MP-NFR-11): card dan tabel diganti kerangka saat dimuat ulang.
         table.on('preXhr.dt', function () { $('#fu-skel').prop('hidden', false); $('#fu-panel, #fu-cards').addClass('fu-loading'); });
