@@ -1,4 +1,8 @@
 <?php
+if (!empty($rp_transfer_available)) {
+	$rp_tutorial_page = 'approval';
+	include dirname(__DIR__, 2) . '/request_payment/views/transfer_tutorial.php';
+}
 $ENABLE_VIEW = has_permission('Approval_Request_Payment.View');
 ?>
 
@@ -68,6 +72,7 @@ $ENABLE_VIEW = has_permission('Approval_Request_Payment.View');
 						<th>COMPANY</th>
 						<th>TANGGAL PENGAJUAN</th>
 						<th style="width:110px;">JUMLAH DOKUMEN</th>
+						<?php if (!empty($rp_transfer_available)): ?><th>JUMLAH TRANSFER</th><?php endif; ?>
 						<th style="width:150px;">TOTAL DIBAYARKAN</th>
 						<th style="width:130px;">STATUS</th>
 						<th style="width:100px;">ACTION</th>
@@ -113,6 +118,9 @@ $ENABLE_VIEW = has_permission('Approval_Request_Payment.View');
 					data: 'jumlah_dokumen',
 					className: 'text-center'
 				},
+				<?php if (!empty($rp_transfer_available)): ?>
+				{ data: 'transfer_count', className: 'text-center', render: function(count) { return Number(count) || '-'; } },
+				<?php endif; ?>
 				{
 					data: 'total_dibayarkan',
 					className: 'text-right',

@@ -1,4 +1,5 @@
 <?php if (!defined('BASEPATH')) exit('No direct script access allowed');
+require_once dirname(__DIR__).'/libraries/Rp_transfer_record.php';
 
 /*
  * Controller: Record Request Payment (histori final snapshot - FSD 2026-09)
@@ -24,6 +25,7 @@ class Record_request_payment extends Admin_Controller
 		$this->beginAudit(__FUNCTION__, array(), array());
 		$this->auth->restrict($this->viewPermission);
 		$this->template->title('Record Request Payment');
+		$this->template->set('rp_transfer_available', Rp_transfer::installed($this->db));
 		try {
 			$this->template->render('index');
 		} catch (Throwable $e) {
@@ -164,6 +166,15 @@ class Record_request_payment extends Admin_Controller
 
 		$this->template->set('header', $header);
 		$this->template->set('records', $records);
+		$transferGroups = Rp_transfer_record::groups($this->db, $id_pengajuan);
+		$docTransfers = [];
+		foreach ($transferGroups as $group) {
+			foreach ($group['docs'] as $doc) {
+				$docTransfers[$doc['no_dokumen']] = $doc + ['group' => $group];
+			}
+		}
+		$this->template->set('rp_transfers', $transferGroups);
+		$this->template->set('rp_doc_transfers', $docTransfers);
 		$this->template->title('Detail Record - ' . $header->no_pengajuan);
 		try {
 			$this->template->render('detail');
@@ -203,6 +214,15 @@ class Record_request_payment extends Admin_Controller
 
 		set_time_limit(0);
 		ini_set('memory_limit', '512M');
+		$transfers = Rp_transfer_record::groups($this->db, $id_pengajuan);
+		if ($transfers) {
+			$first = reset($transfers);
+			$this->export_plan_cash_flow($transfers,
+				'Pengajuan Pembayaran ' . $first['no_pengajuan'] . ' (' . tgl_indo(date('Y-m-d', strtotime($first['decided_at']))) . ') - Pengajuan',
+				'Company: ' . $first['company_nama'] . ' | Diputuskan: ' . $first['decided_at'] . ' | Dicetak pada: ' . date('d-m-Y H:i:s'),
+				'Record_Request_Payment_' . $first['no_pengajuan'] . '.xlsx', true);
+			return;
+		}
 
 		$header  = $this->Record_request_payment_model->get_header($id_pengajuan);
 		$headerQueryOk = $this->Record_request_payment_model->auditQueriesOk() && $this->auditReadStatus() === 1;
@@ -443,6 +463,243 @@ class Record_request_payment extends Admin_Controller
 		header('Content-Disposition: attachment;filename="Record_Request_Payment_per_Item.xlsx"');
 		header('Cache-Control: max-age=0');
 		echo $content;
+	}
+
+	public function export_transfer_batches()
+	{
+		$this->beginAudit(__FUNCTION__, [], ['row_count', 'format']);
+		$this->auth->restrict($this->viewPermission);
+		try {
+			$filter = Rp_transfer_record::filters((array) $this->input->get());
+			$groups = Rp_transfer_record::groups($this->db, null, $filter);
+			if ($this->input->method() === 'post') {
+				$selected = $this->input->post('batches');
+				if (!is_array($selected) || !$selected || array_filter($selected, static function ($id) { return !is_string($id) || !ctype_digit($id); })) {
+					throw new DomainException('Pilih minimal satu pengajuan.');
+				}
+				$groups = array_filter($groups, static function ($group) use ($selected) {
+					return in_array((string) $group['id_pengajuan'], $selected, true);
+				});
+				if (!$groups) {
+					throw new DomainException('Pengajuan yang dipilih sudah tidak cocok dengan filter.');
+				}
+				$status = ['unpaid' => 'Belum dibayar', 'paid' => 'Sudah dibayar', '' => 'Semua'][$filter['status']];
+				$numbers = array_values(array_unique(array_column($groups, 'no_pengajuan')));
+				$this->export_plan_cash_flow($groups, 'Pengajuan Pembayaran (' . $filter['from'] . ' s/d ' . $filter['to'] . ') - Pengajuan',
+					'Tanggal diputuskan: ' . $filter['from'] . ' s/d ' . $filter['to'] . ' | Status pembayaran: ' . $status
+					. ' | Kategori: ' . ($filter['category'] ?: 'Semua') . ' | No. Pengajuan: ' . implode(', ', $numbers) . ' | Dicetak pada: ' . date('d-m-Y H:i:s'),
+					'Pengajuan_Pembayaran_' . $filter['from'] . '_sd_' . $filter['to'] . '.xlsx');
+				return;
+			}
+			$batches = Rp_transfer_record::exportBatches($this->db, $filter, $groups);
+			$this->output->set_content_type('application/json')->set_output(json_encode(['status' => 1, 'batches' => $batches]));
+			$this->completeAudit('Membaca pilihan pengajuan untuk Excel', 1, ['row_count' => count($batches)]);
+		} catch (Throwable $e) {
+			$this->completeAudit('Ekspor pengajuan gagal', 0, ['reason' => 'invalid_transfer_export']);
+			$message = $e instanceof DomainException ? $e->getMessage() : 'Gagal memuat ekspor pengajuan.';
+			if ($this->input->method() === 'post') {
+				show_error($message, 400);
+				return;
+			}
+			$this->output->set_status_header(400)->set_content_type('application/json')->set_output(json_encode(['status' => 0, 'msg' => $message]));
+		}
+	}
+
+	private function export_plan_cash_flow(array $groups, $title, $subtitle, $filename, $single = false)
+	{
+		try {
+			$this->load->library('PHPExcel');
+			$workbook = new PHPExcel();
+			$sheet = $workbook->getActiveSheet();
+			$sheet->setTitle('Record Payment');
+			Rp_transfer_record::exportPlan($sheet, $groups, $title, $subtitle, $single);
+			$this->send_workbook($workbook, $filename, count($groups));
+		} catch (Throwable $e) {
+			$this->completeAudit('Gagal membuat Excel Plan Cash Flow', 0, ['reason' => 'export_exception']);
+			show_error('Gagal membuat Excel Plan Cash Flow.', 500);
+		}
+	}
+
+	public function record_payment()
+	{
+		$this->beginAudit(__FUNCTION__, [], ['row_count', 'format']);
+		$this->auth->restrict($this->viewPermission);
+		try {
+			$company = $this->input->get('company');
+			$search = $this->input->get('q');
+			$tab = $this->input->get('tab');
+			if (!in_array($company, [null, '', '7','3','4'], true) || ($search !== null && !is_string($search)) || !in_array($tab, [null,'','diff','same'], true)) {
+				throw new DomainException('Filter Record Payment tidak valid.');
+			}
+			$entries = [];
+			foreach (Rp_transfer_record::groups($this->db, null, ['status' => 'paid']) as $group) {
+				if ($company && $company !== (string) $group['company_id']) {
+					continue;
+				}
+				$compare = Rp_transfer_record::comparison($group);
+				$haystack = implode(' ', array_merge([$group['id_payment'], $group['no_pengajuan'], 'Transfer ' . $group['urutan'],
+					$group['company_nama'], $group['nama'], $group['bank'], $group['no_rek'], $group['keterangan_pembayaran']],
+					array_column($group['docs'], 'no_dokumen'), $compare['differences']));
+				if (!$search || stripos($haystack, trim($search)) !== false) {
+					$entries[] = $group + $compare;
+				}
+			}
+			usort($entries, static function ($a, $b) { return [$b['tgl_bayar'], $b['id']] <=> [$a['tgl_bayar'], $a['id']]; });
+			$counts = ['all' => count($entries), 'diff' => count(array_filter($entries, static function ($row) { return !empty($row['differences']); }))];
+			if ($tab) {
+				$entries = array_filter($entries, static function ($row) use ($tab) { return (bool) $row['differences'] === ($tab === 'diff'); });
+			}
+			if ($this->input->get('export') === '1') {
+				$this->load->library('PHPExcel');
+				$workbook = new PHPExcel();
+				$sheet = $workbook->getActiveSheet();
+				$sheet->setTitle('Record Payment');
+				Rp_transfer_record::row($sheet, 1, ['NO','NO. PAYMENT','TGL BAYAR','NO. PENGAJUAN','TRANSFER','COMPANY','PENERIMA','REKENING','DOKUMEN',
+					'DIBAYARKAN','ADMIN (RP)','PENANGGUNG ADMIN (RP)','PENANGGUNG ADMIN (PAYMENT)','BANK CHARGE (PAYMENT)',
+					'TRANSFER DITERIMA (RP)','TRANSFER DITERIMA (PAYMENT)','KELUAR BANK (RP)','KELUAR BANK (PAYMENT)','SELISIH KELUAR BANK','PERBEDAAN','KETERANGAN PEMBAYARAN']);
+				Rp_transfer_record::headline($sheet, 'A1:U1');
+				$line = 1;
+				foreach ($entries as $row) {
+					Rp_transfer_record::row($sheet, $line + 1, [$line++, $row['id_payment'], $row['tgl_bayar'], $row['no_pengajuan'], 'Transfer ' . $row['urutan'],
+						$row['company_nama'], $row['nama'], $row['bank'] . ' - ' . $row['no_rek'], implode(', ', array_column($row['docs'], 'no_dokumen')),
+						$row['planned']['net'] / 100, $row['admin'] / 100, $row['plannedBearer'], $row['actualBearer'], $row['charge'] / 100,
+						$row['planned']['transfer'] / 100, $row['received'] / 100, $row['planned']['bank'] / 100, $row['actualBank'] / 100,
+						($row['actualBank'] - $row['planned']['bank']) / 100, implode('; ', $row['differences']), $row['keterangan_pembayaran']]);
+				}
+				$this->send_workbook($workbook, 'Record_Payment.xlsx', count($entries));
+				return;
+			}
+			$this->template->set(compact('entries', 'company', 'search', 'tab', 'counts'));
+			$this->template->title('Record Payment');
+			$this->template->page_icon('fa fa-table');
+			$this->template->render('record_payment');
+			$this->completeAudit('Membuka Record Payment', 1, ['row_count' => count($entries)]);
+		} catch (Throwable $e) {
+			$this->completeAudit('Record Payment gagal dimuat', 0, ['reason' => 'record_payment_failure']);
+			show_error($e instanceof DomainException ? $e->getMessage() : 'Gagal memuat Record Payment.', 400);
+		}
+	}
+
+	public function transfer_file($id)
+	{
+		$this->auth->restrict($this->viewPermission);
+		$this->beginAudit(__FUNCTION__, [], ['row_count']);
+		$file = Rp_transfer::installed($this->db) ? Rp_transfer::write($this->db->query(
+			"SELECT f.* FROM tr_rp_transfer_file f JOIN tr_rp_transfer t ON t.id=f.id_transfer
+			 JOIN tr_rp_pengajuan_h h ON h.id=t.id_pengajuan
+			 LEFT JOIN tr_rp_pengajuan_d d ON d.id=f.id_detail AND d.id_transfer=t.id
+			 WHERE f.id=? AND h.status='done' AND h.deleted=0
+			   AND ((f.id_detail IS NULL AND t.status='paid') OR d.decision='approved')",
+			[(int) $id]
+		))->row_array() : null;
+		$this->completeAudit('Membuka lampiran transfer', $file ? 1 : 0, ['row_count' => $file ? 1 : 0]);
+		if (!$file) {
+			show_404();
+			return;
+		}
+		$this->output->set_content_type($file['mime'])
+			->set_header("Content-Disposition: inline; filename*=UTF-8''" . rawurlencode($file['nama']))
+			->set_header('X-Content-Type-Options: nosniff')->set_header('Cache-Control: private, no-store')
+			->set_output($file['content']);
+	}
+
+	public function payment_detail($id)
+	{
+		$this->auth->restrict($this->viewPermission);
+		$this->beginAudit(__FUNCTION__, [], ['row_count']);
+		try {
+			$group = $this->paidGroup($id);
+			$proof = array_filter(Rp_transfer::files($this->db, $group['id']), static function ($file) { return $file['id_detail'] === null; });
+			$journal = Rp_transfer_record::journalRows($this->db, $group['id_payment']);
+			$data = compact('group', 'proof', 'journal') + Rp_transfer_record::comparison($group);
+			if ($this->input->get('modal') === '1') {
+				$this->load->view('payment_detail', $data + ['modal' => true]);
+			} else {
+				$this->template->set($data);
+				$this->template->title('Record Payment');
+				$this->template->render('payment_detail');
+			}
+			$this->completeAudit('Membuka detail Record Payment', 1, ['row_count' => count($group['docs'])]);
+		} catch (Throwable $e) {
+			$this->completeAudit('Detail Record Payment tidak tersedia', 0, ['reason' => 'payment_detail_failure']);
+			show_error($e instanceof DomainException ? $e->getMessage() : 'Gagal memuat detail Payment.', 400);
+		}
+	}
+
+	/** Print Voucher / Bukti Bank Keluar format BBK (2) per payment (RP-R-37/39), jurnal lengkap Debit/Kredit. */
+	public function print_voucher($id)
+	{
+		$this->auth->restrict($this->viewPermission);
+		$this->beginAudit(__FUNCTION__, [], ['row_count']);
+		try {
+			$group = $this->paidGroup($id);
+			$journal = Rp_transfer_record::journalRows($this->db, $group['id_payment']);
+			if (!$journal) {
+				throw new DomainException('Jurnal payment belum tersedia.');
+			}
+			$voucherNo = Rp_transfer_record::voucherNo($this->db, $group);
+			$this->load->view('print_voucher', compact('group', 'journal', 'voucherNo'));
+			$this->completeAudit('Mencetak voucher payment', 1, ['row_count' => count($journal)]);
+		} catch (Throwable $e) {
+			$this->completeAudit('Voucher payment tidak tersedia', 0, ['reason' => 'print_voucher_failure']);
+			show_error($e instanceof DomainException ? $e->getMessage() : 'Gagal memuat voucher.', 400);
+		}
+	}
+
+	private function paidGroup($id)
+	{
+		$transfer = Rp_transfer_payment::find($this->db, (int) $id);
+		$group = Rp_transfer_record::groups($this->db, $transfer['id_pengajuan'], ['status' => 'paid'])[$transfer['id']] ?? null;
+		if (!$group) {
+			throw new DomainException('Pembayaran tidak ditemukan.');
+		}
+		return $group;
+	}
+
+	public function print_transfer_document($id)
+	{
+		$this->auth->restrict($this->viewPermission);
+		$this->beginAudit(__FUNCTION__, [], ['row_count']);
+		$doc = Rp_transfer::installed($this->db) ? Rp_transfer::write($this->db->query(
+			"SELECT d.* FROM tr_rp_pengajuan_d d JOIN tr_rp_transfer t ON t.id=d.id_transfer
+			 JOIN tr_rp_pengajuan_h h ON h.id=t.id_pengajuan
+			 WHERE d.id=? AND h.status='done' AND h.deleted=0 AND d.decision='approved'", [(int) $id]
+		))->row() : null;
+		if (!$doc) {
+			$this->completeAudit('Dokumen print tidak ditemukan', 0, ['reason' => 'not_found']);
+			show_404();
+			return;
+		}
+		$this->load->model('request_payment/Request_payment_model');
+		$source = clone $doc;
+		$source->id = $doc->id_dokumen ?: $doc->no_dokumen;
+		$original = $this->Request_payment_model->build_print_url($source);
+		$files = Rp_transfer::write($this->db->select('id,nama,mime')->order_by('id')->get_where('tr_rp_transfer_file', [
+			'id_transfer' => $doc->id_transfer, 'id_detail' => $doc->id,
+		]))->result_array();
+		$this->load->view('print_transfer_document', compact('doc', 'files', 'original'));
+		$this->completeAudit('Mencetak dokumen transfer', 1, ['row_count' => count($files)]);
+	}
+
+	private function send_workbook($workbook, $filename, $count)
+	{
+		$path = tempnam(sys_get_temp_dir(), 'rp-xlsx-');
+		if (!$path) {
+			throw new RuntimeException('Tidak bisa menyediakan file Excel sementara.');
+		}
+		try {
+			PHPExcel_IOFactory::createWriter($workbook, 'Excel2007')->save($path);
+			$bytes = file_get_contents($path);
+			if ($bytes === false || $bytes === '') {
+				throw new RuntimeException('Isi Excel tidak tersedia.');
+			}
+			$this->completeAudit('Mengekspor Excel pembayaran', 1, ['row_count' => $count, 'format' => 'xlsx']);
+			$this->output->set_content_type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+				->set_header('Content-Disposition: attachment; filename="' . preg_replace('/[^A-Za-z0-9_.-]/', '_', $filename) . '"')
+				->set_output($bytes);
+		} finally {
+			unlink($path);
+		}
 	}
 
 	private function beginAudit($method, $data = array(), $keys = array())

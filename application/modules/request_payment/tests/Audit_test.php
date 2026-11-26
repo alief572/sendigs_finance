@@ -1,6 +1,7 @@
 <?php
 // Real controller + recorder; all business persistence is an in-memory fixture.
 define('BASEPATH', __DIR__);
+putenv('RP_TRANSFER_ENABLED'); // legacy submit contract; transfer mode is covered by Rp_transfer_test
 require_once __DIR__ . '/../../../helpers/periodik_helper.php';
 define('APPPATH', dirname(__DIR__, 3) . '/');
 $events = array(); $scenario = array(); $ci = null; $child = $argv[1] ?? null; $scenarioCount = 0;

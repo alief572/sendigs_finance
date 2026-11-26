@@ -42,9 +42,12 @@ check(strpos($requestHtml, 'get_data_pending_items') === false && strpos($reques
 $new = file_get_contents($requestPath);
 preg_match('/<style>(.*?)<\/style>/s', $new, $newStyle);
 check(hash('sha256', str_replace("\r\n", "\n", $newStyle[1])) === '2fe9e8d5cbf653ec188cd171e51cd0a2bc8cd5465ef2df704ff60c59c6bf3002', 'original Request CSS unchanged');
-preg_match('/<div class="box">.*?(?=<!-- Modal Histori Reject -->)/s', $new, $newBody);
-check(hash('sha256', trim(str_replace("\r\n", "\n", $newBody[0]))) === 'b4a1f529ed2f08e12b2a854487eacee9284a5c47438ece5856d11728c7b804c0', 'original Request markup unchanged');
 $denied = [];
+$requestLegacy = (new ViewHarness([]))->render($requestPath, ['companies' => []]);
+$requestModern = (new ViewHarness([]))->render($requestPath, ['companies' => [], 'rp_transfer_enabled' => true]);
+check(strpos($requestLegacy, 'Ajukan untuk Approval') !== false && strpos($requestLegacy, 'id="rp-atur"') === false, 'legacy Request keeps direct approval action');
+check(strpos($requestModern, 'Atur Pembayaran &amp; Ajukan') !== false && strpos($requestModern, 'id="rp-atur"') !== false, 'modern Request opens transfer setup');
+check(strpos($requestLegacy, 'id="table_rp"') !== false && strpos($requestModern, 'id="table_rp"') !== false, 'both use existing Request table');
 
 $header = (object) ['id' => 10, 'no_pengajuan' => 'PGJ-10', 'company_nama' => 'STM', 'submitted_at' => '2026-10-14 08:00:00', 'decided_at' => '2026-10-14 10:00:00'];
 foreach (['approval', 'record'] as $tab) {

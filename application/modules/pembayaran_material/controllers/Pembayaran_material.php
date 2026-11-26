@@ -1,6 +1,7 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
 require_once dirname(__DIR__).'/libraries/Payment_journal_validator.php';
+require_once dirname(__DIR__).'/libraries/Rp_transfer_payment.php';
 $data_status = array();
 class Pembayaran_material extends Admin_Controller
 {
@@ -11,6 +12,24 @@ class Pembayaran_material extends Admin_Controller
 
 	protected $data_status;
 	private $auditQueriesOk = true;
+
+	/**
+	 * Satu alias per baris Payment (pola Payment_identity_repair::project): identitas approval tidak lagi bergantung pada
+	 * akhiran keterangan. Ditulis dalam transaksi simpan yang sama; gagal = seluruh simpan dibatalkan.
+	 */
+	private function writePaymentAliases($voucher, array $approvalIds)
+	{
+		$rows = (new Payment_reference($this))->rows($voucher);
+		if (!$rows) { throw new RuntimeException('Alias Payment tidak dapat dibuat: baris jurnal tidak ditemukan.'); }
+		$run = bin2hex(random_bytes(16)); $now = date('Y-m-d H:i:s');
+		$ids = json_encode(array_values(array_map('strval', $approvalIds)));
+		$aliases = array();
+		foreach ($rows as $row) {
+			$aliases[] = array('run_id' => $run, 'journal_id' => $row['id'], 'original_no_transaksi' => $voucher, 'voucher' => $voucher,
+				'approval_ids' => $ids, 'active' => 1, 'created_at' => $now);
+		}
+		$this->auditWrite($this->db->insert_batch('tr_jurnal_payment_reference_aliases', $aliases));
+	}
 
 	private function beginAudit($method, $data = array(), $keys = array())
 	{
@@ -240,6 +259,7 @@ class Pembayaran_material extends Admin_Controller
 			'data_status'	=> $this->data_status
 		);
 		$this->template->set($data);
+		$this->template->set('rp_transfer_available', Rp_transfer::installed($this->db));
 		$this->template->render('index_payment_new');
 		$this->completeAudit('Membuka Payment List', 1);
 	}
@@ -864,6 +884,14 @@ class Pembayaran_material extends Admin_Controller
 	public function view_payment_new($id)
 	{
 		$this->beginAudit(__FUNCTION__, array(), array('payment_id', 'payment_ids', 'document_count', 'row_count', 'journal_count', 'jenis_payment', 'admin_charge_bearer'));
+		if (Rp_transfer::installed($this->db) && has_permission('Record_Request_Payment.View')) {
+			$transfer = Rp_transfer::write($this->db->select('id')->get_where('tr_rp_transfer', ['id_payment' => $id, 'status' => 'paid']))->row();
+			if ($transfer) {
+				$this->completeAudit('Membuka detail pembayaran transfer', 1, ['payment_id' => $id]);
+				redirect(site_url('record_request_payment/payment_detail/' . $transfer->id));
+				return;
+			}
+		}
 		$list_id_payment = [];
 		$get_id_payment = $this->auditQuery($this->db->select('a.id, a.id_payment')->get_where('payment_approve a', ['a.id_payment' => $id]))->result();
 		if (!empty($get_id_payment)) {
@@ -1438,14 +1466,186 @@ class Pembayaran_material extends Admin_Controller
 		echo json_encode($param);
 	}
 
+	public function get_list_rp_transfer()
+	{
+		$this->auth->restrict($this->viewPermission);
+		$this->beginAudit(__FUNCTION__, $this->auditFilters(), array('row_count'));
+		$draw = (int) $this->input->post('draw');
+		try {
+			if (!Rp_transfer::installed($this->db)) {
+				throw new DomainException('Fitur transfer belum tersedia.');
+			}
+			$search = $this->input->post('search');
+			$search = is_array($search) && is_string($search['value'] ?? null) ? trim($search['value']) : '';
+			$order = $this->input->post('order');
+			$start = max(0, (int) $this->input->post('start'));
+			$page = Rp_transfer_payment::queuePage($this->db, $search, $start, (int) $this->input->post('length'),
+				isset($order[0]['column']) ? (int) $order[0]['column'] : null, ($order[0]['dir'] ?? '') === 'desc' ? 'desc' : 'asc');
+			$data = array();
+			foreach ($page['rows'] as $i => $row) {
+				$total = Rp_transfer::totals(Rp_transfer::cents($row['net']), Rp_transfer::cents($row['admin']), $row['bearer']);
+				$data[] = array(
+					'no' => $start + $i + 1,
+					'no_pengajuan' => '<b>' . html_escape($row['no_pengajuan']) . '</b>',
+					'tgl' => $row['decided_at'] ? date('d-M-Y', strtotime($row['decided_at'])) : '-',
+					'company' => html_escape($row['company_nama']),
+					'penerima' => html_escape($row['nama']) . '<br><small>' . html_escape($row['bank'] . ' ' . $row['no_rek']) . '</small>',
+					'dokumen' => implode('<br>', array_map('html_escape', explode(', ', (string) $row['numbers']))) .
+						'<br><small class="text-muted">' . html_escape($row['categories']) . '</small>',
+					'currency' => 'IDR',
+					'admin' => (float) $row['admin'] ? 'Rp ' . number_format($row['admin'], 2, ',', '.') . '<br><small>Ditanggung ' .
+						($row['bearer'] === 'company' ? 'perusahaan' : 'penerima') . '</small>' : '-',
+					'jumlah' => '<span class="rp-amount">Rp ' . number_format($total['transfer'] / 100, 2, ',', '.') . '</span>',
+					'option' => '<input type="checkbox" name="transfer" value="' . (int) $row['id'] . '" data-label="' .
+						html_escape($row['no_pengajuan'] . ' · Rp ' . number_format($total['transfer'] / 100, 2, ',', '.')) . '" aria-label="Pilih ' .
+						html_escape($row['no_pengajuan']) . ' Transfer ' . (int) $row['urutan'] . '">',
+				);
+			}
+			echo json_encode(array('draw' => $draw, 'recordsTotal' => $page['total'], 'recordsFiltered' => $page['filtered'], 'data' => $data));
+			$this->completeAudit('Menyiapkan daftar transfer', 1, array('row_count' => count($data)));
+		} catch (Throwable $e) {
+			echo json_encode(array('draw' => $draw, 'recordsTotal' => 0, 'recordsFiltered' => 0, 'data' => array(), 'error' => 'Daftar transfer gagal dimuat.'));
+			$this->completeAudit('Daftar transfer tidak tersedia', 0, array('reason' => 'transfer_queue_failed'));
+		}
+	}
+
 	public function list_request_payment($jenis_payment)
 	{
 		$this->beginAudit(__FUNCTION__, array('jenis_payment' => $jenis_payment));
 		$reset = $this->Pembayaran_material_model->refresh_list();
 		$this->template->set('jenis_payment', $jenis_payment);
+		$this->template->set('rp_transfer_count', (string) $jenis_payment === '2' && Rp_transfer::installed($this->db) && has_permission($this->viewPermission)
+			? Rp_transfer_payment::queuePage($this->db, '', 0, 1)['total'] : 0);
 		$this->template->title('List Request Payment');
 		$this->template->render('list_request_payment');
 		$this->completeAudit('Reset pilihan dan membuka daftar request pembayaran', $reset ? 1 : 0);
+	}
+
+	public function transfer_payment($id)
+	{
+		$this->auth->restrict($this->viewPermission);
+		$this->beginAudit(__FUNCTION__, [], ['transfer_id', 'document_count']);
+		try {
+			$transfer = Rp_transfer_payment::find($this->db, (int) $id);
+			if ($transfer['status'] !== 'approved') {
+				throw new DomainException('Transfer sudah dibayar.');
+			}
+			$refill = Rp_transfer::groupType($transfer['docs'][0]['kategori']) === 'refill';
+			$this->template->set([
+				'transfer' => $transfer, 'banks' => Rp_transfer_payment::banks($this->db, $refill ? '7' : $transfer['company_id']),
+				'planned' => Rp_transfer_payment::planned($transfer),
+			]);
+			$this->template->title('Payment List');
+			$this->template->page_icon('fa fa-table');
+			$this->template->render('transfer_payment');
+			$this->completeAudit('Membuka form pembayaran transfer', 1, ['transfer_id' => (int) $id, 'document_count' => count($transfer['docs'])]);
+		} catch (Throwable $e) {
+			$this->completeAudit('Form pembayaran transfer gagal dimuat', 0, ['reason' => 'transfer_unavailable']);
+			show_error($e instanceof DomainException ? $e->getMessage() : 'Gagal membuka pembayaran transfer.', 400);
+		}
+	}
+
+	public function preview_transfer_payment($id)
+	{
+		$this->auth->restrict($this->viewPermission);
+		$this->beginAudit(__FUNCTION__, [], ['transfer_id', 'journal_count']);
+		try {
+			$transfer = Rp_transfer_payment::find($this->db, (int) $id);
+			$journal = Rp_transfer_payment::journal($this, $transfer, $this->input->post());
+			$this->completeAudit('Membaca preview jurnal transfer', 1, ['transfer_id' => (int) $id, 'journal_count' => count($journal['rows'])]);
+			echo json_encode(['status' => 1, 'rows' => $journal['rows']]);
+		} catch (Throwable $e) {
+			$this->completeAudit('Preview jurnal transfer gagal', 0, ['reason' => 'invalid_transfer_preview']);
+			echo json_encode(['status' => 0, 'pesan' => $e instanceof DomainException ? $e->getMessage() : 'Preview jurnal gagal.']);
+		}
+	}
+
+	public function save_transfer_payment($id)
+	{
+		$this->auth->restrict($this->viewPermission);
+		$this->beginAudit(__FUNCTION__, [], ['transfer_id', 'payment_number', 'document_count', 'journal_count']);
+		$locked = false;
+		$debug = $this->db->db_debug;
+		$this->db->db_debug = false;
+		try {
+			Rp_transfer::requireAjaxPost($this->input);
+			if (!Rp_transfer::installed($this->db)) {
+				throw new DomainException('Schema pembayaran transfer belum siap.');
+			}
+			$files = Rp_transfer::uploadFiles($_FILES['upload_doc'] ?? []);
+			if (!$files) {
+				throw new DomainException('Bukti bayar wajib diunggah.');
+			}
+			Payment_reference::acquire($this->db);
+			$locked = true;
+			Payment_reference::transactional($this->db, ['tr_rp_transfer','tr_rp_transfer_file','tr_rp_pengajuan_d','tr_rp_pengajuan_h',
+				'payment_approve','tr_payment_paid','tr_jurnal','tr_jurnal_payment_reference_aliases']);
+			Rp_transfer::write($this->db->trans_begin());
+			$transfer = Rp_transfer_payment::find($this->db, (int) $id, true);
+			if ($transfer['status'] !== 'approved' || $transfer['id_payment']) {
+				throw new DomainException('Transfer sudah dibayar. Periksa Record Payment.');
+			}
+			$journal = Rp_transfer_payment::journal($this, $transfer, $this->input->post());
+			$bank = $journal['bank'];
+			$actual = $journal['actual'];
+			$date = $journal['date'];
+			if (!$bank || ($this->input->post('payment_bank') ?? '') === '') {
+				throw new DomainException('Pilih bank pembayar dan isi Payment Bank.');
+			}
+			if ($actual['difference'] && $actual['note'] === '') {
+				throw new DomainException('Keterangan Pembayaran wajib karena ada selisih dari pengajuan.');
+			}
+			$voucher = Rp_transfer_payment::nextVoucher($this->db, $date);
+			$user = $this->auth->user_id();
+			$ids = array_column($transfer['docs'], 'payment_approval_id');
+			$rows = [];
+			foreach ($journal['rows'] as $i => $row) {
+				$rows[] = $row + ['no_transaksi' => $voucher, 'no_jurnal' => $this->Pembayaran_material_model->generate_id_invoice_jurnal($i + 1),
+					'created_by' => $user, 'created_date' => date('Y-m-d'), 'sts' => 0];
+			}
+			Payment_journal_validator::validate($rows);
+			Rp_transfer::write($this->db->insert('tr_payment_paid', [
+				'id' => $voucher, 'bank_charge' => Rp_transfer::money($actual['charge']),
+				'admin_charge_bearer' => $actual['mode'] === 'recipient' ? 'recipient' : 'company',
+				'created_by' => $user, 'created_on' => date('Y-m-d H:i:s'),
+			]));
+			Rp_transfer::write($this->db->where_in('id', $ids)->where('status', 1)->update('payment_approve', [
+				'id_payment' => $voucher, 'tgl_bayar' => $date, 'keterangan_pembayaran' => $actual['note'],
+				'coa_bank' => $bank['coa_bank'], 'nm_coa_bank' => $bank['nama_bank'],
+				'mata_uang' => 'IDR', 'kurs_payment' => 1, 'nm_supplier' => $transfer['nama'],
+				'payment_bank' => Rp_transfer::money($actual['bank']), 'total_payment' => Rp_transfer::money($actual['net']),
+				'selisih' => Rp_transfer::money(-$actual['adjustment']), 'status' => 2,
+			]));
+			if ($this->db->affected_rows() !== count($ids)) {
+				throw new RuntimeException('Anggota transfer berubah saat dibayar.');
+			}
+			Rp_transfer::write($this->db->insert_batch('tr_jurnal', $rows));
+			if (!$journal['refill']) {
+				$this->writePaymentAliases($voucher, $ids);
+			}
+			foreach ($files as $file) {
+				Rp_transfer::write($this->db->insert('tr_rp_transfer_file', $file + ['id_transfer' => $transfer['id']]));
+			}
+			Rp_transfer::write($this->db->update('tr_rp_transfer', [
+				'id_payment' => $voucher, 'actual_bearer' => $actual['mode'], 'status' => 'paid',
+			], ['id' => $transfer['id'], 'status' => 'approved']));
+			if ($this->db->affected_rows() !== 1 || !$this->auditCommit()) {
+				throw new RuntimeException('Commit pembayaran tidak terkonfirmasi.');
+			}
+			$this->completeAudit('Menyimpan pembayaran transfer dan jurnal staging', 1, [
+				'transfer_id' => (int) $id, 'payment_number' => $voucher, 'document_count' => count($ids), 'journal_count' => count($rows),
+			]);
+			echo json_encode(['status' => 1, 'pesan' => 'Pembayaran ' . $voucher . ' tersimpan. Jurnal siap diposting di Jurnal All.']);
+		} catch (Throwable $e) {
+			$this->db->trans_rollback();
+			$this->completeAudit('Pembayaran transfer gagal', 0, ['transfer_id' => (int) $id, 'reason' => 'transfer_payment_failed']);
+			echo json_encode(['status' => 0, 'pesan' => $e instanceof DomainException ? $e->getMessage() : 'Pembayaran gagal. Periksa riwayat sebelum mencoba lagi.']);
+		} finally {
+			if ($locked) {
+				Payment_reference::release($this->db);
+			}
+			$this->db->db_debug = $debug;
+		}
 	}
 
 	public function check_payment()

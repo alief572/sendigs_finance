@@ -1,5 +1,6 @@
 <?php if (!defined('BASEPATH')) exit('No direct script access allowed');
 require_once dirname(__DIR__, 2).'/monitoring_piutang/libraries/Piutang_aging.php';
+require_once dirname(__DIR__).'/libraries/Rp_transfer.php';
 
 /*
  * @author Harboens
@@ -40,6 +41,7 @@ class Request_payment extends Admin_Controller
 		$this->template->title('Request Payment');
 		$companies = $this->Request_payment_model->get_companies_list();
 		$this->template->set('companies', $companies);
+		$this->template->set('rp_transfer_enabled', Rp_transfer::enabled() && Rp_transfer::installed($this->db));
 		$this->template->render('rp_index');
 		$this->completeAudit('Membuka Request Payment', $this->auditReadStatus(), array('row_count' => count($companies)));
 	}
@@ -131,6 +133,75 @@ class Request_payment extends Admin_Controller
 	public function submit_for_approval()
 	{
 		$this->beginAudit(__FUNCTION__, array(), array('document_ids', 'document_count', 'no_pengajuan', 'company_id', 'amount'));
+		$modern = Rp_transfer::enabled();
+		if (!$modern && $this->input->post('transfers') !== null && $this->input->post('transfers') !== false) {
+			$this->completeAudit('Pengajuan transfer tidak aktif', 0, ['reason' => 'transfer_disabled']);
+			echo json_encode(['status' => 0, 'msg' => 'Pengajuan per transfer sedang tidak aktif.']);
+			return;
+		}
+		if (!$modern) {
+			$this->submit_batch(false);
+			return;
+		}
+		$this->auth->restrict($this->viewPermission);
+		require_once dirname(__DIR__, 2).'/jurnal_all/libraries/Payment_reference.php';
+		$locked = false;
+		$debug = $this->db->db_debug;
+		$this->db->db_debug = false;
+		try {
+			if (!has_permission($this->managePermission)) {
+				throw new DomainException('Anda tidak memiliki hak untuk mengajukan.');
+			}
+			Rp_transfer::requireAjaxPost($this->input);
+			if (!Rp_transfer::installed($this->db)) {
+				throw new DomainException('Schema Request Payment per transfer belum siap.');
+			}
+			Payment_reference::acquire($this->db);
+			$locked = true;
+			Payment_reference::transactional($this->db, ['ms_generate', 'tr_rp_pengajuan_h', 'tr_rp_pengajuan_d', 'tr_rp_transfer', 'tr_rp_transfer_file']);
+			$this->submit_batch(true);
+		} catch (Throwable $e) {
+			$this->db->trans_rollback();
+			$this->completeAudit('Gagal menyimpan pengajuan transfer', 0, ['reason' => 'transfer_submission_failed']);
+			echo json_encode(['status' => 0, 'msg' => $e instanceof DomainException ? $e->getMessage() : 'Gagal menyimpan pengajuan. Silakan coba lagi.']);
+		} finally {
+			if ($locked) {
+				Payment_reference::release($this->db);
+			}
+			$this->db->db_debug = $debug;
+		}
+	}
+
+	public function transfer_accounts()
+	{
+		$this->auth->restrict($this->viewPermission);
+		$this->beginAudit(__FUNCTION__, [], ['document_count']);
+		$docs = $this->input->post('documents');
+		try {
+			if (!Rp_transfer::enabled() || !is_array($docs) || !$docs || count($docs) > 200 || array_filter($docs, static function ($doc) { return !is_string($doc) || $doc === '' || strlen($doc) > 100; })) {
+				throw new DomainException('Pilihan dokumen tidak valid.');
+			}
+			$rows = Rp_transfer::write($this->db->select('no_dokumen, kategori, request_by, keperluan, nilai_pengajuan')->where('status', '1')->where_in('no_dokumen', $docs)->get('v_request_payment'))->result_array();
+			if (count($rows) !== count($docs) || array_intersect($docs, $this->Request_payment_model->get_locked_docs())) {
+				throw new DomainException('Sebagian dokumen sudah tidak tersedia. Muat ulang daftar.');
+			}
+			$this->load->model('record_request_payment/Record_request_payment_model');
+			$result = [];
+			foreach ($rows as $row) {
+				$row['account'] = $this->Record_request_payment_model->resolve_bank_info($row['no_dokumen'], $row['kategori']);
+				$row['group_type'] = Rp_transfer::groupType($row['kategori']);
+				$result[$row['no_dokumen']] = $row;
+			}
+			$this->completeAudit('Membuka pengaturan transfer', 1, ['document_count' => count($result)]);
+			echo json_encode(['status' => 1, 'documents' => $result]);
+		} catch (Throwable $e) {
+			$this->completeAudit('Pengaturan transfer tidak tersedia', 0, ['reason' => 'transfer_documents_failed']);
+			echo json_encode(['status' => 0, 'msg' => $e instanceof DomainException ? $e->getMessage() : 'Gagal memuat dokumen transfer.']);
+		}
+	}
+
+	private function submit_batch($modern)
+	{
 		$items = $this->input->post('items'); // array of {no_dokumen, ppn, pph23, pph21, admin}
 
 		if (empty($items) || !is_array($items)) {
@@ -141,11 +212,17 @@ class Request_payment extends Admin_Controller
 
 		$no_dokumen_list = [];
 		foreach ($items as $it) {
+			if ($modern && (!is_array($it) || !is_string($it['no_dokumen'] ?? null) || $it['no_dokumen'] === '' || strlen($it['no_dokumen']) > 100)) {
+				throw new DomainException('Pilihan dokumen tidak valid.');
+			}
 			if (!empty($it['no_dokumen'])) {
 				$no_dokumen_list[] = $it['no_dokumen'];
 			}
 		}
 		$no_dokumen_list = array_values(array_unique($no_dokumen_list));
+		if ($modern && (count($no_dokumen_list) !== count($items) || count($items) > 200)) {
+			throw new DomainException('Dokumen duplikat atau pilihan terlalu banyak.');
+		}
 
 		if (empty($no_dokumen_list)) {
 			$this->completeAudit('Pengajuan approval ditolak', 0, array('reason' => 'invalid_documents'));
@@ -208,6 +285,25 @@ class Request_payment extends Admin_Controller
 			$batch_company_nama = $cnama;
 			break;
 		}
+		$plan = [];
+		$attachments = [];
+		if ($modern) {
+			foreach ($no_dokumen_list as $doc) {
+				if (empty($company_info[$doc]['company_id']) || (string) $company_info[$doc]['company_id'] !== (string) $batch_company_id) {
+					throw new DomainException('Company semua dokumen harus terverifikasi dan sama.');
+				}
+			}
+			$payload = $this->input->post('transfers');
+			$plan = Rp_transfer::plan(is_string($payload) ? json_decode($payload, true) : null, $src_map);
+			$fileDocs = $this->input->post('attachment_docs');
+			foreach (Rp_transfer::uploadFiles($_FILES['transfer_files'] ?? []) as $key => $file) {
+				$doc = $fileDocs[$key] ?? null;
+				if (!is_string($doc) || !isset($src_map[$doc]) || Rp_transfer::groupType($src_map[$doc]->kategori) === 'debt') {
+					throw new DomainException('Lampiran tidak memiliki dokumen pengajuan yang valid.');
+				}
+				$attachments[$doc][] = $file;
+			}
+		}
 
 		if ($this->db->trans_begin() === false) {
 			$this->completeAudit('Gagal membuat pengajuan approval', 0, array('reason' => 'transaction_begin_failed'));
@@ -246,7 +342,8 @@ class Request_payment extends Admin_Controller
 			$admin = isset($it['admin']) ? (int) $it['admin'] : 0;
 
 			$dpp  = (float) $src->nilai_pengajuan;
-			$calc = $this->Request_payment_model->calc_tax($dpp, $flag_ppn, $flag_pph23, $flag_pph21, $admin);
+			$isTransfer = $modern && Rp_transfer::groupType($src->kategori) !== 'debt';
+			$calc = $isTransfer ? Rp_transfer::taxes($src->nilai_pengajuan, $flag_ppn, $flag_pph21, $flag_pph23) : $this->Request_payment_model->calc_tax($dpp, $flag_ppn, $flag_pph23, $flag_pph21, $admin);
 
 			// Resolusi nama pembuat (request_by) dari database konsultan khusus Direct Payment (bukan Cash)
 			$req_by = $src->request_by;
@@ -279,7 +376,7 @@ class Request_payment extends Admin_Controller
 				'kategori'   => $src->kategori,
 				'request_by' => $req_by,
 				'keperluan'  => $src->keperluan,
-				'dpp'        => $dpp,
+				'dpp'        => $isTransfer ? $src->nilai_pengajuan : $dpp,
 				'flag_ppn'   => $flag_ppn,
 				'flag_pph23' => $flag_pph23,
 				'flag_pph21' => $flag_pph21,
@@ -290,6 +387,13 @@ class Request_payment extends Admin_Controller
 				'decision'   => 'approved',
 				'created_on' => $now,
 			];
+			if ($modern) {
+				$description = $isTransfer ? ($it['keterangan_finance'] ?? '') : '';
+				if (!is_string($description) || strlen($description) > 4000) {
+					throw new DomainException('Keterangan Finance terlalu panjang atau tidak valid.');
+				}
+				$detail_rows[count($detail_rows) - 1]['keterangan_finance'] = trim($description) ?: null;
+			}
 			$total_dibayarkan += $calc['dibayarkan'];
 		}
 
@@ -307,15 +411,44 @@ class Request_payment extends Admin_Controller
 			'deleted'          => 0,
 		]);
 		$id_pengajuan = $this->db->insert_id();
+		$transferIds = [];
+		if ($modern && $header_saved) {
+			$amounts = array_column($detail_rows, 'dibayarkan', 'no_dokumen');
+			foreach ($plan as $index => $transfer) {
+				$docs = $transfer['docs'];
+				unset($transfer['docs']);
+				$net = 0;
+				foreach ($docs as $doc) {
+					$net += Rp_transfer::cents($amounts[$doc]);
+				}
+				Rp_transfer::totals($net, Rp_transfer::cents($transfer['admin']), $transfer['bearer']);
+				Rp_transfer::write($this->db->insert('tr_rp_transfer', $transfer + ['id_pengajuan' => $id_pengajuan, 'urutan' => $index + 1]));
+				$id = $this->db->insert_id();
+				foreach ($docs as $doc) {
+					$transferIds[$doc] = $id;
+				}
+			}
+		}
 
 		// Insert detail
 		foreach ($detail_rows as &$d) {
 			$d['id_pengajuan'] = $id_pengajuan;
+			if ($modern) {
+				$d['id_transfer'] = $transferIds[$d['no_dokumen']] ?? null;
+			}
 		}
 		unset($d);
 		$details_saved = true;
 		if (!empty($detail_rows)) {
 			$details_saved = $this->db->insert_batch('tr_rp_pengajuan_d', $detail_rows) !== false;
+		}
+		if ($details_saved && $attachments) {
+			$rows = Rp_transfer::write($this->db->select('id, no_dokumen, id_transfer')->get_where('tr_rp_pengajuan_d', ['id_pengajuan' => $id_pengajuan]))->result_array();
+			foreach ($rows as $row) {
+				foreach ($attachments[$row['no_dokumen']] ?? [] as $file) {
+					Rp_transfer::write($this->db->insert('tr_rp_transfer_file', $file + ['id_detail' => $row['id'], 'id_transfer' => $row['id_transfer']]));
+				}
+			}
 		}
 
 		if (!$header_saved || !$details_saved || $this->db->trans_status() === false) {
@@ -372,7 +505,7 @@ class Request_payment extends Admin_Controller
 				// exit;
 
 				$config['upload_path'] = './assets/expense/';
-				$config['allowed_types'] = '*';
+				$config['allowed_types'] = 'pdf|jpg|jpeg|png|webp|doc|docx|xls|xlsx';
 				$config['remove_spaces'] = TRUE;
 				$config['encrypt_name'] = TRUE;
 
@@ -1709,6 +1842,9 @@ class Request_payment extends Admin_Controller
 			if (!is_scalar($val) || (string) $val === '' || !is_scalar($bank_coa) || (string) $bank_coa === '') {
 				$this->auditApprovalFailure('hasil', 'invalid_parameter'); return;
 			}
+			if (strpos((string) $val, 'RPA-') === 0) {
+				$this->auditApprovalFailure('hasil', 'use_transfer_payment'); return;
+			}
 			foreach (array($bank_nilai, $bank_admin, $no_doc, $tipe, $nama, $keterangan) as $values) {
 				if (!is_array($values) || !isset($values[$keys]) || !is_scalar($values[$keys])) {
 					$this->auditApprovalFailure('hasil', 'invalid_item'); return;
@@ -1736,7 +1872,7 @@ class Request_payment extends Admin_Controller
 		$det_Jurnaltes1 = array();
 		$ix = 0;
 		$config['upload_path'] = './assets/expense/';
-		$config['allowed_types'] = '*';
+		$config['allowed_types'] = 'pdf|jpg|jpeg|png|webp|doc|docx|xls|xlsx';
 		$config['remove_spaces'] = TRUE;
 		$config['encrypt_name'] = TRUE;
 
@@ -1858,7 +1994,7 @@ class Request_payment extends Admin_Controller
 					}
 
 					if ($tipe[$keys] == 'expense') {
-						$rec = $this->db->query("select * from tr_expense_detail where no_doc='" . $no_doc[$keys] . "' and status IN ('1', '2')")->result();
+						$rec = $this->db->query("select * from tr_expense_detail where no_doc=? and status IN ('1', '2')", array($no_doc[$keys]))->result();
 						$auditQueriesOk = $this->auditReadStatus() === 1 && $auditQueriesOk;
 						// $rec = $this->db->get_where('payment_approve_details', ['payment_id' => $val])->result();
 						$writesOk = $this->db->update('tr_expense_detail', ['status' => '2'], ['no_doc' => $no_doc[$keys]]) !== false && $writesOk;
@@ -1963,7 +2099,7 @@ class Request_payment extends Admin_Controller
 
 					if ($tipe[$keys] == 'periodik') {
 						$coa = '';
-						$rec = $this->db->query("select coa from tr_pengajuan_rutin_detail where id='" . $ids[$keys] . "' and no_doc='" . $no_doc[$keys] . "'")->row();
+						$rec = $this->db->query("select coa from tr_pengajuan_rutin_detail where id=? and no_doc=?", array($ids[$keys], $no_doc[$keys]))->row();
 						$auditQueriesOk = $this->auditReadStatus() === 1 && $auditQueriesOk;
 						if (!empty($rec)) {
 							$coa = $rec->coa;
@@ -2879,7 +3015,7 @@ class Request_payment extends Admin_Controller
 						<td>Upload Dokumen</td>
 						<td>:</td>
 						<td>
-							<input type="file" name="upload_doc_' . $numb . '" id="" class="form-control form-control-sm">
+							<input type="file" name="upload_doc_' . $numb . '" id="" class="form-control form-control-sm" accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx">
 						</td>
 					</tr>
 				</table>
@@ -3175,7 +3311,7 @@ class Request_payment extends Admin_Controller
 						<td>Upload Dokumen</td>
 						<td>:</td>
 						<td>
-							<input type="file" name="upload_doc_' . $numb . '" id="" class="form-control form-control-sm">
+							<input type="file" name="upload_doc_' . $numb . '" id="" class="form-control form-control-sm" accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx">
 						</td>
 					</tr>
 				</table>
