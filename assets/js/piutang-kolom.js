@@ -15,8 +15,20 @@ window.PiutangKolom = {
 
         if (!document.getElementById('kol-css')) {
             $('head').append('<style id="kol-css">' +
-                'table th .kol-rz{position:absolute;top:0;right:0;bottom:0;width:7px;cursor:col-resize;border-right:2px solid transparent}' +
-                'table th .kol-rz:hover{border-right-color:#3f8bba}' +
+                // Gaya garis mengikuti referensi user: bingkai luar, header berlatar, garis antar baris, dan pemisah pendek antar
+                // judul (tanpa garis vertikal di isi). Selector digandakan agar menang dari CSS view dan Bootstrap.
+                'table.kol-table.kol-table{border:1px solid #c3ccd5;border-radius:4px}' +
+                'table.kol-table.kol-table th,table.kol-table.kol-table td{border-left:0;border-right:0;border-top:0;border-bottom:1px solid #d5dbe1}' +
+                'table.kol-table.kol-table>:last-child>tr:last-child>*{border-bottom:0}' +
+                'table.kol-table.kol-table thead th,table.kol-table.kol-table thead td{background-color:#eef2f6;border-bottom-color:#c3ccd5;vertical-align:middle}' +
+                'table.kol-table.kol-table thead.kol-grp td{border-bottom:0}' +
+                'table.kol-table.kol-table tfoot td{border-top:1px solid #c3ccd5}' +
+                'table.kol-table thead.kol-grp th{position:relative}' +
+                'table.kol-table thead:not(.kol-grp) th.kol-th:not([class*="pin"]){cursor:grab}' + // kolom kunci tidak bisa dipindah
+                // pemisah judul sekaligus pegangan ubah lebar: biru dan setinggi sel saat disentuh
+                'table th .kol-rz{position:absolute;top:0;right:0;bottom:0;width:9px;cursor:col-resize}' +
+                'table th .kol-rz:after,table.kol-table thead.kol-grp th:after{content:"";position:absolute;top:50%;margin-top:-8px;height:16px;right:1px;width:2px;background:#9aa7b4}' +
+                'table th .kol-rz:hover:after{top:0;margin-top:0;height:100%;right:0;width:3px;background:#1d5f93}' +
                 'table th.kol-th{position:relative}' +
                 'table.kol-fixed.kol-fixed{table-layout:fixed}' +
                 'table.kol-fixed.kol-fixed th,table.kol-fixed.kol-fixed td{overflow:hidden;text-overflow:ellipsis;white-space:normal}' +
@@ -85,6 +97,7 @@ window.PiutangKolom = {
             });
         }
 
+        $t.addClass('kol-table');
         // tabel yang sama dipakai ulang antar tab: kembalikan lebar bawaan
         $t.removeClass('kol-fixed').css({width: '', minWidth: ''}).children('colgroup.kol-w').remove();
         ths().forEach(function (th) {

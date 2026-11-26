@@ -259,7 +259,7 @@ $bulan = array('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
 <script src="<?= base_url('assets/js/company-multi.js') ?>"></script>
 <script src="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.min.js') ?>"></script>
 <script src="<?= base_url('assets/plugins/datatables/extensions/ColReorder/js/dataTables.colReorder.min.js') ?>"></script>
-<script src="<?= base_url('assets/js/piutang-kolom.js') ?>"></script>
+<script src="<?= base_url('assets/js/piutang-kolom.js') . '?v=' . @filemtime(FCPATH . 'assets/js/piutang-kolom.js') ?>"></script>
 <link rel="stylesheet" href="<?= base_url('assets/plugins/driver/driver.css') ?>">
 <script src="<?= base_url('assets/plugins/driver/driver.js.iife.js') ?>"></script>
 <script src="<?= base_url('assets/js/piutang-tutorial.js') ?>"></script>
