@@ -820,6 +820,75 @@ class Jurnal_all_model extends BF_Model
         return array_values($sections);
     }
 
+    /**
+     * Baris Excel Report Pembayaran: baris export_rows() ditambah tgl_bayar (payment_approve) dan nomor voucher BBK
+     * (sama dengan tombol Voucher di Record Payment). Hanya membaca; export_rows() sendiri tidak berubah.
+     */
+    public function export_payment_rows($values)
+    {
+        $rows=$this->export_rows($values,true);
+        $vouchers=[];
+        foreach($rows as $item)foreach(explode(',',(string)($item['header']['display_no_transaksi'] ?? '')) as $token){
+            $token=trim($token);
+            if($token!==''&&$token!=='-')$vouchers[$token]=true;
+        }
+        $info=$this->paymentExportInfo(array_keys($vouchers));
+        foreach($rows as &$item){
+            $dates=[];$bbk=[];
+            foreach(explode(',',(string)($item['header']['display_no_transaksi'] ?? '')) as $token){
+                $token=trim($token);
+                if(!isset($info[$token]))continue;
+                if($info[$token]['tgl_bayar']!=='')$dates[$info[$token]['tgl_bayar']]=true;
+                if($info[$token]['bbk']!=='')$bbk[$info[$token]['bbk']]=true;
+            }
+            $item['line']['tgl_bayar']=implode(', ',array_keys($dates));
+            $item['line']['bbk_voucher']=$bbk?implode(', ',array_keys($bbk)):'-';
+        }
+        unset($item);
+        return $rows;
+    }
+
+    /** Tanggal bayar dan nomor BBK per voucher BK; kegagalan satu voucher menjadi kosong, tidak menggagalkan export. */
+    protected function paymentExportInfo($vouchers)
+    {
+        $info=[];
+        foreach(array_chunk(array_values($vouchers),200) as $chunk){
+            $rows=$this->read($this->db->select('id_payment,MIN(tgl_bayar) AS tgl_bayar',false)->where_in('id_payment',$chunk)
+                ->where('tgl_bayar IS NOT NULL',null,false)->group_by('id_payment')->get('payment_approve'))->result_array();
+            foreach($rows as $row){
+                $date=trim((string)$row['tgl_bayar']);
+                if($date==='' || strpos($date,'0000-00-00')===0)continue;
+                $info[$row['id_payment']]=['tgl_bayar'=>substr($date,0,10),'bbk'=>''];
+            }
+        }
+        require_once dirname(__DIR__, 2).'/record_request_payment/libraries/Rp_transfer_record.php';
+        if(!class_exists('Rp_transfer')||!Rp_transfer::installed($this->db))return $this->fillMissingInfo($info,$vouchers);
+        foreach(array_chunk(array_values($vouchers),200) as $chunk){
+            try{
+                $rows=Rp_transfer::write($this->db->query(
+                    "SELECT t.id_payment, h.company_id, h.company_nama, MIN(pa.tgl_bayar) AS tgl_bayar
+                     FROM tr_rp_transfer t JOIN tr_rp_pengajuan_h h ON h.id=t.id_pengajuan
+                     JOIN tr_rp_pengajuan_d d ON d.id_transfer=t.id AND d.decision='approved'
+                     JOIN payment_approve pa ON BINARY pa.id=BINARY d.payment_approval_id
+                     WHERE t.status='paid' AND h.deleted=0 AND t.id_payment IN ?
+                     GROUP BY t.id_payment, h.company_id, h.company_nama",[$chunk]
+                ))->result_array();
+            }catch(Throwable $error){ log_message('error','Report Jurnal: nomor voucher BBK belum dapat dibaca.'); continue; }
+            foreach($rows as $group){
+                if(empty($group['tgl_bayar']))continue;
+                try{ $info[$group['id_payment']]=['tgl_bayar'=>$info[$group['id_payment']]['tgl_bayar'] ?? substr((string)$group['tgl_bayar'],0,10),'bbk'=>Rp_transfer_record::voucherNo($this->db,$group)]; }
+                catch(Throwable $error){ /* payment tanpa nomor BBK: biarkan '-' */ }
+            }
+        }
+        return $this->fillMissingInfo($info,$vouchers);
+    }
+
+    private function fillMissingInfo($info,$vouchers)
+    {
+        foreach($vouchers as $voucher)if(!isset($info[$voucher]))$info[$voucher]=['tgl_bayar'=>'','bbk'=>''];
+        return $info;
+    }
+
     public function export_rows($values, $posted = false)
     {
         $headers=$this->groups($values,$posted); $result=[];
