@@ -1,6 +1,7 @@
 <?php if (!defined('BASEPATH')) exit('No direct script access allowed');
 require_once dirname(__DIR__).'/libraries/Rp_transfer_record.php';
 require_once dirname(__DIR__).'/libraries/Rp_document_attachments.php';
+require_once dirname(__DIR__).'/libraries/Record_payment_legacy.php';
 
 /*
  * Controller: Record Request Payment (histori final snapshot - FSD 2026-09)
@@ -530,7 +531,7 @@ class Record_request_payment extends Admin_Controller
 			$company = $this->input->get('company');
 			$search = $this->input->get('q');
 			$tab = $this->input->get('tab');
-			if (!in_array($company, [null, '', '7','3','4'], true) || ($search !== null && !is_string($search)) || !in_array($tab, [null,'','diff','same'], true)) {
+			if (!in_array($company, [null, '', '7','3','4'], true) || ($search !== null && !is_string($search)) || !in_array($tab, [null,'','diff','same','old'], true)) {
 				throw new DomainException('Filter Record Payment tidak valid.');
 			}
 			$entries = [];
@@ -548,8 +549,23 @@ class Record_request_payment extends Admin_Controller
 			}
 			usort($entries, static function ($a, $b) { return [$b['tgl_bayar'], $b['id']] <=> [$a['tgl_bayar'], $a['id']]; });
 			$counts = ['all' => count($entries), 'diff' => count(array_filter($entries, static function ($row) { return !empty($row['differences']); }))];
-			if ($tab) {
+			if ($tab === 'diff' || $tab === 'same') {
 				$entries = array_filter($entries, static function ($row) use ($tab) { return (bool) $row['differences'] === ($tab === 'diff'); });
+			}
+			$oldNumbers = Record_payment_legacy::numbers($this->db, (string) $company, (string) $search);
+			$old_count = count($oldNumbers);
+			$old_rows = [];
+			$old_page = $old_pages = 1;
+			if ($tab === 'old') {
+				if ($this->input->get('export') === '1') {
+					$this->export_old_payments(Record_payment_legacy::details($this->db, $oldNumbers));
+					return;
+				}
+				$old_pages = max(1, (int) ceil($old_count / Record_payment_legacy::PER_PAGE));
+				$old_page = min($old_pages, max(1, (int) $this->input->get('page')));
+				$old_rows = Record_payment_legacy::details($this->db,
+					array_slice($oldNumbers, ($old_page - 1) * Record_payment_legacy::PER_PAGE, Record_payment_legacy::PER_PAGE));
+				$entries = [];
 			}
 			if ($this->input->get('export') === '1') {
 				$this->load->library('PHPExcel');
@@ -571,15 +587,30 @@ class Record_request_payment extends Admin_Controller
 				$this->send_workbook($workbook, 'Record_Payment.xlsx', count($entries));
 				return;
 			}
-			$this->template->set(compact('entries', 'company', 'search', 'tab', 'counts'));
+			$this->template->set(compact('entries', 'company', 'search', 'tab', 'counts', 'old_count', 'old_rows', 'old_page', 'old_pages'));
 			$this->template->title('Record Payment');
 			$this->template->page_icon('fa fa-table');
 			$this->template->render('record_payment');
-			$this->completeAudit('Membuka Record Payment', 1, ['row_count' => count($entries)]);
+			$this->completeAudit('Membuka Record Payment', 1, ['row_count' => $tab === 'old' ? count($old_rows) : count($entries)]);
 		} catch (Throwable $e) {
 			$this->completeAudit('Record Payment gagal dimuat', 0, ['reason' => 'record_payment_failure']);
 			show_error($e instanceof DomainException ? $e->getMessage() : 'Gagal memuat Record Payment.', 400);
 		}
+	}
+
+	private function export_old_payments(array $rows)
+	{
+		$this->load->library('PHPExcel');
+		$workbook = new PHPExcel();
+		$sheet = $workbook->getActiveSheet();
+		$sheet->setTitle('Payment Lama');
+		Rp_transfer_record::row($sheet, 1, ['NO','NO. PAYMENT','TGL BAYAR','NO. PENGAJUAN','COMPANY','REQUEST BY','DOKUMEN','BANK PEMBAYAR','DIBAYAR','BANK CHARGE','KETERANGAN PEMBAYARAN']);
+		Rp_transfer_record::headline($sheet, 'A1:K1');
+		foreach (array_values($rows) as $i => $row) {
+			Rp_transfer_record::row($sheet, $i + 2, [$i + 1, $row['payment'], $row['tgl'], $row['pengajuan'], $row['company'], $row['request_by'],
+				implode(', ', $row['docs']), $row['bank'], $row['paid'], $row['charge'], $row['note']]);
+		}
+		$this->send_workbook($workbook, 'Record_Payment_Lama.xlsx', count($rows));
 	}
 
 	public function transfer_file($id)
