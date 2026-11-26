@@ -12,7 +12,7 @@ $nonSource=function($n,$limit='10000.00')use($db){
     return $key;
 };
 $nonRequest=function($key,$tax='PKP',$role='sales_consulting')use($service){
-    $source=$service->non_consulting_source($key);$mapping=$service->mapping($source['source_company_id']);
+    $source=$service->non_consulting_source($key);$mapping=$service->with_other($service->mapping($source['source_company_id'])); // sama dengan form: termasuk Penjualan Lain-lain bila COA ada
     return array('id_penawaran'=>$key,'tanggal_invoice'=>'2026-11-23','nomor_po'=>'PO-NC','nomor_faktur'=>'FP-NC','tax_treatment'=>$tax,'sales_role'=>$role,
         'source_fingerprint'=>Invoice_calculation::fingerprint(array('source'=>$source,'mapping'=>$mapping)),
         'item'=>array(array('nama'=>'Item <script>','qty'=>'1.25','harga'=>'800.00')),'biaya_kirim'=>'999999','total_akhir_jurnal'=>'1','id_customer'=>'WRONG','id_company'=>'WRONG','jurnal_invoice_no_coa'=>'9999-99-99');
@@ -163,4 +163,4 @@ $list=controllerCall($ci,'get_data_quotation_non_konsultasi',array('draw'=>1,'st
 $draftInvoice=$service->one('SELECT * FROM tr_invoicing WHERE id=?',array($draft['id']));
 $listRows=array_values(array_filter($list['data'],function($row)use($draftInvoice){return $row['no_invoice']===$draftInvoice['no_invoice'];}));
 verify(count($listRows)===1 && $listRows[0]['company']==='Vuca','Non consulting list reads saved owner with real SQL');
-verify(strpos($listRows[0]['action'],'print_invoice_non_kons/'.$draft['id'])!==false && strpos($listRows[0]['action'],'pilih_print_inv_non_kons')===false,'Modern list print skips mutable company modal');
+verify(strpos($listRows[0]['action'],'pilih_print_inv_non_kons')!==false,'Non consulting list print offers the company picker (2789ee0f)');
