@@ -1,5 +1,7 @@
 <?php
-define('BASEPATH',true);class BF_Model{}
+define('BASEPATH',true);
+#[\AllowDynamicProperties]
+class BF_Model{}
 require dirname(__DIR__,2).'/jurnal_invoicing/models/Jurnal_invoicing_model.php';
 require dirname(__DIR__,2).'/jurnal_penerimaan/models/Jurnal_penerimaan_model.php';
 $checks=0;function check($ok,$msg){global $checks;$checks++;if(!$ok)throw new RuntimeException($msg);}

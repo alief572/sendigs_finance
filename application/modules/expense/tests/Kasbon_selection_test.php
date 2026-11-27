@@ -2,6 +2,7 @@
 define('BASEPATH', __DIR__);
 define('FCPATH', sys_get_temp_dir() . '/kasbon-selection/');
 define('DBACC', 'fixture_accounting');
+#[\AllowDynamicProperties]
 class Admin_Controller {}
 require dirname(__DIR__) . '/controllers/Expense.php';
 require dirname(__DIR__, 3) . '/libraries/Module_audit_recorder.php';
@@ -156,7 +157,7 @@ $c->input->values=array('id'=>'','informasi'=>'Own kasbon with PR metadata','tgl
     'total_kasbon'=>100,'no_doc_kasbon'=>'KS-OWN','id_expense_detail'=>array('PR-DTL-999'));
 $reply=json_decode(selectionCall($c,'save'),true);
 selectionCheck(!empty($reply['save']), 'PR detail metadata on an owned kasbon is not a routine source ID');
-$guard = new ReflectionMethod('Expense','ownsReportKasbonReferences'); $guard->setAccessible(true);
+$guard = new ReflectionMethod('Expense','ownsReportKasbonReferences'); if (PHP_VERSION_ID < 80100) { $guard->setAccessible(true); }
 foreach (array(array(array('KS-OWN'),array('11'),true),array(array('KS-OWN','KS-OTHER'),array(),false),array(array(),array('11','22'),false),array(array(array('nested')),array(),false),array(array(),array(),true)) as $case) {
     $c=selectionController();
     selectionCheck($guard->invoke($c,$case[0],$case[1])===$case[2], 'Batch reference validation handles own/foreign/invalid/empty');

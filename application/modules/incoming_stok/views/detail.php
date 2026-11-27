@@ -70,7 +70,7 @@
 					echo "<td align='center'>" . $No . "</td>";
 					echo "<td>" . $nm_material . "</td>";
 					echo "<td align='center'>" . number_format($qty_in, 2) . "</td>";
-					echo "<td align='center'>" . strtoupper($get_stock->satuan) . "</td>";
+					echo "<td align='center'>" . strtoupper($get_stock->satuan ?? '') . "</td>";
 					echo "<td>" . $value['keterangan'] . "</td>";
 					echo "</tr>";
 				}

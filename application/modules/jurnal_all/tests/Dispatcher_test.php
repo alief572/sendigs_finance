@@ -2,6 +2,7 @@
 define('BASEPATH',true);
 function has_permission($permission){global $permissions;return in_array($permission,$permissions,true);}
 function log_message($level,$message){}
+#[\AllowDynamicProperties]
 class BF_Model{}
 require dirname(__DIR__).'/models/Jurnal_all_model.php';
 require dirname(__DIR__).'/libraries/Jurnal_all_dispatcher.php';

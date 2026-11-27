@@ -6,7 +6,7 @@ define('BASEPATH', 1);
 define('APPPATH', dirname(__DIR__, 3) . '/');
 define('FCPATH', $tmp);
 define('DBCNL', 'db_consultant_new');
-class Admin_Controller {}
+class Admin_Controller { public $Monitoring_piutang_model, $input, $output, $auth; }
 class BF_Model {}
 class Berhenti extends Exception {}
 function show_404() { throw new Berhenti('404'); }
@@ -43,7 +43,12 @@ function jalan($method, $args = []) {
     try { $c->$method(...$args); } catch (Berhenti $e) { return $e->getMessage(); }
     return (string) $c->output->code;
 }
-function priv($method, $args) { global $c; $m = new ReflectionMethod($c, $method); $m->setAccessible(true); return $m->invokeArgs($c, $args); }
+function priv($method, $args) {
+    global $c;
+    $m = new ReflectionMethod($c, $method);
+    if (PHP_VERSION_ID < 80100) { $m->setAccessible(true); }
+    return $m->invokeArgs($c, $args);
+}
 function inv($o = []) {
     return $o + ['id' => 'I1', 'no_invoice' => '1/STM/2026', 'tgl_invoice' => '2026-10-05', 'customer' => 'PT A', 'project' => 'P', 'company' => '7',
         'company_name' => 'STM', 'nilai' => 100, 'saldo' => 100, 'sts_close' => '0', 'tax_treatment' => null, 'tgl_kirim' => null, 'tgl_terima' => null,

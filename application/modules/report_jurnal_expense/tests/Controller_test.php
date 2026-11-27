@@ -1,5 +1,6 @@
 <?php
 define('BASEPATH', true);
+#[AllowDynamicProperties]
 class Admin_Controller {}
 $allowed=true;
 function has_permission($permission) { global $allowed; return $allowed && $permission==='Report_Jurnal_Expense.View'; }

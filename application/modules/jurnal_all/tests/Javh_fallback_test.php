@@ -1,7 +1,7 @@
 <?php
 // Report accounting-number fallback: javh keterangan lookup is batched (one scan per 50 keys) and keeps the old per-key result.
 define('BASEPATH',dirname(__DIR__,4).'/system/');define('APPPATH',dirname(__DIR__,3).'/');
-function log_message($l,$m){}function show_error($m){throw new RuntimeException($m);}function load_class($n,$d){return null;}class BF_Model{}
+function log_message($l,$m){}function show_error($m){throw new RuntimeException($m);}function load_class($n,$d){return null;}class BF_Model{public $db;}
 require BASEPATH.'database/DB.php';require dirname(__DIR__).'/models/Jurnal_all_model.php';
 $checks=0;function check($v,$m){global $checks;$checks++;if(!$v)throw new RuntimeException($m);}
 $mk=function(){$d=DB(['dbdriver'=>'pdo','subdriver'=>'sqlite','dsn'=>'sqlite::memory:','db_debug'=>false],true);$d->conn_id=$d->conn_id?:true;
@@ -28,7 +28,7 @@ $inv=function($no){return ['source'=>'INV','id_company'=>'7','no_transaksi'=>'IN
 $rows=[$inv('INV/1'),$inv('INV/2'),$inv('A_B'),$inv('NONE/9'),$inv('DUP-1'),['source'=>'EXP','id_company'=>'7','no_transaksi'=>'ER-2026-9','source_numbers'=>'']];
 foreach($bulk as $b)$rows[]=$inv($b);
 $model=new Jurnal_all_model();
-$reader=new ReflectionMethod($model,'resolveGlMetadata');$reader->setAccessible(true);
+$reader=new ReflectionMethod($model,'resolveGlMetadata');if (PHP_VERSION_ID < 80100) { $reader->setAccessible(true); }
 $gl->queries=[];
 $reader->invokeArgs($model,[&$rows]);
 check($rows[0]['source_numbers']==='J-1'&&$rows[0]['posted_at']==='2026-01-03'&&$rows[0]['posted_by_id']==='u-javh','jurnal match keeps javh date and user');

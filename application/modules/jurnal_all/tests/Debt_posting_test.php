@@ -1,7 +1,11 @@
 <?php
 define('BASEPATH',dirname(__DIR__,4).'/system/');define('APPPATH',dirname(__DIR__,3).'/');
 function log_message($l,$m){}function show_error($m){throw new RuntimeException($m);}function load_class($n,$d){return null;}function is_php($v){return version_compare(PHP_VERSION,$v,'>=');}
-class BF_Model{}class CI_Model{}class Admin_Controller{}
+#[\AllowDynamicProperties]
+class BF_Model {}
+class CI_Model {}
+#[\AllowDynamicProperties]
+class Admin_Controller {}
 $allowed=true;function has_permission($p){global $allowed;return $allowed;}
 require BASEPATH.'database/DB.php';
 require APPPATH.'modules/jurnal_all/models/Jurnal_all_model.php';

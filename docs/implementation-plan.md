@@ -335,3 +335,7 @@ Kriteria: request 1.000.028 + PPN 0, PPh 23 20.001, payment 980.027 sebelum admi
 Status: fase 1–3 selesai. PPh form/preview/simpan dan jurnal tersinkron; konfigurasi serta jurnal pembulatan bank dilepas. Tidak perlu pengisian COA pembulatan untuk memakai aturan PPh ini. Bukti tes dan keterbatasan: checkpoint bagian Pembulatan PPh per item.
 
 Publikasi atas permintaan user: siapkan commit terisolasi dari tip terbaru development dan main, sertakan hanya kode/tes/dokumen PPh dan fixture yang dibutuhkan; jangan ikutkan konfigurasi DB lokal atau perubahan task lain. Verifikasi paket masing-masing branch, lalu push fast-forward tanpa force dan cek hash remote.
+
+## PHP 8.5.12 di atas main (2026-11-27)
+
+Tujuan: `upgrade/php-8.5` = `main` + kompatibilitas PHP 8.5.12, tanpa fitur `development`. Fase: backup dan basis `main`; port three-way (basis `93e8ee16`); build 8.5.12 dan lint; tes dibanding `main` PHP 7.4; runbook; push hanya ke `upgrade/php-8.5`. Kriteria: tidak ada kegagalan tes baru, `constants.php` identik dengan `main`.

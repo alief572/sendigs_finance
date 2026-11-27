@@ -4,7 +4,9 @@ define('BASEPATH', __DIR__);
 define('DBCNL', 'consultant_fixture');
 set_error_handler(function ($severity, $message, $file, $line) { throw new ErrorException($message, 0, $severity, $file, $line); });
 
+#[\AllowDynamicProperties]
 class Admin_Controller {}
+#[\AllowDynamicProperties]
 class BF_Model { public $db; public function __construct() {} }
 function has_permission($p) { return true; }
 

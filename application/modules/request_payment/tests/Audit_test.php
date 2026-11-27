@@ -102,6 +102,7 @@ class FixtureUpload {
     public function do_upload($field) { global $scenario; return empty($scenario['upload_failure']); }
     public function data() { return array('file_name' => 'private-file'); }
 }
+#[\AllowDynamicProperties]
 class Admin_Controller {
     public function __construct() {
         global $ci; $ci = $this;

@@ -5,6 +5,7 @@ set_error_handler(function ($severity, $message) { throw new ErrorException($mes
 function log_message($level, $message) {}
 function show_error($message) { throw new RuntimeException($message); }
 function load_class($name, $directory) { return null; }
+#[AllowDynamicProperties]
 class BF_Model {}
 class ExpenseQueryInput { public $values = []; public function post() { return $this->values; } }
 function has_permission($key) { return true; }

@@ -3,6 +3,7 @@ define('BASEPATH', dirname(__DIR__, 4) . '/system/');
 function log_message($level, $message) {}
 function base_url($path) { return '/' . $path; }
 function has_permission($permission) { global $ci; return $ci->auth->has_permission($permission); }
+#[\AllowDynamicProperties]
 class Admin_Controller {}
 require BASEPATH . 'core/Common.php';
 require BASEPATH . 'database/DB_driver.php';
@@ -73,7 +74,7 @@ foreach (array(array(false, false, 'alice', false), array(false, true, 'alief', 
                 $ci->auth = (new ReflectionClass('Auth'))->newInstanceWithoutConstructor();
                 foreach (array('ci' => $ci, 'user' => array('id_user' => '42', 'username' => $roles[2])) as $name => $value) {
                     $property = new ReflectionProperty('Auth', $name);
-                    $property->setAccessible(true); $property->setValue($ci->auth, $value);
+                    if (PHP_VERSION_ID < 80100) { $property->setAccessible(true); } $property->setValue($ci->auth, $value);
                 }
                 $ci->input = new QueryStateInput();
                 $ci->input->values = array('draw' => 3, 'start' => 0, 'length' => 10, 'all' => $all,

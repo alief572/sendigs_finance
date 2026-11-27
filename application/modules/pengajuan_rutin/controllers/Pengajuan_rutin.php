@@ -360,7 +360,7 @@ class Pengajuan_rutin extends Admin_Controller
 			}
 			$key = $user_dept;
 		}
-		$periode = $this->input->get('periode');
+		$periode = $this->input->get('periode') ?? '';
 		$periodOptions = $this->periodOptions();
 		$periode = isset($periodOptions[$periode]) ? $periode : key($periodOptions);
 

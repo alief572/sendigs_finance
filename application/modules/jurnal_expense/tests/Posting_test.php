@@ -1,6 +1,7 @@
 <?php
 define('BASEPATH', true);
 define('DBACC_STM', 'acc_stm'); define('DBACC_VUCA', 'acc_vuca'); define('DBACC_SUST', 'acc_sustain');
+#[AllowDynamicProperties]
 class BF_Model {}
 function log_message($level, $message) {}
 require dirname(__DIR__) . '/models/Jurnal_expense_posting_model.php';

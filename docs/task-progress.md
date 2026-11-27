@@ -909,3 +909,9 @@ Batch1 telah selesai (bukan lagi RED/implementasi aktif):394skenario+2shutdownPA
 - Tes ditambah/diubah: Piutang_aging 264 assertion, jurnal_all Client_test (57; jalur multiple), invoicing List_filter_test dan Ui_render_test (opsi tanpa nilai kosong, IN), Batch1_audit_test (stub company_ids). Cek ad hoc: company_ids invoicing, company_wanted penerimaan_uang.
 - Gagal sebelum perubahan (bukan regresi): invoicing integration_test dan List_filter_test (total_nominal_jurnal), jurnal_all Challenger_stress_test dan Periodic_division_test, penerimaan_uang Lookup_bootstrap/Report_penerimaan_serverside/Xlsx_export/integration test. invoicing Consulting_integration_test gagal karena mk_tax_badge (view penerimaan_uang lokal), tidak terkait filter company.
 - Belum diuji: tampilan Select2 di browser dan DB nyata; modul tanpa tes otomatis hanya di-lint.
+
+## PHP 8.5.12 di atas main (2026-11-27)
+
+- Selesai: seluruh fase di docs/implementation-plan.md bagian yang sama. Keputusan: dibangun ulang dari `origin/main` 0a4c1800 agar riwayat development tidak ikut ke main; push hanya ke `upgrade/php-8.5`.
+- Hasil, file inti, keterbatasan, runbook, dan rollback: docs/php85-release.md.
+- Berikutnya (user): siapkan server PHP 8.5.12, UAT, lalu putuskan merge ke `main`.

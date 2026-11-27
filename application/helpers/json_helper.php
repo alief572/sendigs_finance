@@ -1590,7 +1590,7 @@ function generateNoTransaksiStok()
 	$Ym 			= date('ym');
 	$srcMtr			= "SELECT MAX(kode_trans) as maxP FROM warehouse_adjustment WHERE kode_trans LIKE 'TRM" . $Ym . "%' ";
 	$resultMtr		= $CI->db->query($srcMtr)->result_array();
-	$angkaUrut2		= $resultMtr[0]['maxP'];
+	$angkaUrut2		= $resultMtr[0]['maxP'] ?? '';
 	$urutan2		= (int)substr($angkaUrut2, 7, 4);
 	$urutan2++;
 	$urut2			= sprintf('%04s', $urutan2);
@@ -1605,7 +1605,7 @@ function generateNoTransaksiLainnya()
 	$Ym 			= date('ym');
 	$srcMtr			= "SELECT MAX(kode_trans) as maxP FROM warehouse_adjustment WHERE kode_trans LIKE 'TRA" . $Ym . "%' ";
 	$resultMtr		= $CI->db->query($srcMtr)->result_array();
-	$angkaUrut2		= $resultMtr[0]['maxP'];
+	$angkaUrut2		= $resultMtr[0]['maxP'] ?? '';
 	$urutan2		= (int)substr($angkaUrut2, 7, 4);
 	$urutan2++;
 	$urut2			= sprintf('%04s', $urutan2);

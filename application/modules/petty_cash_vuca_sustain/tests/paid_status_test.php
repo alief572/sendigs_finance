@@ -10,7 +10,9 @@ function log_message($level, $message) {
 }
 function is_php($version) { return version_compare(PHP_VERSION, $version, '>='); }
 function show_error($message) { throw new RuntimeException($message); }
+#[\AllowDynamicProperties]
 class BF_Model {}
+#[\AllowDynamicProperties]
 class Admin_Controller {}
 class PaidTestAuth { function user_id() { return 42; } }
 class PaidTestInput { public $values; function post() { return $this->values; } }

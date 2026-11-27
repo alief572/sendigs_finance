@@ -3,6 +3,7 @@
 // Posting/revisi jurnal lama harus ditolak tanpa izin Manage, sebelum menyentuh data. Tanpa database.
 define('BASEPATH', 1);
 define('APPPATH', dirname(__DIR__, 3) . '/');
+#[AllowDynamicProperties]
 class Admin_Controller {}
 function has_permission($p) { return in_array($p, $GLOBALS['diberi'], true); }
 

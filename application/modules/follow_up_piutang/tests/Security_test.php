@@ -5,7 +5,7 @@ define('BASEPATH', 1);
 define('APPPATH', dirname(__DIR__, 3) . '/');
 define('FCPATH', sys_get_temp_dir() . '/fu_sec_tidak_dipakai/');
 define('DBCNL', 'db_consultant_new');
-class Admin_Controller {}
+class Admin_Controller { public $Monitoring_piutang_model, $input, $output, $auth; }
 class BF_Model {}
 function has_permission($p) { return true; }
 set_error_handler(function ($no, $msg) { fwrite(STDERR, "FAIL: warning PHP: $msg\n"); exit(1); });
@@ -48,7 +48,11 @@ function buat($class) {
     return $c;
 }
 function jalan($c, $method, $args = []) { $c->output = new FakeOutput(); $c->$method(...$args); return $c->output->code; }
-function priv($c, $method, $args = []) { $m = new ReflectionMethod($c, $method); $m->setAccessible(true); return $m->invokeArgs($c, $args); }
+function priv($c, $method, $args = []) {
+    $m = new ReflectionMethod($c, $method);
+    if (PHP_VERSION_ID < 80100) { $m->setAccessible(true); }
+    return $m->invokeArgs($c, $args);
+}
 function inv($o = []) {
     return $o + ['id' => 'I1', 'no_invoice' => '1/STM/2026', 'tgl_invoice' => '2026-10-05', 'customer' => 'PT A', 'project' => 'P', 'company' => '7',
         'nilai' => 100, 'saldo' => 100, 'sts_close' => '0', 'tax_treatment' => null, 'tgl_kirim' => null, 'tgl_terima' => null, 'plan_bayar' => null,

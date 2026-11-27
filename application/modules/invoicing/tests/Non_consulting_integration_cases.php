@@ -150,7 +150,7 @@ foreach(array('ALTER TABLE kons_tr_penawaran ADD id_divisi VARCHAR(100)','ALTER 
 require_once dirname(__DIR__,2).'/report_jurnal_invoicing/models/Report_jurnal_invoicing_model.php';
 foreach(array('Jurnal_invoicing_model'=>'base_query_jurnal','Report_jurnal_invoicing_model'=>'_base_query_report') as $class=>$method){
     $queryModel=(new ReflectionClass($class))->newInstanceWithoutConstructor();$queryModel->db=$db;
-    $build=new ReflectionMethod($class,$method);$build->setAccessible(true);
+    $build=new ReflectionMethod($class,$method);if (PHP_VERSION_ID < 80100) { $build->setAccessible(true); }
     foreach(array('STM','VUCA') as $company){
         $build->invoke($queryModel,array('company'=>$company));$query=$db->get();verify($query!==false,'Actual company SQL '.$class.': '.json_encode($db->error()).' '.$db->last_query());
         $rows=array_values(array_filter($query->result_array(),function($row){return strpos($row['id_penawaran_non_kons']??'','NC-OWNER')===0;}));

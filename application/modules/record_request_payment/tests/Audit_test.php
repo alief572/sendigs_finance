@@ -76,6 +76,7 @@ if (!class_exists('PHPExcel_Style_Fill')) {
 
 require APPPATH . 'libraries/Module_audit_recorder.php';
 if (!class_exists('BF_Model')) {
+    #[\AllowDynamicProperties]
     class BF_Model {
         public function __construct() {}
         public function __get($name) { global $ci; return $ci->$name ?? null; }
@@ -303,6 +304,7 @@ class RecordFixtureDb {
     }
 }
 
+#[\AllowDynamicProperties]
 class Admin_Controller {
     public function __construct() {
         global $ci;
@@ -315,7 +317,7 @@ class Admin_Controller {
         $this->template = new RecordFixtureTemplate();
         $this->Record_request_payment_model = new Record_request_payment_model();
         $ref = new ReflectionProperty('Record_request_payment_model', 'consultant');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) { $ref->setAccessible(true); }
         $ref->setValue($this->Record_request_payment_model, $this->db);
     }
 }

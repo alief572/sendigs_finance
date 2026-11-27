@@ -4,7 +4,7 @@ mysqli_report(MYSQLI_REPORT_ERROR|MYSQLI_REPORT_STRICT);
 class RepairFixtureDb extends mysqli
 {
     public $commitFault='';
-    public function commit($flags=0,$name=null){if($this->commitFault==='before')return false;$ok=parent::commit($flags,$name);return $this->commitFault==='after'?false:$ok;}
+    public function commit(int $flags=0,?string $name=null):bool{if($this->commitFault==='before')return false;$ok=parent::commit($flags,$name);return $this->commitFault==='after'?false:$ok;}
 }
 $schema='codex_voucher_repair_'.bin2hex(random_bytes(5));
 $db=new RepairFixtureDb('127.0.0.1','root',getenv('JOURNAL_TEST_PASSWORD')?:'','',3307);$db->set_charset('utf8mb4');

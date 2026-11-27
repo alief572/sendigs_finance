@@ -1,6 +1,8 @@
 <?php
 // Native controller/view regression for empty, filtered-empty and populated receipt lists.
-define('BASEPATH',__DIR__);class Admin_Controller{}
+define('BASEPATH',__DIR__);
+#[\AllowDynamicProperties]
+class Admin_Controller{}
 require dirname(__DIR__,3).'/helpers/mockup_format_helper.php';
 require dirname(__DIR__).'/controllers/Kwitansi_deposit.php';
 set_error_handler(function($level,$message,$file,$line){throw new ErrorException($message,0,$level,$file,$line);});

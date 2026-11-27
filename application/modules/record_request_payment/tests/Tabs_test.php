@@ -18,6 +18,7 @@ function audit_log($message, $status = null, $context = []) {
     if (!empty($options['writer_exception'])) { throw new RuntimeException('PRIVATE_WRITER'); }
     return empty($options['writer_failure']);
 }
+#[\AllowDynamicProperties]
 class BF_Model {
     public function __construct() {}
     public function __get($key) { global $ci; return $ci->$key ?? null; }
@@ -95,6 +96,7 @@ class TabsLoad {
     public function model($models) { global $ci; if (in_array('request_payment/Request_payment_model', (array) $models, true)) { $ci->Request_payment_model = new TabsPrintModel(); } }
     public function library($name) { global $ci; if (!isset($ci->module_audit_recorder)) { $ci->module_audit_recorder = new Module_audit_recorder(); } }
 }
+#[\AllowDynamicProperties]
 class Admin_Controller {
     public function __construct() {
         global $ci; $ci = $this;

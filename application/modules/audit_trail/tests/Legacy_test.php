@@ -1,5 +1,6 @@
 <?php
 define('BASEPATH', __DIR__);
+#[AllowDynamicProperties]
 class BF_Model {}
 require dirname(__DIR__, 3) . '/helpers/audit_trail_helper.php';
 require dirname(__DIR__, 3) . '/helpers/app_helper.php';
