@@ -764,7 +764,7 @@ check($e['context']['data']['source_type'] === 'asset', 'copy_pr_doc: source_typ
 check($e['context']['data']['outcome'] === 'found', 'copy_pr_doc: outcome found');
 $resp = json_decode($out, true);
 check($resp['file_name'] === 'surat_pr_asset.pdf', 'copy_pr_doc (asset): file_name matched');
-check($resp['doc_file'] === 'uploads/pr_asset/surat_pr_asset.pdf', 'copy_pr_doc (asset): doc_file matched');
+check($resp['doc_file'] === 'assets/pr/surat_pr_asset.pdf', 'copy_pr_doc (asset): doc_file matched');
 
 // C. Not found PR
 list($e, $out) = expense_b7_run('copy_pr_doc', array('empty_pr_dept' => true, 'empty_pr_asset' => true), array('no_pr' => 'PR-NOT-FOUND'));
