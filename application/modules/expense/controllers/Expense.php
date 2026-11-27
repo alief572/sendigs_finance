@@ -444,8 +444,7 @@ class Expense extends Admin_Controller
 				}
 			} elseif (!empty($file_name)) {
 				$prFiles = kasbon_attachment_names($file_name);
-				$source = $tipe_pr === 'pr asset' ? 'uploads/pr_asset' : 'assets/pr';
-				$this->copyExpenseAttachments($prFiles, FCPATH . $source);
+				$this->copyExpenseAttachments($prFiles, FCPATH . 'assets/pr');
 				$filenames = $file_name;
 			}
 		} catch (RuntimeException $e) {
@@ -5271,7 +5270,7 @@ class Expense extends Admin_Controller
 		$doc_file = '';
 		$to_doc_file = '';
 		$source_type = 'none';
-		$directory = !empty($get_pr_dept) ? 'assets/pr/' : 'uploads/pr_asset/';
+		$directory = 'assets/pr/';
 		if (!empty($get_pr_dept)) {
 			$file_name = $get_pr_dept->document;
 			$source_type = 'rutin_non_planning';
