@@ -220,12 +220,12 @@ function formatDate($date)
 				<th width="70">Tanggal</th>
 				<th>Keperluan</th>
 				<th width="85">No. Polisi</th>
-				<th width="65">KM Awal</th>
-				<th width="65">KM Akhir</th>
+				<th width="65">Total KM</th>
 				<th width="90">Bensin</th>
 				<th width="80">Tol</th>
 				<th width="80">Parkir</th>
 				<th width="90">Lain-lain</th>
+				<th width="90">Total</th>
 			</tr>
 		</thead>
 		<tbody>
@@ -241,18 +241,19 @@ function formatDate($date)
 					$total_tol += $record->tol;
 					$total_parkir += $record->parkir;
 					$total_lainnya += $record->lainnya;
+					$total_item = $record->bensin + $record->tol + $record->parkir + $record->lainnya;
 			?>
 					<tr>
 						<td style="text-align: center;"><?= $no++ ?></td>
 						<td style="text-align: center;"><?= formatDate($record->tgl_doc) ?></td>
 						<td><?= $record->keperluan ?></td>
 						<td style="text-align: center;"><?= !empty($record->nopol) ? $record->nopol : '-' ?></td>
-						<td style="text-align: right;"><?= number_format((float)$record->km_awal, 0, ',', '.') ?></td>
-						<td style="text-align: right;"><?= number_format((float)$record->km_akhir, 0, ',', '.') ?></td>
+						<td style="text-align: right;"><?= number_format((float)$record->km_akhir - (float)$record->km_awal, 0, ',', '.') ?></td>
 						<td style="text-align: right;"><?= 'Rp ' . number_format($record->bensin, 0, ',', '.') ?></td>
 						<td style="text-align: right;"><?= 'Rp ' . number_format($record->tol, 0, ',', '.') ?></td>
 						<td style="text-align: right;"><?= 'Rp ' . number_format($record->parkir, 0, ',', '.') ?></td>
 						<td style="text-align: right;"><?= 'Rp ' . number_format($record->lainnya, 0, ',', '.') ?></td>
+						<td style="text-align: right; font-weight: bold;"><?= 'Rp ' . number_format($total_item, 0, ',', '.') ?></td>
 					</tr>
 			<?php
 				endforeach;
@@ -261,15 +262,16 @@ function formatDate($date)
 		</tbody>
 		<tfoot>
 			<tr>
-				<td colspan="6" style="text-align: right; font-weight: bold;">Subtotal</td>
+				<td colspan="5" style="text-align: right; font-weight: bold;">Subtotal</td>
 				<td style="text-align: right;"><?= 'Rp ' . number_format($total_bensin, 0, ',', '.') ?></td>
 				<td style="text-align: right;"><?= 'Rp ' . number_format($total_tol, 0, ',', '.') ?></td>
 				<td style="text-align: right;"><?= 'Rp ' . number_format($total_parkir, 0, ',', '.') ?></td>
 				<td style="text-align: right;"><?= 'Rp ' . number_format($total_lainnya, 0, ',', '.') ?></td>
+				<td style="text-align: right; font-weight: bold;"><?= 'Rp ' . number_format($total_bensin + $total_tol + $total_parkir + $total_lainnya, 0, ',', '.') ?></td>
 			</tr>
 			<tr>
-				<td colspan="6" style="text-align: right; font-weight: bold;">Total</td>
-				<td colspan="4" style="text-align: right; font-weight: bold;"><?= 'Rp ' . number_format($total_bensin + $total_tol + $total_parkir + $total_lainnya, 0, ',', '.') ?></td>
+				<td colspan="5" style="text-align: right; font-weight: bold;">Total</td>
+				<td colspan="5" style="text-align: right; font-weight: bold;"><?= 'Rp ' . number_format($total_bensin + $total_tol + $total_parkir + $total_lainnya, 0, ',', '.') ?></td>
 			</tr>
 		</tfoot>
 	</table>
