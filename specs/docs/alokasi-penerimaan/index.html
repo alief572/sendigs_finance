@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SENDIGS SS | Alokasi Penerimaan</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/driver.js@1.3.1/dist/driver.css">
+<script src="https://cdn.jsdelivr.net/npm/driver.js@1.3.1/dist/driver.js.iife.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+/* ===== Shell AdminLTE (skin-blue) seperti aplikasi SENDIGS SS ===== */
+:root{--header:#3c8dbc;--logo:#367fa9;--side:#222d32;--side-sub:#2c3b41;--side-text:#b8c7ce;--bg:#ecf0f5;--chg:#f39c12;}
+*{box-sizing:border-box;}
+html,body{margin:0;}
+body{font-family:"Source Sans Pro","Segoe UI","Helvetica Neue",Helvetica,Arial,sans-serif;font-size:14px;color:#333;background:var(--bg);}
+a{color:#3c8dbc;text-decoration:none;cursor:pointer;}
+.main-header{position:fixed;top:0;left:0;right:0;height:50px;z-index:100;background:var(--header);display:flex;}
+.logo{width:230px;background:var(--logo);color:#fff;font-size:20px;font-weight:700;text-align:center;line-height:50px;flex:none;}
+.navbar{flex:1;display:flex;align-items:center;justify-content:space-between;padding:0 15px;color:#fff;}
+.navbar .burger{background:none;border:0;color:#fff;font-size:18px;cursor:pointer;padding:0 10px 0 0;}
+.nav-right{display:flex;align-items:center;gap:22px;font-size:14px;}
+.nav-right a{color:#fff;}
+.nav-right .user{display:flex;align-items:center;gap:8px;}
+.avatar{width:22px;height:22px;border-radius:50%;background:#f5d6a8;border:2px solid #e6b97a;display:inline-block;}
+.chg-toggle{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;}
+.nav-right button{background:#fff;color:#3c8dbc;border:0;border-radius:3px;padding:4px 10px;font:inherit;font-size:12px;cursor:pointer;}
+.sidebar{position:fixed;top:50px;bottom:0;left:0;width:230px;background:var(--side);overflow-y:auto;z-index:90;}
+.sidebar .menu-search{padding:12px 10px 22px;}
+.sidebar .menu-search div{display:flex;align-items:center;gap:8px;border:1px solid #4b5a61;border-radius:4px;padding:10px;color:#b8c7ce;font-size:13px;}
+.sidebar ul{list-style:none;margin:0;padding:0;}
+.sidebar .item>a{display:flex;align-items:center;gap:10px;padding:12px 15px;color:var(--side-text);}
+.sidebar .item>a .fa{width:16px;text-align:center;}
+.sidebar .item>a .chev{margin-left:auto;font-size:11px;}
+.sidebar .item.open>a{background:#1e282c;color:#fff;border-left:3px solid var(--header);padding-left:12px;}
+.sidebar .sub{background:var(--side-sub);padding:5px 0;}
+.sidebar .sub a{display:flex;justify-content:space-between;align-items:center;padding:7px 10px 7px 22px;color:#8aa4af;font-size:14px;white-space:nowrap;}
+.sidebar .sub a span:first-child::before{content:"\203A  ";}
+.sidebar .sub a.active{color:#fff;font-weight:600;}
+.sidebar .cnt{background:#f39c12;color:#fff;border-radius:9px;font-size:10px;font-weight:700;padding:0 6px;}
+.sidebar .cnt:empty{display:none;}
+.content-wrapper{margin-left:230px;margin-top:50px;padding:15px;min-height:calc(100vh - 50px);}
+.content-header h1{font-size:24px;font-weight:400;margin:4px 0 14px;color:#333;}
+.content-header h1 .fa{margin-right:6px;}
+.hidden{display:none !important;}
+@media (max-width:900px){.sidebar{display:none;}.content-wrapper{margin-left:0;padding:12px 16px;}.logo{width:auto;padding:0 14px;font-size:17px;}.nav-right .hide-sm{display:none;}}
+
+/* ===== Bootstrap 3 / AdminLTE dasar ===== */
+.box{position:relative;background:#fff;border-top:3px solid #d2d6de;border-radius:3px;margin-bottom:20px;box-shadow:0 1px 1px rgba(0,0,0,.1);}
+.box.box-primary{border-top-color:#3c8dbc;}
+.box-header{padding:10px;position:relative;}
+.box-header.with-border{border-bottom:1px solid #f4f4f4;}
+.box-header .box-title{display:inline-block;margin:0;font-size:18px;line-height:1.1;}
+.box-body{padding:10px;}
+.pull-right{float:right;}
+.clearfix::after{content:"";display:table;clear:both;}
+.breadcrumb{list-style:none;display:flex;gap:6px;background:none;padding:0;margin:0 0 5px;font-size:12px;}
+.breadcrumb li+li::before{content:"/";color:#ccc;margin-right:6px;}
+.breadcrumb .active{color:#777;}
+.badge{display:inline-block;min-width:10px;padding:3px 7px;font-size:12px;font-weight:700;color:#fff;line-height:1;vertical-align:middle;white-space:nowrap;text-align:center;background:#777;border-radius:10px;}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:6px 12px;font-size:14px;line-height:1.42857;border:1px solid transparent;border-radius:3px;cursor:pointer;font-family:inherit;color:#fff;white-space:nowrap;}
+.btn-sm{padding:5px 10px;font-size:12px;line-height:1.5;}
+.btn-xs{padding:1px 5px;font-size:12px;}
+.btn-block{display:flex;width:100%;}
+.btn-default{background:#f4f4f4;color:#444;border-color:#ddd;}
+.btn-primary{background:#3c8dbc;border-color:#367fa9;}
+.btn-success{background:#00a65a;border-color:#008d4c;}
+.btn-warning{background:#f39c12;border-color:#e08e0b;}
+.btn-danger{background:#dd4b39;border-color:#d73925;}
+.btn-info{background:#00c0ef;border-color:#00acd6;}
+.btn-link{background:none;color:#3c8dbc;border:0;padding-left:0;}
+.btn:disabled{opacity:.65;cursor:not-allowed;}
+.form-control{display:block;width:100%;height:34px;padding:6px 12px;font-size:14px;color:#555;background:#fff;border:1px solid #d2d6de;border-radius:0;font-family:inherit;}
+.input-sm,.form-control.input-sm{height:30px;padding:5px 10px;font-size:12px;}
+textarea.form-control{height:auto;}
+.form-control:disabled,.form-control[readonly]{background:#eee;}
+.input-group{display:flex;}
+.input-group-addon{padding:5px 10px;font-size:12px;background:#fff;border:1px solid #d2d6de;border-left:0;border-right:0;}
+.row{display:flex;flex-wrap:wrap;margin:0 -8px;}
+.row>[class*=col-]{padding:0 8px;}
+.col-md-2{width:16.6667%}.col-md-3{width:25%}.col-md-4{width:33.3333%}.col-md-6{width:50%}.col-md-12{width:100%}
+@media (max-width:991px){.row>[class*=col-]{width:50%;}}
+@media (max-width:600px){.row>[class*=col-]{width:100%;}}
+.text-right{text-align:right !important;}.text-center{text-align:center !important;}.text-muted{color:#777;}.text-danger{color:#dd4b39;}
+.table{width:100%;max-width:100%;border-collapse:collapse;margin-bottom:20px;}
+.table>thead>tr>th,.table>tbody>tr>td,.table>tfoot>tr>td,.table>tfoot>tr>th{padding:8px;line-height:1.42857;vertical-align:top;border-top:1px solid #f4f4f4;}
+.table-bordered,.table-bordered>thead>tr>th,.table-bordered>tbody>tr>td{border:1px solid #f4f4f4;}
+.table-striped>tbody>tr:nth-of-type(odd){background:#f9f9f9;}
+.bg-blue>th,thead.bg-primary th,.bg-primary>th{background:#3c8dbc !important;color:#fff;}
+tfoot.bg-primary th,tfoot.bg-primary td{background:#3c8dbc;color:#fff;}
+.alert{padding:15px;margin-bottom:20px;border:1px solid transparent;border-radius:3px;color:#fff;}
+.alert-info{background:#00c0ef;border-color:#00acd6;}
+.alert-warning{background:#f39c12;border-color:#e08e0b;}
+.alert-danger{background:#dd4b39;border-color:#d73925;}
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin-top:12px;}
+.dash-card{background:#fff;border:1px solid #d9dee5;border-left:4px solid #f39c12;border-radius:4px;padding:12px 14px;cursor:pointer;}
+.dash-card:hover{box-shadow:0 2px 6px rgba(0,0,0,.12);}
+.dash-card.sel{outline:2px solid #3c8dbc;box-shadow:0 2px 8px rgba(60,141,188,.35);background:#f4f9fd;}
+.dash-card.done{border-left-color:#00a65a;}
+.dash-card .dc-t{font-size:12px;font-weight:700;text-transform:uppercase;color:#555;}
+.dash-card .dc-n{font-size:13px;color:#666;margin-top:4px;}
+.dash-card .dc-v{font-size:20px;font-weight:700;margin-top:2px;}
+.dash-card .dc-a{font-size:11.5px;color:#777;margin-top:6px;}
+.dash-card .dc-a span{display:inline-block;padding:1px 6px;border-radius:8px;background:#f1f1f1;margin-right:3px;}
+.dash-card .dc-a span.old{background:#f8d7da;color:#a94442;}
+.dash-filter{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;}
+.dash-filter label{display:block;font-size:12px;margin-bottom:3px;}
+.nav-tabs{display:flex;list-style:none;margin:0;padding:0;border-bottom:1px solid #ddd;}
+.nav-tabs>li>a{display:block;padding:10px 15px;margin-right:2px;color:#444;border:1px solid transparent;border-radius:0;}
+.nav-tabs>li.active>a{color:#555;background:#fff;border:1px solid #ddd;border-bottom-color:transparent;border-top:3px solid #3c8dbc;font-weight:600;margin-bottom:-1px;}
+.dt-info{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-top:10px;font-size:13px;}
+.pager{display:flex;}
+.pager button{border:1px solid #ddd;background:#fff;color:#555;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer;margin-left:-1px;}
+.pager button.on{background:#3c8dbc;border-color:#3c8dbc;color:#fff;}
+.pager button:disabled{color:#bbb;cursor:default;}
+.dt-empty{text-align:center;color:#777;padding:18px !important;}
+
+/* ===== penanda mockup ===== */
+body.show-chg .chg{outline:2px dashed var(--chg);outline-offset:2px;}
+.newtag{display:none;background:var(--chg);color:#fff;font-size:9px;font-weight:700;border-radius:2px;padding:1px 4px;margin-left:4px;vertical-align:middle;letter-spacing:.3px;}
+body.show-chg .newtag{display:inline-block;}
+.legend{background:#fffbe6;border:1px dashed #e0b84a;border-radius:4px;padding:8px 12px;margin:0 0 12px;font-size:12.5px;color:#6b5513;}
+details.cases{border:1px solid #e3e8ee;border-left:3px solid var(--chg);border-radius:3px;padding:8px 12px;margin-bottom:12px;background:#fff;font-size:13px;}
+details.cases summary{cursor:pointer;font-weight:600;}
+details.cases ol{margin:8px 0 2px;padding-left:20px;}
+details.cases li{margin:3px 0;}
+ul.chg-list{margin:6px 0 0 18px;padding:0;}ul.chg-list li{margin-bottom:6px;}
+
+/* ===== modal & swal ===== */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-start;justify-content:center;z-index:200;padding-top:60px;}
+.modal-bg.on{display:flex;}
+.modal{background:#fff;border-radius:4px;width:620px;max-width:95vw;box-shadow:0 5px 15px rgba(0,0,0,.5);max-height:85vh;display:flex;flex-direction:column;}
+.modal-header{padding:15px;border-bottom:1px solid #e5e5e5;display:flex;justify-content:space-between;align-items:center;}
+.modal-header h4{margin:0;font-size:18px;font-weight:500;}
+.modal-header .close{background:none;border:0;font-size:21px;font-weight:700;opacity:.4;cursor:pointer;}
+.modal-body{padding:15px;overflow:auto;}
+.modal-footer{padding:15px;border-top:1px solid #e5e5e5;text-align:right;display:flex;justify-content:flex-end;gap:6px;}
+.modal.swal{width:470px;text-align:center;}
+.modal.swal .modal-header{display:none;}
+.modal.swal .modal-body{padding:24px 20px 6px;}
+.modal.swal .modal-footer{justify-content:center;border:0;padding-bottom:22px;}
+.swal-ic{width:70px;height:70px;border-radius:50%;border:4px solid;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;font-size:32px;}
+.swal-ic.warning{border-color:#f8bb86;color:#f8bb86;}.swal-ic.success{border-color:#a5dc86;color:#a5dc86;}.swal-ic.error{border-color:#f27474;color:#f27474;}
+.swal-t{font-size:26px;font-weight:600;color:#575757;margin-bottom:8px;}
+.swal-x{color:#797979;font-size:15px;}
+.dlg-err{color:#dd4b39;font-size:13px;margin-top:8px;}
+/* ===== tambahan: halaman alokasi & tampungan (meniru alokasi/views/index.php & unlocated_penerimaan/views/index.php) ===== */
+.bg-blue{background:#0073b7 !important;}.bg-green{background:#00a65a !important;}.bg-purple{background:#605ca8 !important;}.bg-gray{background:#999 !important;}.bg-yellow{background:#f39c12 !important;}
+.flt{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;}
+.flt label{font-weight:600;color:#555;margin-right:6px;font-size:13px;}
+.flt .grp{display:flex;align-items:center;}
+.flt input[type=date]{width:auto;}
+.flt select{min-width:300px;width:auto;}
+.dt-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:13px;flex-wrap:wrap;gap:8px;}
+.dt-top input{width:200px;display:inline-block;}
+.money{text-align:right;white-space:nowrap;}
+.tamp-note{background:#f4f8fb;border:1px solid #d6e4ef;border-radius:3px;padding:8px 12px;font-size:12.5px;color:#31708f;margin-bottom:10px;}
+.split-ind{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;border:1px solid #ddd;border-radius:3px;padding:10px 12px;margin-top:10px;}
+.split-ind label{font-weight:700;font-size:13px;display:block;}
+.split-ind p{margin:4px 0 0;font-weight:700;}
+.modal.lg{width:900px;}
+.ro-box{background:#eee;border:1px solid #d2d6de;padding:5px 10px;font-size:12px;min-height:30px;}
+.link-tamp{font-size:11px;margin-left:6px;}
+.dir-in{color:#00a65a;font-size:11px;font-weight:600;}.dir-out{color:#dd4b39;font-size:11px;font-weight:600;}
+.tour-fab{position:fixed;right:22px;bottom:22px;z-index:150;display:flex;align-items:center;gap:8px;background:#00a65a;color:#fff;border:0;border-radius:28px;padding:12px 20px 12px 16px;font:inherit;font-size:14px;font-weight:600;box-shadow:0 4px 14px rgba(0,0,0,.25);cursor:pointer;animation:tourPulse 2.4s ease-in-out infinite;}
+.tour-fab .fa{font-size:20px;}.tour-fab:hover{background:#008d4c;animation:none;}
+@keyframes tourPulse{0%,100%{box-shadow:0 4px 14px rgba(0,0,0,.25),0 0 0 0 rgba(0,166,90,.5);}50%{box-shadow:0 4px 14px rgba(0,0,0,.25),0 0 0 10px rgba(0,166,90,0);}}
+@media (max-width:600px){.tour-fab{right:14px;bottom:14px;padding:10px 14px;}.tour-fab span{display:none;}}
+.driver-popover{font-family:inherit;max-width:340px;}.driver-popover-title{font-size:15px;}.driver-popover-description{font-size:13px;line-height:1.5;}
+
+/* ===== Tutorial v2: tombol di baris atas konten (tidak menutupi Simpan), menu halaman ini + alur proses ===== */
+.tour-bar{float:right;position:relative;z-index:20;margin:0 0 8px 12px}
+.tour-btn{display:inline-flex;align-items:center;gap:7px;background:#00a65a;color:#fff;border:0;border-radius:18px;padding:7px 16px 7px 12px;font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.18)}
+.tour-btn:hover{background:#008d4c}.tour-btn .tb-ic{font-size:16px;line-height:1}
+.tour-menu{position:absolute;right:0;top:calc(100% + 6px);width:380px;max-width:calc(100vw - 32px);max-height:70vh;overflow:auto;background:#fff;color:#333;border:1px solid #ccc;border-radius:4px;box-shadow:0 8px 24px rgba(0,0,0,.22);font-size:13px;text-align:left}
+.tour-menu[hidden]{display:none}
+.tour-menu h4{margin:0;padding:8px 14px;font-size:12px;letter-spacing:.3px;text-transform:uppercase;color:#666;background:#f4f4f4;border-bottom:1px solid #e3e3e3}
+.tour-menu button{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid #eee;background:#fff;padding:9px 14px;cursor:pointer;font:inherit;color:#333}
+.tour-menu button:hover,.tour-menu button:focus{background:#eef6fb;outline:none}
+.tour-menu button small{display:block;color:#777;margin-top:2px;font-size:12px}
+.tour-pg{display:inline-block;background:#3c8dbc;color:#fff;border-radius:3px;padding:1px 7px;font-size:11px;font-weight:600;margin-bottom:6px}
+.driver-popover.tour-pop{max-width:400px;min-width:340px}
+.driver-popover.tour-pop .driver-popover-navigation-btns button{white-space:nowrap}
+.driver-popover.tour-pop .driver-popover-footer{gap:10px}
+.tour-fl{font-size:11.5px;color:#888;margin-bottom:3px}
+.driver-popover.tour-pop .driver-popover-progress-text{font-size:11.5px}
+/* ===== Jurnal All: meniru assets/css/jurnal-all.css ===== */
+.jaw{--ja-blue:#1a78b1;--ja-action:#2876a3;--ja-green:#008548;--ja-red:#c63f2f;--ja-line:#d8e0eb;--ja-muted:#526176;color:#1e293b;font-size:14px;line-height:1.5}
+.jaw .ja-intro{color:var(--ja-muted);margin:0 0 16px}
+.jaw .ja-cards{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}
+.jaw .ja-card{display:flex;flex-direction:column;gap:6px;padding:14px;min-width:0;text-align:left;font:inherit;color:inherit;background:#fff;border:1px solid var(--ja-line);border-left:4px solid var(--ja-source);border-radius:6px;cursor:pointer}
+.jaw [data-src="INV"]{--ja-source:#1e88c8;--ja-source-ink:#1a78b1;--ja-source-soft:#edf7fd}
+.jaw [data-src="RCV"]{--ja-source:#00a65a;--ja-source-ink:#08783f;--ja-source-soft:#eef9f2}
+.jaw [data-src="PAY"]{--ja-source:#605ca8;--ja-source-ink:#605ca8;--ja-source-soft:#f3f1fb}
+.jaw [data-src="EXP"]{--ja-source:#f39c12;--ja-source-ink:#9a5b00;--ja-source-soft:#fff7e8}
+.jaw [data-src="PCS"]{--ja-source:#d81b60;--ja-source-ink:#b51652;--ja-source-soft:#fff0f5}
+.jaw [data-src="BANK"]{--ja-source:#00838f;--ja-source-ink:#006064;--ja-source-soft:#e8f7f8}
+.jaw .ja-card:hover,.jaw .ja-card.active{background:var(--ja-source-soft);border-color:var(--ja-source)}
+.jaw .ja-card.active{box-shadow:inset 0 0 0 1px var(--ja-source)}
+.jaw .ja-card-title{font-weight:600;min-height:40px}
+.jaw .ja-card-count{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px}
+.jaw .ja-card-count strong{color:var(--ja-source-ink);font-size:28px;font-weight:700;line-height:1.2}
+.jaw .ja-card-count>span,.jaw .ja-card small{font-size:12px;color:var(--ja-muted)}
+.jaw .ja-card .ja-age{color:#b91c1c}
+.jaw .ja-hint{margin:8px 0 16px;color:var(--ja-muted);font-size:12px}
+.jaw .ja-tabs{display:flex;gap:4px;overflow-x:auto;margin-top:18px;border-bottom:1px solid var(--ja-line)}
+.jaw .ja-tab{flex-shrink:0;display:inline-flex;align-items:center;gap:8px;padding:12px 14px;border:0;border-bottom:3px solid transparent;background:transparent;font:inherit;color:var(--ja-muted);cursor:pointer}
+.jaw .ja-tab.active{background:#edf7fd;border-bottom-color:var(--ja-blue);color:#176999;font-weight:600}
+.jaw .ja-badge:not(:empty){min-width:22px;padding:1px 6px;border-radius:4px;background:#e2e8f0;color:#334155;font-size:12px;text-align:center}
+.jaw .ja-tab.active .ja-badge{background:var(--ja-blue);color:#fff}
+.jaw .ja-panel{margin:14px 0 20px;border:1px solid var(--ja-line);border-radius:8px;background:#fff;padding:20px}
+.jaw .ja-section-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:18px}
+.jaw .ja-section-head h2{margin:0 0 4px;font-size:18px;font-weight:600}
+.jaw .ja-section-head p{margin:0;color:var(--ja-muted);font-size:13px}
+.jaw .ja-filters{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;padding:16px;border:1px solid #e2e8f0;border-radius:6px;background:#f8fafc}
+.jaw .ja-filters label{display:flex;flex:1 1 140px;flex-direction:column;gap:6px;min-width:120px;max-width:240px;margin:0;font-size:12px;font-weight:600;color:#334155}
+.jaw .ja-buttons{display:flex;gap:8px}
+.jaw .form-control{height:36px;border:1px solid #8392a7;border-radius:5px;font-size:13px}
+.jaw .btn{border-radius:5px;font-size:13px;font-weight:600}
+.jaw .ja-btn-apply{background:var(--ja-action);border-color:var(--ja-action);color:#fff}
+.jaw .ja-btn-reset{background:var(--ja-red);border-color:var(--ja-red);color:#fff}
+.jaw .ja-btn-export{background:var(--ja-green);border-color:var(--ja-green);color:#fff}
+.jaw .ja-table-tools{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin:18px 0 12px}
+.jaw .ja-table-tools label{display:flex;align-items:center;gap:8px;margin:0;color:var(--ja-muted);font-size:13px;font-weight:400}
+.jaw .ja-search{width:340px;max-width:100%}
+.jaw .ja-scroll{border:1px solid var(--ja-line);border-radius:6px;overflow-x:auto}
+.jaw .ja-table{min-width:1000px;width:100%;margin:0;font-size:13px;border-collapse:collapse}
+.jaw .ja-table thead th{padding:11px;background:var(--ja-blue);border-right:1px solid #176999;color:#fff;font-weight:600;white-space:nowrap}
+.jaw .ja-table tbody td{padding:13px 11px;border-top:1px solid #e2e8f0;vertical-align:middle}
+.jaw .ja-table tbody tr:nth-child(odd){background:#f9f9f9}
+.jaw .ja-transaction{color:#1e6fa8;font-weight:600}
+.jaw .ja-reference{color:var(--ja-muted);white-space:nowrap}
+.jaw .ja-money{text-align:right;white-space:nowrap}
+.jaw .ja-desc{min-width:240px;max-width:360px;overflow-wrap:anywhere}
+.jaw .ja-post{background:var(--ja-action);border-color:var(--ja-action);color:#fff}
+.jaw .ja-empty{text-align:center;padding:40px 16px !important;color:var(--ja-muted)}
+.jaw .ja-footer{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-top:16px;color:var(--ja-muted);font-size:13px}
+.ja-meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px 20px;margin:0 0 18px;padding:16px;border:1px solid #d8e0eb;border-radius:6px;background:#f8fafc}
+.ja-meta dt{margin-bottom:4px;font-size:12px;font-weight:500;color:#526176}.ja-meta dd{margin:0;font-weight:600;overflow-wrap:anywhere}
+.ja-lines{width:100%;font-size:13px;border-collapse:collapse}
+.ja-lines thead th,.ja-lines tfoot th{padding:10px;background:#1a78b1;color:#fff;font-weight:600}
+.ja-lines td{padding:10px;border:1px solid #d8e0eb}
+.draft-banner{background:#fdecea;border:2px solid #dd4b39;color:#a94442;border-radius:4px;padding:10px 14px;margin:0 0 12px;font-size:13.5px}
+.un-sec{margin-bottom:14px}.un-h{font-weight:700;font-size:13.5px;margin:0 0 6px;color:#333}.un-h small{font-weight:400;color:#777}
+.unl-sum{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px}.unl-sum>div{flex:1;min-width:200px;border:1px solid #d8e0eb;border-radius:4px;padding:10px 12px;background:#f8fafc}.unl-sum label{display:block;font-size:12px;color:#526176;font-weight:500;margin:0 0 4px}.unl-sum b{font-size:17px}.unl-sum small{display:block;color:#777;font-size:11.5px;margin-top:2px}
+#unlRegT td:nth-child(2),#unlRegT td:nth-child(3),#unlRegT td:nth-child(6),#unlRegT td:nth-child(7),#unlRegT td:nth-child(10){white-space:nowrap}
+.unl-link{display:inline-block;font-size:11px;margin:0 4px 2px 0;cursor:pointer}
+.jv-all .ja-lines td{padding:7px 9px;font-size:12.5px;vertical-align:top}.jv-all .ja-lines td:nth-child(5){min-width:200px}.jv-all .ja-lines td:nth-child(4){min-width:120px}.jv-all .ja-lines td:nth-child(1),.jv-all .ja-lines td:nth-child(3),.jv-all .ja-lines td:nth-child(6){white-space:nowrap}.jv-all .ja-lines th{padding:8px 9px;font-size:12.5px}.jv-all .ja-meta{padding:12px;gap:10px 16px;margin-bottom:10px}.ja-money{text-align:right;white-space:nowrap}
+@media (max-width:1100px){.jaw .ja-cards{grid-template-columns:repeat(3,minmax(0,1fr))}.ja-meta{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:640px){.jaw .ja-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.ja-meta{grid-template-columns:1fr}}
+</style>
+</head>
+<body class="show-chg">
+<header class="main-header">
+  <div class="logo">SENDIGS SS</div>
+  <div class="navbar">
+    <button class="burger" type="button"><i class="fa fa-bars"></i></button>
+    <div class="nav-right">
+      <label class="chg-toggle"><input type="checkbox" id="chgToggle" checked> Tandai perubahan</label>
+      <a id="navSum"><i class="fa fa-list-ul"></i> Ringkasan perubahan</a>
+      <button type="button" id="btnReset"><i class="fa fa-refresh"></i> Reset data</button>
+      <a class="hide-sm">Helpdesk</a><a class="hide-sm">Manual Book</a>
+      <span class="user"><span class="avatar"></span>Admin</span>
+    </div>
+  </div>
+</header>
+<aside class="sidebar">
+  <div class="menu-search"><div><i class="fa fa-search"></i>Cari menu...</div></div>
+  <ul>
+    <li class="item"><a><i class="fa fa-dashboard"></i>Dashboard</a></li>
+    <li class="item"><a><i class="fa fa-table"></i>Master Data<i class="fa fa-angle-left chev"></i></a></li>
+    <li class="item"><a><i class="fa fa-bank"></i>Pengeluaran Non Pembelian<i class="fa fa-angle-left chev"></i></a></li>
+    <li class="item open">
+      <a><i class="fa fa-money"></i>Penerimaan<i class="fa fa-angle-down chev"></i></a>
+      <ul class="sub">
+        <li class="chg"><a data-go="dash"><span>Dashboard Alokasi</span><span class="cnt"></span></a></li>
+        <li><a data-go="alo"><span>Alokasi</span><span class="cnt" id="c_alo"></span></a></li>
+        <li><a data-go="pp"><span>Penerimaan Piutang</span><span class="cnt" id="c_pp"></span></a></li>
+        <li><a data-go="unl"><span>Unlocated Penerimaan</span><span class="cnt" id="c_unl"></span></a></li>
+        <li><a data-go="kal"><span>Alokasi Kalibrasi</span><span class="cnt" id="c_kal"></span></a></li>
+        <li class="chg"><a data-go="kas"><span>Pengembalian Kasbon</span><span class="cnt" id="c_kas"></span></a></li>
+        <li class="chg"><a data-go="mut"><span>Mutasi</span><span class="cnt" id="c_mut"></span></a></li>
+        <li class="chg"><a data-go="tb"><span>Transaksi Bank</span><span class="cnt" id="c_tb"></span></a></li>
+        <li class="chg"><a data-go="pay"><span>Pembayaran</span><span class="cnt" id="c_pay"></span></a></li>
+        <li><a data-go="his"><span>Historical Alokasi</span><span class="cnt"></span></a></li>
+      </ul>
+    </li>
+    <li class="item open">
+      <a><i class="fa fa-exchange"></i>Mutasi Bank<i class="fa fa-angle-down chev"></i></a>
+      <ul class="sub">
+        <li><a data-go="mts"><span>Request Mutasi</span><span class="cnt"></span></a></li>
+        <li><a data-go="mtsapv"><span>Approval Mutasi</span><span class="cnt" id="c_mtsapv"></span></a></li>
+      </ul>
+    </li>
+    <li class="item open chg">
+      <a><i class="fa fa-university"></i>Transaksi Bank<i class="fa fa-angle-down chev"></i></a>
+      <ul class="sub">
+        <li><a data-go="tbk"><span>Data Transaksi Bank</span><span class="cnt"></span></a></li>
+      </ul>
+    </li>
+    <li class="item open">
+      <a><i class="fa fa-file-text-o"></i>Expense<i class="fa fa-angle-down chev"></i></a>
+      <ul class="sub">
+        <li class="chg"><a data-go="verk"><span>Verifikasi Pengembalian Kasbon</span><span class="cnt" id="c_verk"></span></a></li>
+      </ul>
+    </li>
+    <li class="item open chg">
+      <a><i class="fa fa-book"></i>Accounting<i class="fa fa-angle-down chev"></i></a>
+      <ul class="sub">
+        <li><a data-go="jall"><span>Jurnal All</span><span class="cnt" id="c_jall"></span></a></li>
+        <li><a data-go="jrep"><span>Report Jurnal All</span><span class="cnt"></span></a></li>
+      </ul>
+    </li>
+    <li class="item"><a><i class="fa fa-check"></i>Approval<i class="fa fa-angle-left chev"></i></a></li>
+    <li class="item"><a><i class="fa fa-cog"></i>Settings<i class="fa fa-angle-left chev"></i></a></li>
+  </ul>
+</aside>
+
+<main class="content-wrapper">
+<div class="tour-bar" id="tourBar"><button type="button" class="tour-btn" id="tourBtn" aria-haspopup="true" aria-expanded="false"><span class="tb-ic">&#10067;</span> Tutorial</button><div class="tour-menu" id="tourMenu" hidden></div></div>
+<p class="legend"><b>Mockup to-be.</b> Tampilan dan alur mengikuti menu Alokasi dan Unlocated Penerimaan yang berjalan sekarang. Garis putus oranye / <span class="newtag" style="display:inline-block">BARU</span> = yang baru: 4 sub modul <b>tampungan</b> untuk jenis alokasi yang selama ini berhenti di label (Pengembalian Kasbon, Mutasi, Transaksi Bank, Pembayaran). Proses lanjutan sudah dibuat untuk Unlocated, Pengembalian Kasbon, Mutasi, dan Transaksi Bank; Pembayaran belum dibahas.</p>
+
+<div class="draft-banner hidden" id="draftBanner"></div>
+<!-- ================= ALOKASI ================= -->
+<section class="page" id="pg-alo">
+  <div class="content-header"><h1>Alokasi</h1></div>
+  <details class="cases"><summary>Skenario uji Alokasi</summary><ol>
+    <li>Baris berstatus <b>Open</b> punya tombol <b>Alokasi</b> (ikon uang). Klik, pilih jenis alokasi, isi nominal, <b>Simpan</b>. Total harus sama dengan nominal transaksi.</li>
+    <li>Coba <b>BIAYA ADM 14-Nov</b> → Transaksi Bank. Lalu buka menu <b>Transaksi Bank</b>: baris itu muncul di sana.</li>
+    <li>Coba <b>PT ASAHI DENSO 15-Nov</b> (12.210.000) dibagi 2: Penerimaan Piutang 12.200.000 + Transaksi Bank 10.000.</li>
+    <li>Transaksi berstatus <b>Sebagian</b> <span class="newtag" style="display:inline-block">BARU</span> punya tombol Alokasi dan View: modal Alokasi hanya mengisi sisanya, alokasi yang sudah ada tetap.</li>
+    <li>Baris yang sudah dialokasikan punya tombol <b>View</b> (ikon mata). Di detail ada link <span class="newtag" style="display:inline-block">BARU</span> ke menu tampungannya.</li>
+  </ol></details>
+  <div class="box">
+    <div class="box-header flt">
+      <div class="grp"><label>Start:</label><input type="date" class="form-control input-sm" id="aFrom"></div>
+      <div class="grp"><label>End:</label><input type="date" class="form-control input-sm" id="aTo"></div>
+      <select class="form-control input-sm" id="aBank"></select>
+      <div class="grp" style="gap:4px"><button type="button" class="btn btn-sm btn-primary" id="aSearch"><i class="fa fa-search"></i> Search</button><button type="button" class="btn btn-sm btn-danger" id="aReset"><i class="fa fa-refresh"></i> Reset</button><button type="button" class="btn btn-sm btn-success" id="aUpload"><i class="fa fa-plus"></i> Upload Rekening Koran</button><button type="button" class="btn btn-sm btn-warning" id="aManual"><i class="fa fa-pencil"></i> Tambah Alokasi Manual</button></div>
+    </div>
+    <div class="box-body">
+      <div class="dt-top"><span>Show <select class="form-control input-sm" style="width:auto;display:inline-block"><option>10</option><option selected>25</option></select> entries</span><span>Search: <input class="form-control input-sm" id="aQ"></span></div>
+      <div style="overflow-x:auto"><table class="table table-bordered" id="aT"><thead><tr><th class="text-center">No.</th><th class="text-center">Tanggal Transaksi Bank</th><th class="text-center">Bank</th><th class="text-center">Keterangan</th><th class="text-center">Total Debit</th><th class="text-center">Total Credit</th><th class="text-center">Saldo Akhir</th><th class="text-center">Status Alokasi</th><th class="text-center">Action</th></tr></thead><tbody></tbody></table></div>
+      <div class="dt-info" id="aInfo"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= PENERIMAAN PIUTANG (AP-R-40: Proses mengikuti penerimaan_uang) ================= -->
+<section class="page" id="pg-pp">
+  <div class="content-header"><h1>Penerimaan Piutang</h1></div>
+  <div class="box" id="ppMain"><div class="box-body">
+    <div class="tamp-note">Menu yang sudah berjalan. Tab dan kolom mengikuti <code>penerimaan_uang/views/index.php</code>: draft alokasi jenis Penerimaan Piutang (1) di tab Invoice, jenis Deposit (8) di tab Kwitansi Deposit, yang sudah diproses di Report Penerimaan. <span class="chg">Tombol <b>Proses</b> sekarang bisa dicoba (alur <code>add.php</code> → <code>consulting_process.php</code>). Draft yang berasal dari Unlocated dijurnal <b>Debit Penerimaan Belum Teridentifikasi</b>, bukan Bank.<span class="newtag">BARU</span></span></div>
+    <ul class="nav-tabs" id="ppTabs">
+      <li class="active"><a data-pptab="inv">Penerimaan Piutang Invoice <span class="badge bg-blue" id="cnt_ppinv">0</span></a></li>
+      <li><a data-pptab="dep">Penerimaan Piutang Kwitansi Deposit <span class="badge bg-blue" id="cnt_ppdep">0</span></a></li>
+      <li><a data-pptab="rep">Report Penerimaan <span class="badge bg-blue" id="cnt_pprep">0</span></a></li>
+    </ul>
+    <div style="padding-top:12px">
+      <div data-pppane="inv"><table class="table table-bordered" id="ppT"><thead><tr><th>No.</th><th>Tanggal Transaksi</th><th>Bank</th><th>Keterangan</th><th class="text-right">Nominal</th><th>Status</th><th class="text-center">Action</th></tr></thead><tbody></tbody></table></div>
+      <div data-pppane="dep" class="hidden"><table class="table table-bordered" id="ppKT"><thead><tr><th>No.</th><th>Tanggal Transaksi</th><th>Bank</th><th>Keterangan</th><th class="text-right">Nominal</th><th>Status</th><th class="text-center">Action</th></tr></thead><tbody></tbody></table></div>
+      <div data-pppane="rep" class="hidden"><table class="table table-bordered" id="ppRT"><thead><tr><th>No.</th><th>Tanggal Transaksi</th><th>Bank</th><th>Keterangan</th><th>Jenis</th><th class="text-right">Nominal</th><th>No. Penerimaan</th></tr></thead><tbody></tbody></table></div>
+    </div>
+  </div></div>
+  <div id="ppProcBox"></div>
+</section>
+
+<!-- ================= TAMPUNGAN (1 template untuk Unlocated, Kalibrasi, dan 4 menu baru) ================= -->
+<section class="page" id="pg-tamp">
+  <div class="content-header"><h1 id="tTitle"></h1></div>
+  <details class="cases" id="tCases"><summary>Skenario uji tampungan</summary><ol>
+    <li>Menu ini menampung semua alokasi berjenis <b id="tJenis"></b> dari menu Alokasi, 1 baris per alokasi.</li>
+    <li>Filter tanggal dan bank seperti menu Unlocated Penerimaan.</li>
+    <li>Menu <b>Mutasi</b>: baris "KE 4364000300" (BCA STM → BCA Sustain) → <b>Proses Mutasi</b> → pilih MTS-261100003: belum punya realisasi, jadi terbentuk MTR-261100001 + jurnal sisi keluar di buku STM. Lalu baris masuk "CR 0511 DARI 4363005287" di BCA Sustain → pilih MTS-261100003 yang sama: ditautkan + jurnal sisi masuk di buku SUSTAIN. Test case lengkap ada di menu Mutasi Bank → Request Mutasi.</li>
+    <li>Menu <b>Transaksi Bank</b>: "BUNGA JASA GIRO" → Proses → akun lawan terisi otomatis → Simpan → KM baru. "BIAYA ADM" → Proses → KK baru. "AUTODEBET BPJS KETENAGAKERJAAN" → Proses → akun lawan Hutang Asuransi BPJS Ketenagakerjaan → KK baru. Cek Transaksi Bank → Data Transaksi Bank. Test case lengkap: test-case-transaksi-bank.md.</li>
+    <li>Centang baris lalu <b>Rollback Data Terpilih</b>: hanya alokasi di menu ini yang dibatalkan. Kalau transaksinya juga punya alokasi lain (misalnya Penerimaan Piutang), alokasi itu tetap dan transaksinya menjadi <b>Sebagian</b> di menu Alokasi; sisanya bisa dialokasikan ulang.</li>
+  </ol></details>
+  <div class="box">
+    <div class="box-header flt">
+      <div class="grp"><label>Start:</label><input type="date" class="form-control input-sm" id="tFrom"></div>
+      <div class="grp"><label>End:</label><input type="date" class="form-control input-sm" id="tTo"></div>
+      <select class="form-control input-sm" id="tBank"></select>
+      <div class="grp" style="gap:4px"><button type="button" class="btn btn-sm btn-primary" id="tSearch"><i class="fa fa-search"></i> Search</button><button type="button" class="btn btn-sm btn-danger" id="tReset"><i class="fa fa-refresh"></i> Reset</button></div>
+    </div>
+    <div class="box-body">
+      <div class="tamp-note chg" id="tNote"></div>
+      <ul class="nav-tabs chg hidden" id="tUnlTabs"><li><a data-utab="belum">Belum Diproses <span class="badge bg-blue" id="cnt_unlb">0</span></a></li><li><a data-utab="sudah">Sudah Diproses <span class="badge bg-blue" id="cnt_unls">0</span></a></li><li><a data-utab="daftar">Daftar UNL <span class="badge bg-blue" id="cnt_unld">0</span><span class="newtag">BARU</span></a></li></ul>
+      <div id="unlReg" class="hidden chg"></div>
+      <div class="dt-top" id="tTop"><span>Show <select class="form-control input-sm" style="width:auto;display:inline-block"><option>10</option><option selected>25</option></select> entries</span><span>Search: <input class="form-control input-sm" id="tQ"></span></div>
+      <div style="overflow-x:auto" id="tWrap"><table class="table table-bordered" id="tT"><thead><tr><th class="text-center">No.</th><th class="text-center">Tanggal Transaksi Bank</th><th class="text-center">Bank</th><th class="text-center">Keterangan</th><th class="text-center">Total Debit</th><th class="text-center">Total Credit</th><th class="text-center chg">Nominal Alokasi<span class="newtag">BARU</span></th><th class="text-center">Saldo Akhir</th><th class="text-center">Status Alokasi</th><th class="text-center chg" id="tProcTh">Proses<span class="newtag">BARU</span></th><th class="text-center"><input type="checkbox" id="tAll"></th></tr></thead><tbody></tbody>
+        <tfoot><tr><th colspan="6" class="text-right">Total</th><th class="money" id="tTot"></th><th colspan="4"></th></tr></tfoot></table></div>
+      <div class="dt-info" id="tInfo"></div>
+      <div style="margin-top:15px;display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn btn-danger" id="tRollback"><i class="fa fa-undo"></i> Rollback Data Terpilih</button><span class="chg hidden" id="tMoveWrap"><button type="button" class="btn btn-success" id="tMove"><i class="fa fa-share"></i> Pindahkan ke Penerimaan Piutang Invoice</button> <button type="button" class="btn btn-info" id="tMoveKw"><i class="fa fa-share"></i> Pindahkan ke Penerimaan Piutang Kwitansi Deposit</button><span class="newtag">BARU</span></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= HISTORICAL (tidak dimockup) ================= -->
+<!-- ================= MODUL MUTASI (request_mutasi), daftar saja ================= -->
+<section class="page" id="pg-mts">
+  <div class="content-header"><h1>Request Mutasi</h1></div>
+  <div class="box"><div class="box-body">
+    <details class="cases"><summary>Test case: Request Mutasi sampai alokasi mutasi (SUSTAIN → STM)</summary><ol>
+      <li><b>Request:</b> klik <b>Tambah</b>. Tgl 18-11-2026, Dari <i>Bank BCA Sustain</i>, Ke <i>Bank BCA STM</i>, Keterangan "Pengembalian dana talangan ke STM", Nilai 15.000.000 → Simpan. Hasil: <b>MTS-261100007</b> berstatus Menunggu Approval.</li>
+      <li><b>Approval:</b> menu Approval Mutasi → <b>Approve</b> MTS-261100007. Hasil: status Approved.</li>
+      <li><b>Upload rekening koran bank asal:</b> Penerimaan → Alokasi → Upload Rekening Koran → rekening <i>BCA - 436.400.0300 - Bank Sustain</i>, file <i>rekening_koran_BCA_SUSTAIN_18112026.csv</i> → Preview → Proses. Hasil: baris "KE 4363005287 SENTRAL TEHNOLOGI" uang keluar 15.000.000, status Open.</li>
+      <li><b>Alokasi baris keluar:</b> klik Alokasi → jenis <b>Mutasi</b> 15.000.000 → Simpan. Hasil: baris masuk menu tampungan Mutasi.</li>
+      <li><b>Proses baris keluar:</b> Penerimaan → Mutasi → baris itu → <b>Proses Mutasi</b> → No Request MTS-261100007 (cocok) → Simpan. Hasil: realisasi <b>MTR-261100003</b> dibuat beserta jurnal; Request Mutasi berstatus Terealisasi.</li>
+      <li><b>Upload rekening koran bank tujuan:</b> Alokasi → Upload → rekening <i>BCA - 436.300.5287 - Bank STM</i>, file <i>rekening_koran_BCA_STM_18112026.csv</i>. Hasil: baris "DARI 4364000300 SENTRAL SUSTAINABILITY" uang masuk 15.000.000.</li>
+      <li><b>Alokasi baris masuk</b> → jenis <b>Mutasi</b> 15.000.000.</li>
+      <li><b>Proses baris masuk:</b> Penerimaan → Mutasi → baris masuk → <b>Proses Mutasi</b> → pilih request yang sama, MTS-261100007 (cocok). Hasil: ditautkan ke MTR-261100003; kolom Proses kedua baris menampilkan MTR dan jurnal per sisi (Lihat jurnal).</li>
+    </ol>Urutan boleh terbalik: kalau rekening STM diupload dan diproses duluan, baris masuk yang membuat realisasi, lalu baris keluar ditautkan. Uji negatif: request yang bank asal/tujuannya beda dengan rekening koran → ditolak; rollback baris yang sudah diproses → ditolak.</details>
+    <div class="tamp-note">Modul yang sudah berjalan (<code>request_mutasi</code>): request → approval → realisasi. Form request disederhanakan untuk mockup. Realisasi sekarang dilakukan dari tampungan <b>Mutasi</b> (rekening koran).</div>
+    <p><button type="button" class="btn btn-sm btn-success" id="mtsAdd"><i class="fa fa-plus"></i> Tambah</button></p>
+    <table class="table table-bordered" id="mtsT"><thead><tr><th class="text-center">No</th><th>Tgl Request</th><th>Kode Mutasi</th><th>Keterangan</th><th>Bank Asal</th><th>Bank Tujuan</th><th>Mata Uang</th><th class="chg">Company<span class="newtag">BARU</span></th><th class="text-right">Nilai</th><th class="text-center">Status</th></tr></thead><tbody></tbody></table>
+  </div></div>
+</section>
+<section class="page" id="pg-mtsapv">
+  <div class="content-header"><h1>Approval Mutasi</h1></div>
+  <div class="box"><div class="box-body">
+    <table class="table table-bordered" id="apvT"><thead><tr><th class="text-center">No</th><th>Tgl Request</th><th>Kode Mutasi</th><th>Keterangan</th><th>Bank Asal</th><th>Bank Tujuan</th><th class="chg">Company<span class="newtag">BARU</span></th><th class="text-right">Nilai</th><th class="text-center">Option</th></tr></thead><tbody></tbody></table>
+  </div></div>
+</section>
+<section class="page" id="pg-tbk">
+  <div class="content-header"><h1>Data Transaksi Bank</h1></div>
+  <div class="box"><div class="box-body">
+    <div class="tamp-note chg">Input manual (tombol Tambah / form Transaksi Bank) <b>ditutup</b>: Transaksi Bank hanya dibuat dari rekening koran yang diupload, lewat tampungan Transaksi Bank, satu baris rekening koran = satu transaksi. Nomor KK/KM mengikuti bulan tanggal transaksi. Jurnal: Penerimaan = Dr Bank / Cr Akun Lawan; Pengeluaran = Dr Akun Lawan / Cr Bank.<span class="newtag">BARU</span></div>
+    <table class="table table-bordered" id="tbkT"><thead><tr><th class="text-center">No</th><th>Tgl Transaksi</th><th>Kode Transaksi</th><th>Keterangan</th><th class="chg">Akun Lawan (COA Asal)<span class="newtag">BARU</span></th><th class="chg">Bank (COA Tujuan)<span class="newtag">BARU</span></th><th class="chg">Company<span class="newtag">BARU</span></th><th class="text-right">Nilai</th><th class="chg">Rekening Koran<span class="newtag">BARU</span></th></tr></thead><tbody></tbody></table>
+  </div></div>
+</section>
+
+<section class="page" id="pg-verk">
+  <div class="content-header"><h1>Verifikasi Pengembalian Kasbon</h1></div>
+  <details class="cases"><summary>Skenario uji Verifikasi Pengembalian Kasbon</summary><ol>
+    <li>Tab <b>Mutasi Bank</b>: baris "SETORAN TUNAI BUDI SANTOSO" 250.000 (sudah dialokasikan Pengembalian Kasbon) → Proses Verifikasi → pilih Expense Report <b>ER-2026-00265</b> (Budi) → periksa perbandingan bank/tanggal/nominal → centang ketiga checklist (Bukti, Mutasi, Nominal) → Setujui. Jurnal Dr Bank BCA STM / Cr Piutang Lain-lain Konsultan.</li>
+    <li>Coba pilih expense yang salah (mis. ER-2026-00287, 1.250.000): perbandingan menandai ✖ beda; Finance tidak mencentang checklist, sehingga tidak bisa disetujui.</li>
+    <li>Baris "ZUHDI RAHMAN PENGEMBALIAN KASBON" (12-Nov) belum ada di tab Mutasi Bank karena masih Open. Alokasikan dulu sebagai Pengembalian Kasbon di menu Alokasi.</li>
+    <li>Tab <b>Pengajuan Karyawan</b>: ER-2026-00310 (Masika) belum ada uangnya di rekening koran. Tolak (alasan wajib) mengembalikan laporan ke pelapor.</li>
+  </ol></details>
+  <div class="box"><div class="box-body">
+    <div class="tamp-note chg">Seperti Penerimaan Piutang: verifikasi dimulai dari <b>baris rekening koran</b> yang dialokasikan sebagai Pengembalian Kasbon di menu Alokasi. Klik Proses Verifikasi, lalu <b>pilih sendiri Expense Report</b> yang dibayar oleh uang itu. Sistem tidak memasangkan otomatis; perbandingan bank, tanggal, dan nominal dengan bukti transfer karyawan hanya membantu checklist.<span class="newtag">BARU</span></div>
+    <ul class="nav-tabs" id="verkTabs">
+      <li class="active"><a data-vtab="mb">Mutasi Bank Pengembalian Kasbon <span class="badge bg-blue" id="cnt_vmb">0</span></a></li>
+      <li><a data-vtab="aj">Pengajuan Karyawan <span class="badge bg-blue" id="cnt_vaj">0</span></a></li>
+      <li><a data-vtab="ok">Selesai <span class="badge bg-blue" id="cnt_vok">0</span></a></li>
+    </ul>
+    <div style="padding-top:12px;overflow-x:auto">
+      <div data-vpane="mb"><table class="table table-bordered" id="verkT"><thead><tr><th>No.</th><th>Tanggal Transaksi</th><th>Bank</th><th>Keterangan</th><th class="text-right">Nominal</th><th>Status</th><th class="text-center">Action</th></tr></thead><tbody></tbody></table></div>
+      <div data-vpane="aj" class="hidden"><table class="table table-bordered" id="verkAT"><thead><tr><th>#</th><th>No. Dokumen</th><th>No. Kasbon</th><th>Tanggal</th><th>Nama Pelapor</th><th>Keperluan / Keterangan</th><th class="text-right">Lebih Kasbon (Rp)</th><th>Bank Tujuan Transfer</th><th>Tgl Transfer</th><th class="text-center">Status</th><th class="text-center">Aksi</th></tr></thead><tbody></tbody></table></div>
+      <div data-vpane="ok" class="hidden"><table class="table table-bordered" id="verkDT"><thead><tr><th>#</th><th>No. Dokumen</th><th>No. Kasbon</th><th>Nama Pelapor</th><th class="text-right">Lebih Kasbon (Rp)</th><th>Mutasi Bank</th><th>Jurnal</th></tr></thead><tbody></tbody></table></div>
+    </div>
+  </div></div>
+</section>
+<section class="page" id="pg-dash">
+  <div class="content-header"><h1>Dashboard Alokasi</h1></div>
+  <details class="cases"><summary>Skenario uji Dashboard Alokasi</summary><ol>
+    <li>Tanpa filter: semua card menghitung seluruh data. Export to Excel mengunduh semua.</li>
+    <li>Pilih Company <b>STM</b>: card dan rincian hanya rekening BCA 436.300.5287; pilihan Bank ikut menyempit. Export hanya data STM.</li>
+    <li>Isi rentang tanggal 15-11-2026 s.d. 18-11-2026: hanya transaksi di rentang itu.</li>
+    <li>Klik card <b>Mutasi</b>: card tersorot dan Rincian di bawahnya hanya berisi baris Mutasi; tombol Buka menu Mutasi untuk memprosesnya. Klik card yang sama lagi (atau Tampilkan semua) untuk kembali ke semua jenis.</li>
+    <li>Alokasikan satu baris Open di menu Alokasi, lalu kembali: card Belum Dialokasikan berkurang.</li>
+  </ol></details>
+  <div class="box chg"><div class="box-body">
+    <div class="tamp-note">Semua baris rekening koran harus tuntas: dialokasikan, lalu diproses di menu lanjutannya. Card menunjukkan jumlah dan total nominal yang <b>belum diproses</b> per jenis alokasi, umur transaksi tertua, dan sebaran umur (0–7, 8–30, &gt;30 hari). Klik card untuk melihat rinciannya di bawah; dari rincian bisa membuka menunya.<span class="newtag">BARU</span></div>
+    <div class="dash-filter">
+      <div><label>Tanggal Transaksi (dari)</label><input type="date" class="form-control input-sm" id="dfStart"></div>
+      <div><label>s.d.</label><input type="date" class="form-control input-sm" id="dfEnd"></div>
+      <div><label>Company</label><select class="form-control input-sm" id="dfCo"><option value="">Semua Company</option><option>STM</option><option>VUCA</option><option>SUSTAIN</option></select></div>
+      <div style="min-width:260px"><label>Bank</label><select class="form-control input-sm" id="dfBank"></select></div>
+      <div><button type="button" class="btn btn-default btn-sm" id="dfReset"><i class="fa fa-refresh"></i> Reset</button></div>
+      <div style="margin-left:auto"><button type="button" class="btn btn-success btn-sm" id="dfXls"><i class="fa fa-file-excel-o"></i> Export to Excel</button></div>
+    </div>
+    <div style="margin-top:12px;font-size:13px" id="dashTot"></div>
+    <div class="dash-grid" id="dashCards"></div>
+    <div style="margin-top:18px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><h4 style="margin:0" id="dashH">Rincian Belum Diproses</h4><span style="flex:1"></span><button type="button" class="btn btn-default btn-sm hidden" id="dashAll"><i class="fa fa-th"></i> Tampilkan semua jenis</button><button type="button" class="btn btn-primary btn-sm hidden" id="dashGo"></button></div>
+    <div style="overflow-x:auto"><table class="table table-bordered" id="dashT"><thead><tr><th>No.</th><th>Jenis</th><th>Tanggal Transaksi</th><th>Company</th><th>Bank</th><th>Keterangan</th><th class="text-right">Nominal</th><th class="text-right">Umur (hari)</th><th>Status</th></tr></thead><tbody></tbody></table></div>
+  </div></div>
+</section>
+<section class="page" id="pg-jall">
+  <div class="content-header"><h1>Jurnal All</h1></div>
+  <div class="jaw" id="jaWs"></div>
+</section>
+<section class="page" id="pg-jrep">
+  <div class="content-header"><h1>Report Jurnal All</h1></div>
+  <div class="jaw" id="jaRep"></div>
+</section>
+<section class="page" id="pg-his">
+  <div class="content-header"><h1>Historical Alokasi</h1></div>
+  <div class="box"><div class="box-body"><div class="tamp-note">Menu yang sudah berjalan, tidak diubah dan tidak dimockup.</div><table class="table table-bordered" id="hisT"><thead><tr><th>Waktu</th><th>Transaksi</th><th>Aksi</th><th>Keterangan</th></tr></thead><tbody></tbody></table></div></div>
+</section>
+
+<!-- ================= RINGKASAN ================= -->
+<section class="page" id="pg-sum">
+  <div class="content-header"><h1><i class="fa fa-list-ul"></i>Ringkasan Perubahan</h1></div>
+  <div class="row">
+    <div class="col-md-6"><div class="box box-primary"><div class="box-body"><b>Yang baru</b><ul class="chg-list">
+      <li>4 sub modul tampungan di menu Penerimaan: <b>Pengembalian Kasbon</b>, <b>Mutasi</b>, <b>Transaksi Bank</b>, <b>Pembayaran</b>. Isinya semua alokasi berjenis itu dari menu Alokasi (sumber: <code>tr_alokasi_split.jenis_alokasi</code> 3, 4, 5, 6).</li>
+      <li>Tampilan dan aksi meniru <b>Unlocated Penerimaan</b>: filter tanggal &amp; bank, tabel, centang, <b>Rollback Data Terpilih</b> (kembali Open di Alokasi).</li>
+      <li>Kolom baru <b>Nominal Alokasi</b> di tabel tampungan: 1 transaksi bisa dipecah ke beberapa jenis, jadi nominal yang masuk ke tampungan bisa lebih kecil dari debit/kredit transaksinya. Baris total di bawah tabel, dipisah uang masuk dan uang keluar.</li>
+      <li>Detail alokasi (View) di menu Alokasi diberi link ke menu tampungan tiap jenis.</li>
+      <li><span class="chg"><b>Mutasi</b>: kolom Proses, satu tombol <b>Proses Mutasi</b> untuk baris keluar dan masuk. User memilih <b>Request Mutasi</b> yang sudah di-approve (bank asal harus sama dengan rekening untuk baris keluar, bank tujuan untuk baris masuk). Belum ada realisasi → sistem membuat MTR + jurnal (tanggal &amp; nilai aktual dari rekening koran). Sudah ada realisasi dari sisi lain → baris ditautkan ke realisasi itu. Kolom Proses menampilkan MTR dan link Lihat jurnal.<span class="newtag">BARU</span></span></li>
+      <li><span class="chg"><b>Transaksi Bank</b>: kolom Proses → form Transaksi Bank terisi dari rekening koran (jenis, tanggal, company, COA bank, nilai); user memilih COA lawan. Data Transaksi Bank menampilkan baris rekening korannya.<span class="newtag">BARU</span></span></li>
+      <li><span class="chg">Baris tampungan yang sudah diproses (MTR / KK / KM) tidak bisa di-rollback sebelum dibatalkan di modulnya.<span class="newtag">BARU</span></span></li>
+      <li><span class="chg">Unlocated Penerimaan: dua tombol, <b>Pindahkan ke Penerimaan Piutang Invoice</b> (jenis jadi Penerimaan Piutang, tab Invoice) dan <b>Pindahkan ke Penerimaan Piutang Kwitansi Deposit</b> (jenis jadi Deposit, tab Kwitansi Deposit; kwitansi opsional, 1 data per kwitansi). Alokasi Unlocated yang belakangan diketahui sebagai pembayaran invoice diubah jenisnya jadi Penerimaan Piutang (draft), tanpa rollback dan alokasi ulang.<span class="newtag">BARU</span></span></li>
+      <li><span class="chg">Rollback dari tampungan hanya membatalkan alokasi di menu itu. Alokasi lain di transaksi yang sama tetap, dan transaksinya berstatus <b>Sebagian · sisa Rp …</b> di menu Alokasi. Tombol Alokasi muncul lagi untuk mengalokasikan sisanya saja. Di sistem sekarang rollback menghapus semua alokasi transaksi itu.<span class="newtag">BARU</span></span></li>
+    </ul></div></div></div>
+    <div class="col-md-6"><div class="box" style="border-top-color:#f39c12"><div class="box-body"><b>Sudah diputuskan</b><ul class="chg-list">
+      <li class="chg"><b>Jurnal All</b> (AP-R-37, 23-Nov-2026): semua jurnal dari Alokasi masuk staging Jurnal All (belum posting) lalu diposting. Tampilan mengikuti Jurnal All sistem (card dan tab per sumber, filter Tahun / Bulan / Company, <b>+ Post</b> → Detail jurnal → Posting; yang sudah diposting di <b>Report Jurnal All</b>). Tab Penerimaan + filter <b>Kategori Transaksi</b> (Penerimaan Piutang / Unlocated Penerimaan); tab baru <b>Jurnal Bank</b> (Mutasi, Transaksi Bank; Kategori &amp; Arah); Pengembalian Kasbon di tab Expense Report. Unlocated yang sudah diproses boleh dipindah walau jurnalnya belum diposting.<span class="newtag">BARU</span></li>
+      <li>Nama menu sesuai jenis alokasi: Pengembalian Kasbon, Mutasi, Transaksi Bank, Pembayaran.</li>
+      <li>Kolom Nominal Alokasi juga dipakai di Unlocated Penerimaan (dan Alokasi Kalibrasi) yang sekarang.</li>
+      <li>Jenis alokasi dibatasi arah dana. Uang masuk: Penerimaan Piutang, Unlocated Penerimaan, Pengembalian Kasbon, Alokasi Kalibrasi, Deposit. Uang keluar: Pembayaran. Keduanya: Mutasi, Transaksi Bank.</li>
+      <li>Rollback dari tampungan: pilihan B, hanya alokasi di menu itu yang dibatalkan; sisanya jadi status Sebagian.</li>
+      <li>Mutasi tetap wajib lewat Request Mutasi + approval (menunggu konfirmasi atasan).</li>
+      <li><b>Dashboard Alokasi</b> (menu baru di Penerimaan): card per jenis alokasi berisi jumlah dan total nominal yang belum diproses, umur tertua, dan sebaran umur. Filter rentang tanggal, Company, Bank. Export to Excel mengikuti filter (tanpa filter = semua).</li>
+      <li><b>Pengembalian Kasbon</b>: seperti Penerimaan Piutang. Baris rekening koran yang dialokasikan Pengembalian Kasbon jadi draft di menu Expense → Verifikasi Pengembalian Kasbon. Finance klik Proses Verifikasi dan memilih sendiri Expense Report-nya (tidak ada pencocokan otomatis); perbandingan bank, tanggal, nominal dengan bukti user membantu 3 checklist. Jurnal tetap satu (Dr Bank / Cr Piutang Lain-lain Konsultan). Tampungan Pengembalian Kasbon jadi daftar status berjalan.</li>
+      <li><b>Autodebet pembayaran lewat Transaksi Bank</b>: arah (keluar/masuk) mengikuti debit/kredit rekening koran, user cukup memilih COA lawan. Di sistem pilihan COA lawan = seluruh COA master (mockup memberi contoh 2103-01-07 Hutang Asuransi BPJS Ketenagakerjaan dan 5101-01-03 Biaya Pengeluaran Lainnya). Kalau tagihannya sudah tercatat sebagai hutang, pilih akun hutangnya supaya tidak dobel beban.</li>
+      <li><b>Akun lawan Transaksi Bank dipilih manual</b> oleh user (tidak ada isi otomatis dari kata kunci). Form menampilkan preview jurnal dan arah CR/DB rekening koran.</li>
+      <li><b>Mulai bersih tanpa data awal</b> (mis. go-live per Desember): semua Mutasi dan Transaksi Bank dibuat dari rekening koran. Tidak ada pilihan menautkan ke transaksi / realisasi manual lama.</li>
+      <li><b>Transaksi Bank</b> hanya dari rekening koran (input manual ditutup); satu baris rekening koran = satu transaksi (bunga, pajak bunga, biaya admin, biaya transfer). Form memakai label <b>Bank</b> (COA Tujuan) dan <b>Akun Lawan</b> (COA Asal) sesuai jurnal sistem.</li>
+      <li>Menu dipisah: <b>Mutasi Bank</b> (Request Mutasi, Approval Mutasi), <b>Transaksi Bank</b> (Data Transaksi Bank). <span class="chg"><b>List Mutasi dihapus</b>: realisasi (MTR) dan jurnal per sisi dilihat di tampungan Mutasi (kolom Proses, link Lihat jurnal); status request di Request Mutasi menjadi Terealisasi MTR-….</span> Di kode tetap satu modul <code>request_mutasi</code>.</li>
+      <li><b>Target Accounting dihapus</b> dari Request Mutasi dan Transaksi Bank. Buku jurnal ditentukan rekening: sisi keluar di buku company bank asal, sisi masuk di buku company bank tujuan. Form menampilkan company otomatis, mis. "SUSTAIN → STM (antar company)".</li>
+      <li>Proses Mutasi / Transaksi Bank dimulai dari tombol di tampungan, membuka form modul yang sudah terisi.</li>
+      <li>Mutasi diproses dengan memilih Request Mutasi di kedua sisi (bukan memilih MTR); satu tombol Proses Mutasi.</li>
+      <li>Jurnal mutasi dibuat <b>per sisi</b>, masing-masing di buku company rekening korannya, saat baris itu diproses. Mockup memakai usulan jurnal versi awal; usulan fix menyusul.</li>
+    </ul><b>Perlu dikonfirmasi</b><ul class="chg-list">
+      <li>Mutasi tanpa Request Mutasi: boleh dibuat langsung dari rekening koran atau tidak (menunggu jawaban atasan).</li>
+      <li>Usulan fix jurnal mutasi (akun Piutang/Hutang antar company, akun Kas/Bank dalam Perjalanan) dan COA lawan Transaksi Bank (bertanda *).</li>
+      <li>Prosedur Finance bila nominal/tanggal bukti user beda dengan rekening koran (sementara mengikuti 3 checklist sekarang).</li>
+      <li>Proses lanjutan Pembayaran belum dibahas.</li>
+    </ul></div></div></div>
+    <div class="col-md-12"><div class="box box-primary"><div class="box-body"><b>Usulan jurnal mutasi per sisi (versi awal)</b> <span class="newtag">BARU</span>
+      <div style="overflow-x:auto;margin-top:8px"><table class="table table-bordered" style="font-size:12.5px;margin:0"><thead><tr class="bg-blue"><th>Kasus</th><th>Sisi keluar (rekening koran bank asal) — buku company bank asal</th><th>Sisi masuk (rekening koran bank tujuan) — buku company bank tujuan</th></tr></thead><tbody>
+        <tr><td><b>Antar company</b><br><small>mis. BCA SUSTAIN → BCA STM</small></td><td>Dr Piutang ke STM (belum ada)<br>Cr Bank BCA Sustain</td><td>Dr Bank BCA STM<br>Cr Hutang ke SUSTAIN (belum ada)</td></tr>
+        <tr><td><b>Satu company</b><br><small>antar rekening milik company yang sama</small></td><td>Dr Kas/Bank dalam Perjalanan (belum ada)<br>Cr Bank asal</td><td>Dr Bank tujuan<br>Cr Kas/Bank dalam Perjalanan (belum ada)</td></tr>
+      </tbody></table></div>
+      <p class="text-muted" style="font-size:12px;margin:6px 0 0">Jurnal dibuat saat <b>Proses Mutasi</b> per baris rekening koran, tanggal mengikuti rekening koran masing-masing. Tidak ada jurnal saat Request Mutasi dibuat atau di-approve.</p>
+    </div></div></div>
+  </div>
+</section>
+</main>
+
+
+
+<div class="modal-bg" id="dlg"><div class="modal" id="dlgBox">
+  <div class="modal-header"><h4 id="dlgT"></h4><button class="close" type="button" id="dlgX">&times;</button></div>
+  <div class="modal-body"><div id="dlgB"></div><div class="dlg-err" id="dlgErr"></div></div>
+  <div class="modal-footer"><button type="button" class="btn btn-success" id="dlgOk">OK</button><button type="button" class="btn btn-danger" id="dlgNo">Batal</button></div>
+</div></div>
+
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const nf2=n=>(n<0?'-':'')+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const MON=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const tgl=s=>{const [y,m,d]=s.split('-');return d+'-'+MON[+m-1]+'-'+y;};
+// arah dana yang boleh per jenis: in = uang masuk (debit), out = uang keluar (kredit)
+const ARAH={1:['in'],2:['in'],3:['in'],4:['in','out'],5:['in','out'],6:['out'],7:['in'],8:['in']};
+const arahTx=t=>t.debit>0?'in':'out';
+const ARAH_TXT={in:'uang masuk',out:'uang keluar'};
+const JENIS={1:'Penerimaan Piutang',2:'Unlocated Penerimaan',3:'Pengembalian Kasbon',4:'Mutasi',5:'Transaksi Bank',6:'Pembayaran',7:'Alokasi Kalibrasi',8:'Deposit'};
+// halaman tampungan: jenis → menu
+const TAMP={unl:{j:2,title:'Unlocated Penerimaan',baru:false},kal:{j:7,title:'Alokasi Kalibrasi',baru:false},kas:{j:3,title:'Pengembalian Kasbon',baru:true},mut:{j:4,title:'Mutasi',baru:true},tb:{j:5,title:'Transaksi Bank',baru:true},pay:{j:6,title:'Pembayaran',baru:true}};
+const MENU_OF={2:'unl',7:'kal',3:'kas',4:'mut',5:'tb',6:'pay',1:'pp',8:'pp'};
+const NOTE={
+ kas:'Daftar status berjalan uang masuk pengembalian kasbon. Baris di sini muncul sebagai draft di menu Expense → Verifikasi Pengembalian Kasbon; di sana Finance memilih Expense Report-nya dan jurnal dibuat (masuk Jurnal All · Expense, lalu diposting). Baris yang sudah terverifikasi tidak bisa di-rollback.',
+ mut:'Tampungan pemindahbukuan antar rekening perusahaan (keluar dari satu rekening, masuk ke rekening lain). Klik Proses Mutasi untuk memilih Request Mutasi yang sudah di-approve; jurnal dibuat per sisi.',
+ tb:'Tampungan transaksi dari bank sendiri: biaya administrasi, bunga jasa giro, pajak bunga, biaya transfer, dan autodebet pembayaran (mis. BPJS). Klik Proses untuk membuat Transaksi Bank (KK/KM) dari baris rekening koran dengan akun lawan dipilih manual.',
+ pay:'Tampungan uang keluar untuk pembayaran. Proses lanjutan, misalnya menautkan ke nomor Payment (BK-…) dari menu Payment List, dibahas berikutnya.',
+ unl:'Menu yang sudah berjalan, ditambah kolom Nominal Alokasi dan dua tab: Belum Diproses (Proses = jurnal Debit Bank / Kredit Penerimaan Belum Teridentifikasi + nomor Unlocated) dan Sudah Diproses (pindah ke Penerimaan Piutang Invoice / Kwitansi Deposit).',
+ kal:'Menu yang sudah berjalan. Ditampilkan dengan template yang sama untuk perbandingan.'};
+// coa = ms_bank.coa_bank; acc = company pemilik rekening (buku jurnal)
+const BANKS=[{id:'b1',txt:'BCA - 436.300.5287 - Bank STM',coa:'1101-02-09',nmcoa:'Bank BCA STM',acc:'STM',fmt:'BCA (format kode 7)'},{id:'b2',txt:'BCA - 436.400.0300 - Bank Sustain',coa:'1101-02-05',nmcoa:'Bank BCA Sustain',acc:'SUSTAIN',fmt:'BCA (format kode 7)'},{id:'b3',txt:'OCBC NISP - 7788.0000.0417 - Bank Vuca',coa:'1101-02-07',nmcoa:'Bank OCBC Vuca',acc:'VUCA',fmt:'OCBC NISP (format kode 22)'}];
+const bk=id=>BANKS.find(b=>b.id===id)||{};
+const coaTxt=id=>bk(id).coa+' - '+bk(id).nmcoa;
+// company tidak dipilih user: diambil dari rekening bank asal & tujuan (Target Accounting dihapus)
+const coTxt=(d,k)=>d&&k?bk(d).acc+' → '+bk(k).acc+(bk(d).acc===bk(k).acc?' (satu company)':' (antar company)'):'-';
+// COA lawan Transaksi Bank (di sistem: dropdown master COA). Bertanda * = contoh.
+const LAWAN=[['7201-01-04','Admin Charge'],['7101-01-02 *','Pendapatan Bunga Jasa Giro (contoh)'],['7201-01-06 *','Beban Pajak Bunga (contoh)'],['7201-01-07 *','Beban Biaya Transfer (contoh)'],['7201-01-09 *','Beban Bank Lainnya (contoh)'],['2103-01-07','Hutang Asuransi BPJS Ketenagakerjaan'],['5101-01-03','Biaya Pengeluaran Lainnya']];
+const bankTxt=id=>(BANKS.find(b=>b.id===id)||{}).txt||'-';
+
+function seed(){
+  // debit = uang masuk, kredit = uang keluar (sama dengan tr_alokasi_detail.nominal_debit / nominal_kredit)
+  const T=(id,d,b,ket,deb,kre,splits)=>({id,tgl:d,bank:b,ket,debit:deb,kredit:kre,splits:(splits||[]).map((s,i)=>({id:id+'-'+(i+1),j:s[0],nominal:s[1],used:s[2]||null}))});
+  const tx=[
+   T('D01','2026-11-03','b1','TRSF E-BANKING CR 0311/FTSCY/WS95031 PT ARWANA CITRAMULIA TBK',44100000,0,[[1,44100000,'00046/PU/XI/26']]),
+   T('D02','2026-11-04','b1','SETORAN TUNAI BUDI SANTOSO SISA KASBON KS-2026-00201',250000,0,[[3,250000]]),
+   T('D03','2026-11-05','b1','TRSF E-BANKING DB 0511 KE 4364000300 SENTRAL SUSTAINABILITY',0,25000000,[[4,25000000]]),
+   T('D04','2026-11-05','b2','TRSF E-BANKING CR 0511 DARI 4363005287 SENTRAL TEHNOLOGI',25000000,0,[[4,25000000]]),
+   T('D05','2026-11-06','b1','BIAYA ADM',0,30000,[[5,30000]]),
+   T('D06','2026-11-06','b2','BUNGA JASA GIRO',85412,0,[[5,85412]]),
+   T('D07','2026-11-06','b2','PAJAK BUNGA',0,17082,[[5,17082]]),
+   T('D08','2026-11-07','b1','TRSF E-BANKING DB 0711 PT POLYTRON SEWA BATERAI OKT-NOV',0,2664000,[[6,2664000]]),
+   T('D09','2026-11-10','b1','TRSF E-BANKING CR PT MADA WIKRI TUNGGAL INV 189/STM/2026',15500000,0,[[1,15000000,'00051/PU/XI/26'],[2,500000]]),
+   T('D10','2026-11-11','b3','TRSF CR PT KERETA API INDONESIA',30000000,0,[[2,30000000]]),
+   T('D11','2026-11-11','b1','TRSF E-BANKING CR LAB KALIBRASI PT IPC',4750000,0,[[7,4750000]]),
+   T('D12','2026-11-12','b1','TRSF E-BANKING CR ZUHDI RAHMAN PENGEMBALIAN KASBON',1250000,0),
+   T('D13','2026-11-13','b1','TRSF E-BANKING DB 1311 KE OCBC 778800000417 VUCA STRATEGI',0,10000000),
+   T('D14','2026-11-13','b3','TRF MASUK DARI BCA 4363005287 SENTRAL TEHNOLOGI MANAGEMEN',10000000,0),
+   T('D15','2026-11-14','b1','BIAYA ADM',0,30000),
+   T('D16','2026-11-14','b1','TRSF E-BANKING DB 1411 TELKOM INDONESIA',0,920000),
+   T('D17','2026-11-15','b1','TRSF E-BANKING CR PT ASAHI DENSO INDONESIA',12210000,0),
+   T('D18','2026-11-16','b2','BIAYA ADM',0,15000),
+   T('D19','2026-11-17','b1','AUTODEBET BPJS KETENAGAKERJAAN 11/2026',0,1850000,[[5,1850000]]),
+   // AP-R-35: case tambahan Unlocated (belum diproses) untuk dicoba Finance
+   T('D20','2026-11-18','b2','TRSF E-BANKING CR 1811 PT INDO KORDSA TBK',8325000,0,[[2,8325000]]),
+   T('D21','2026-11-18','b1','SETORAN TUNAI 1811 TANPA KETERANGAN',2000000,0,[[2,2000000]]),
+   T('D22','2026-11-19','b3','TRF MASUK PT SURYA BANGUN FAJAR',6000000,0,[[2,6000000]]),
+   T('D23','2026-11-19','b1','TRSF E-BANKING CR 1911 PT HEINZ ABC INDONESIA INV 276/STM/2026',19500000,0,[[1,18870000,'00052/PU/XI/26'],[2,630000]]),
+  ];
+  // saldo berjalan per rekening
+  const open={b1:182500000,b2:64300000,b3:21750000};
+  tx.forEach(t=>{open[t.bank]+=t.debit-t.kredit;t.saldo=open[t.bank];});
+  // modul Mutasi (request_mutasi): request MTS (sts approved/pending), realisasi MTR, transaksi bank KK/KM
+  const mts=[
+   {no:'MTS-261100003',tgl:'2026-11-04',dari:'b1',ke:'b2',nilai:25000000,ket:'Dana operasional Sustain November',acc:'STM',sts:'approved',mtr:null},
+   {no:'MTS-261100005',tgl:'2026-11-12',dari:'b1',ke:'b3',nilai:10000000,ket:'Dana operasional Vuca November',acc:'STM',sts:'approved',mtr:null},
+   {no:'MTS-261100006',tgl:'2026-11-14',dari:'b3',ke:'b1',nilai:5000000,ket:'Pengembalian saldo Vuca ke STM',acc:'VUCA',sts:'pending',mtr:null}];
+  const mtr=[];
+  const tbk=[];
+  // Expense Report dengan lebih kasbon (tr_expense.lebih_bayar > 0). sts 4 = Menunggu Verifikasi (bukti sudah diupload), 3 = Menunggu Pengembalian, 2 = Selesai
+  const er=[
+   {no:'ER-2026-00265',kasbon:'KS-2026-00201',tgl:'2026-11-03',pelapor:'Budi Santoso',dept:'Konsultan',info:'Realisasi kasbon akomodasi audit Bandung',lebih:250000,sts:4,bank:'b1',ttgl:'2026-11-04',tjml:250000,bukti:'bukti-transfer-budi.jpg',rk:null,jv:null,alasan:null},
+   {no:'ER-2026-00287',kasbon:'KS-2026-00188',tgl:'2026-11-11',pelapor:'Zuhdi Rahman',dept:'Konsultan',info:'Realisasi kasbon visit Semarang',lebih:1250000,sts:4,bank:'b1',ttgl:'2026-11-12',tjml:1250000,bukti:'bukti-transfer-zuhdi.pdf',rk:null,jv:null,alasan:null},
+   {no:'ER-2026-00310',kasbon:'KS-2026-00199',tgl:'2026-11-14',pelapor:'Masika Putri',dept:'Konsultan',info:'Realisasi kasbon meeting pertek emisi',lebih:175000,sts:4,bank:'b2',ttgl:'2026-11-15',tjml:175000,bukti:'bukti-transfer-masika.jpg',rk:null,jv:null,alasan:null}];
+  const kwd=[
+   {no:'KD/2026/11/0003',co:'VUCA',cust:'PT Kereta Api Indonesia',spk:'SPK-2026-0141',nilai:30000000,sts:'MENUNGGU_PEMBAYARAN'},
+   {no:'KD/2026/11/0005',co:'STM',cust:'PT Mada Wikri Tunggal',spk:'SPK-2026-0152',nilai:500000,sts:'MENUNGGU_PEMBAYARAN'},
+   {no:'KD/2026/11/0006',co:'STM',cust:'PT Asahi Denso Indonesia',spk:'SPK-2026-0155',nilai:12000000,sts:'MENUNGGU_PEMBAYARAN'},
+   {no:'KD/2026/11/0007',co:'VUCA',cust:'PT Surya Bangun Fajar',spk:'SPK-2026-0158',nilai:6000000,sts:'MENUNGGU_PEMBAYARAN'}];
+  return {tx,log:[],mts,mtr,tbk,er,kwd,inv:INV_SEED(),n:{pu:53,mtr:1,kk:1,km:1,mts:7,up:1,jv:{},bum:1,unl:1},files:{},jur:[
+    {no:'00412-BUM-XI-26',acc:'STM',tipe:'BUM',tgl:'2026-11-10',jt:'RCV',jenis:'Penerimaan Piutang',trx:'00051/PU/XI/26',ref:'INV 189/STM/2026',arah:'in',ket:'PT MADA WIKRI TUNGGAL INV 189/STM/2026 (contoh, sudah berjalan)',sts:'posted',lines:[['1101-02-09','Bank BCA STM',15000000,0,'Penerimaan piutang PT MADA WIKRI TUNGGAL - INV 189/STM/2026'],['1102-01-01','Piutang Dagang Usaha',0,15000000,'Pelunasan INV 189/STM/2026 - PT MADA WIKRI TUNGGAL']]},
+    {no:'00415-BUM-XI-26',acc:'STM',tipe:'BUM',tgl:'2026-11-19',jt:'RCV',jenis:'Penerimaan Piutang',trx:'00052/PU/XI/26',ref:'INV 276/STM/2026',arah:'in',ket:'PT HEINZ ABC INDONESIA INV 276/STM/2026 (contoh, sudah berjalan)',sts:'pending',lines:[['1101-02-09','Bank BCA STM',18870000,0,'Penerimaan piutang PT HEINZ ABC INDONESIA - INV 276/STM/2026'],['1102-01-01','Piutang Dagang Usaha',0,18870000,'Pelunasan INV 276/STM/2026 - PT HEINZ ABC INDONESIA']]}]};
+}
+let S=seed();
+const U={ja:{t:'RCV',cat:'',ar:'',month:'',co:'',q:''},page:'alo',tamp:'unl',utab:'belum',f:{from:'',to:'',bank:''},q:'',tf:{from:'',to:'',bank:''},tq:'',sel:new Set(),split:null};
+const tx=id=>S.tx.find(t=>t.id===id);
+const nom=t=>t.debit>0?t.debit:t.kredit;
+const alloc=t=>t.splits.reduce((a,s)=>a+s.nominal,0);
+const sisaOf=t=>Math.round((nom(t)-alloc(t))*100)/100;
+const logIt=(t,a,k)=>S.log.unshift({w:'17-11-2026 '+String(9+S.log.length).padStart(2,'0')+':00',t:t.id,a,k});
+
+/* ---------- dialog & swal ---------- */
+let dlgCb=null;
+function modal(title,body,okText,onOk,opt){opt=opt||{};
+  $('dlgBox').className='modal'+(opt.swal?' swal':'')+(opt.lg?' lg':'');$('dlgT').innerHTML=title;$('dlgB').innerHTML=body;$('dlgErr').textContent='';
+  $('dlgOk').innerHTML=okText||'OK';$('dlgOk').className='btn '+(opt.okClass||'btn-success');$('dlgOk').style.display=opt.noOk?'none':'';
+  $('dlgNo').style.display=opt.noCancel?'none':'';$('dlgNo').innerHTML=opt.cancelText||'Batal';
+  dlgCb=onOk||null;$('dlg').classList.add('on');}
+function swal(type,title,text,onOk,confirm){
+  modal(title,`<div class="swal-ic ${type}"><i class="fa ${type==='success'?'fa-check':type==='error'?'fa-times':'fa-exclamation'}"></i></div><div class="swal-t">${esc(title)}</div><div class="swal-x">${text}</div>`,confirm||'OK',onOk,{swal:true,noCancel:!confirm,okClass:confirm?'btn-danger':'btn-primary',cancelText:'No, cancel!'});}
+function closeDlg(){$('dlg').classList.remove('on');dlgCb=null;}
+$('dlgNo').onclick=closeDlg;$('dlgX').onclick=closeDlg;
+$('dlgOk').onclick=()=>{const cb=dlgCb;if(!cb){closeDlg();return;}const err=cb();if(typeof err==='string'&&err){$('dlgErr').textContent=err;return;}if(err!==false&&dlgCb===cb)closeDlg();};
+
+/* ---------- navigasi ---------- */
+function go(p){if(TAMP[p]){U.tamp=p;U.sel.clear();U.page='tamp';}else U.page=p;
+  document.querySelectorAll('.page').forEach(s=>s.classList.toggle('hidden',s.id!=='pg-'+U.page));
+  document.querySelectorAll('.sidebar [data-go]').forEach(a=>a.classList.toggle('active',a.dataset.go===(U.page==='tamp'?U.tamp:U.page)));
+  render();window.scrollTo&&window.scrollTo(0,0);}
+document.querySelectorAll('.sidebar [data-go]').forEach(a=>a.onclick=()=>go(a.dataset.go));
+$('navSum').onclick=()=>go('sum');
+// Status per bagian (AP-R-42): yang final = Alokasi → Unlocated Penerimaan → Penerimaan Piutang (jurnal saja).
+// Halaman lain masih draft, diberi banner merah supaya IT tidak mengerjakannya dulu.
+const FINAL_PAGES={alo:1,pp:1,his:1,sum:1},FINAL_TAMP={unl:1};
+function draftBanner(){const b=$('draftBanner');const fin=U.page==='tamp'?!!FINAL_TAMP[U.tamp]:!!FINAL_PAGES[U.page];
+  const bantu=U.page==='jall'||U.page==='jrep';b.classList.toggle('hidden',fin);
+  b.innerHTML=bantu?'<b>HALAMAN BANTU · bukan bagian yang dikerjakan.</b> Jurnal All di mockup ini hanya untuk melihat jurnal yang terbentuk. Yang final hanya jurnal <b>Unlocated Penerimaan</b> dan <b>Penerimaan Piutang</b> di tab Penerimaan.'
+    :'<b>DRAFT · belum final, jangan dikerjakan dulu.</b> Konsep halaman ini masih difinalisasi user. Yang siap dikerjakan hanya Alokasi → Unlocated Penerimaan → Penerimaan Piutang (jurnal).';}
+function render(){badges();draftBanner();$('c_verk').textContent=kasDraft().length||'';$('c_mtsapv').textContent=S.mts.filter(m=>m.sts==='pending').length||'';({jall:rJall,jrep:rJrep,dash:rDash,alo:rAlo,pp:rPP,tamp:rTamp,his:rHis,mts:rMts,mtsapv:rApv,tbk:rTbk,verk:rVerk,sum:()=>{}})[U.page]();}
+function badges(){$('c_jall').textContent=S.jur.filter(j=>j.sts!=='posted').length||'';
+  $('c_alo').textContent=S.tx.filter(t=>sisaOf(t)>0).length||'';
+  $('c_pp').textContent=splitsOf(1).concat(splitsOf(8)).filter(x=>!x.s.used).length||'';
+  Object.keys(TAMP).forEach(k=>$('c_'+k).textContent=splitsOf(TAMP[k].j).length||'');}
+const splitsOf=j=>S.tx.flatMap(t=>t.splits.filter(s=>s.j===j).map(s=>({t,s})));
+const bankOpts=()=>'<option value="">- Bank -</option>'+BANKS.map(b=>`<option value="${b.id}">${esc(b.txt)}</option>`).join('');
+$('aBank').innerHTML=bankOpts();$('tBank').innerHTML=bankOpts();
+const inF=(t,f)=>(!f.from||t.tgl>=f.from)&&(!f.to||t.tgl<=f.to)&&(!f.bank||t.bank===f.bank);
+
+/* ---------- ALOKASI ---------- */
+function statusHtml(t){if(!t.splits.length)return '<span class="badge bg-blue">Open</span>';
+  return (sisaOf(t)>0?`<span class="badge bg-yellow chg" style="margin:0 2px 2px 0">Sebagian · sisa ${nf2(sisaOf(t))}</span>`:'')+t.splits.map(s=>`<span class="badge bg-purple" style="margin:0 2px 2px 0">${JENIS[s.j]}</span>`+(s.proc&&s.proc.type==='unl'?`<a class="unl-link chg" data-unlno="${esc(s.proc.no)}" title="Buka di Daftar UNL">${esc(s.proc.no)} <i class="fa fa-external-link"></i></a>`:'')).join('');}
+function rAlo(){const q=U.q.toLowerCase();
+  const L=S.tx.filter(t=>inF(t,U.f)&&(!q||[t.tgl,bankTxt(t.bank),t.ket,t.debit,t.kredit].concat(t.splits.map(s=>s.proc&&s.proc.no||'')).concat(t.splits.map(s=>s.used||'')).some(v=>String(v).toLowerCase().includes(q))));
+  document.querySelector('#aT tbody').innerHTML=L.map((t,i)=>`<tr data-id="${t.id}"><td class="text-center">${i+1}</td><td>${tgl(t.tgl)}</td><td>${esc(bankTxt(t.bank))}</td><td>${esc(t.ket)}</td><td class="money">${nf2(t.debit)}</td><td class="money">${nf2(t.kredit)}</td><td class="money">${nf2(t.saldo)}</td><td>${statusHtml(t)}</td><td class="text-center" style="white-space:nowrap">${sisaOf(t)>0?`<button type="button" class="btn btn-sm btn-primary" title="Alokasi" data-alo="${t.id}"><i class="fa fa-money"></i></button> `:''}${t.splits.length?`<button type="button" class="btn btn-sm btn-info" title="View Alokasi" data-view="${t.id}"><i class="fa fa-eye"></i></button>`:''}</td></tr>`).join('')||'<tr><td colspan="9" class="dt-empty">No data available in table</td></tr>';
+  $('aInfo').innerHTML=`<span>Showing ${L.length?1:0} to ${L.length} of ${L.length} entries</span>`;}
+$('aSearch').onclick=()=>{U.f={from:$('aFrom').value,to:$('aTo').value,bank:$('aBank').value};rAlo();};
+$('aReset').onclick=()=>{['aFrom','aTo','aBank','aQ'].forEach(i=>$(i).value='');U.f={from:'',to:'',bank:''};U.q='';rAlo();};
+$('aQ').oninput=e=>{U.q=e.target.value;rAlo();};
+$('aManual').onclick=()=>swal('warning','Tidak dimockup','Tambah alokasi manual (admin) tidak berubah.');
+const trxHead=t=>`<table class="table table-bordered" style="font-size:12px"><thead><tr><th class="text-center">Tanggal Transaksi</th><th class="text-center">Reference No</th><th class="text-center">Description</th><th class="text-center">Total Debit</th><th class="text-center">Total Credit</th><th class="text-center">Bank</th></tr></thead><tbody><tr><td class="text-center">${tgl(t.tgl)}</td><td class="text-center">-</td><td class="text-center">${esc(t.ket)}</td><td class="money">Rp. ${nf2(t.debit)}</td><td class="money">Rp. ${nf2(t.kredit)}</td><td class="text-center">${esc(bankTxt(t.bank))}</td></tr></tbody></table>`;
+document.querySelector('#aT tbody').addEventListener('click',e=>{const un=e.target.closest('[data-unlno]');if(un){openUnlReg(un.dataset.unlno);return;}const a=e.target.closest('[data-alo]'),v=e.target.closest('[data-view]');
+  if(a)openSplit(a.dataset.alo);if(v)openView(v.dataset.view);});
+function openSplit(id){const t=tx(id);U.split={id,rows:[{j:'',n:''}]};
+  modal('<span class="fa fa-money"></span>&nbsp;Alokasi Split Transaksi',trxHead(t)+(t.splits.length?`<div class="tamp-note chg" id="spExist"><b>Sudah dialokasikan</b> (tetap, tidak berubah): ${t.splits.map(x=>JENIS[x.j]+' Rp '+nf2(x.nominal)).join(', ')}. Sisa yang dialokasikan sekarang: <b>Rp ${nf2(sisaOf(t))}</b>.<span class="newtag">BARU</span></div>`:'')+`<table class="table table-bordered" id="spT"><thead><tr><th class="text-center" width="50">No</th><th class="text-center">Jenis Alokasi</th><th class="text-center" width="200">Nominal</th><th class="text-center" width="80">Aksi</th></tr></thead><tbody></tbody></table>
+    <p class="tamp-note chg" id="spArah">Transaksi ini <b>${ARAH_TXT[arahTx(t)]}</b>. Pilihan jenis alokasi disesuaikan: ${Object.entries(JENIS).filter(([k])=>ARAH[k].includes(arahTx(t))).map(([,l])=>l).join(', ')}.<span class="newtag">BARU</span></p>
+    <button type="button" class="btn btn-sm btn-primary" id="spAdd"><i class="fa fa-plus"></i> Tambah Baris</button>
+    <div class="split-ind"><div><label>Total Dialokasikan</label><p id="spTot">Rp. 0</p></div><div><label>Sisa</label><p id="spSisa">Rp. 0</p></div><div><label>Status</label><p id="spSts" style="color:red">Tidak Sesuai</p></div></div>`,
+    '<i class="fa fa-check"></i> Simpan',saveSplit,{lg:true});
+  spRender();$('spAdd').onclick=()=>{U.split.rows.push({j:'',n:''});spRender();};}
+function spRender(){const R=U.split.rows;
+  document.querySelector('#spT tbody').innerHTML=R.map((r,i)=>`<tr><td class="text-center">${i+1}</td><td><select class="form-control input-sm" data-sj="${i}"><option value="">-- Pilih Jenis Alokasi --</option>${Object.entries(JENIS).filter(([k])=>ARAH[k].includes(arahTx(tx(U.split.id)))).map(([k,l])=>`<option value="${k}" ${String(r.j)===k?'selected':''}>${l}</option>`).join('')}</select></td><td><input type="number" class="form-control input-sm text-right" data-sn="${i}" value="${r.n}"></td><td class="text-center">${R.length>1?`<button type="button" class="btn btn-xs btn-danger" data-sd="${i}"><i class="fa fa-trash"></i></button>`:''}</td></tr>`).join('');
+  spInd();}
+function spInd(){const t=tx(U.split.id),tot=U.split.rows.reduce((a,r)=>a+(+r.n||0),0),sisa=sisaOf(t)-tot;
+  $('spTot').textContent='Rp. '+nf2(tot);$('spSisa').textContent='Rp. '+nf2(sisa);const ok=Math.abs(sisa)<0.01;$('spSts').textContent=ok?'Sesuai':'Tidak Sesuai';$('spSts').style.color=ok?'green':'red';}
+$('dlgB').addEventListener('change',e=>{const d=e.target.dataset;if(d.sj!=null){U.split.rows[+d.sj].j=e.target.value;}});
+$('dlgB').addEventListener('input',e=>{const d=e.target.dataset;if(d.sn!=null){U.split.rows[+d.sn].n=e.target.value;spInd();}});
+$('dlgB').addEventListener('click',e=>{const b=e.target.closest('[data-sd]');if(b){U.split.rows.splice(+b.dataset.sd,1);spRender();}
+  const g=e.target.closest('[data-gotamp]');if(g){closeDlg();go(g.dataset.gotamp);}
+  const u=e.target.closest('[data-unlno]');if(u){openUnlReg(u.dataset.unlno);}});
+function saveSplit(){const t=tx(U.split.id),R=U.split.rows;
+  if(R.some(r=>!r.j))return 'Semua baris harus memiliki jenis alokasi';
+  if(R.some(r=>!(+r.n>0)))return 'Nominal harus lebih besar dari 0';
+  const salah=R.filter(r=>!ARAH[r.j].includes(arahTx(t)));if(salah.length)return JENIS[salah[0].j]+' tidak bisa untuk '+ARAH_TXT[arahTx(t)];
+  const tot=R.reduce((a,r)=>a+(+r.n),0);if(Math.abs(tot-sisaOf(t))>0.01)return t.splits.length?'Total nominal harus sama dengan sisa transaksi':'Total nominal harus sama dengan total transaksi';
+  const baru=R.map((r,i)=>({id:t.id+'-'+(t.splits.length+i+1)+'x'+Date.now()%1000,j:+r.j,nominal:+r.n,used:null}));t.splits=t.splits.concat(baru);
+  logIt(t,'SPLIT_ALOKASI','Split alokasi transaksi menjadi: '+baru.map(s=>JENIS[s.j]+' (Rp. '+nf2(s.nominal)+')').join(', '));
+  const menus=[...new Set(baru.map(s=>s.j))].map(j=>j===1||j===8?'Penerimaan Piutang':TAMP[MENU_OF[j]].title);
+  setTimeout(()=>swal('success','Success !','Alokasi tersimpan. Masuk ke menu '+menus.join(', ')+'.'),0);
+  U.split=null;render();}
+function openView(id){const t=tx(id);
+  modal('<span class="fa fa-eye"></span>&nbsp;Detail Alokasi',trxHead(t)+`<table class="table table-bordered" id="vT"><thead><tr><th class="text-center" width="50">No</th><th class="text-center">Jenis Alokasi</th><th class="text-center">Nominal</th><th class="text-center">Penerimaan Piutang</th><th class="text-center chg">Menu<span class="newtag">BARU</span></th></tr></thead><tbody>${t.splits.map((s,i)=>`<tr><td class="text-center">${i+1}</td><td>${JENIS[s.j]}</td><td class="money">Rp. ${nf2(s.nominal)}</td><td class="text-center">${s.j===1||s.j===8?(s.used?`<span class="badge bg-green">Used</span> ${esc(s.used)}`:'<span class="badge bg-gray">Draft</span>'):'-'}</td><td class="text-center">${MENU_OF[s.j]==='pp'?'Penerimaan Piutang':`<a data-gotamp="${MENU_OF[s.j]}">${TAMP[MENU_OF[s.j]].title} <i class="fa fa-external-link"></i></a>`}</td></tr>`).join('')}</tbody><tfoot><tr><th colspan="2" class="text-right">Total:</th><th class="money">Rp. ${nf2(t.splits.reduce((a,s)=>a+s.nominal,0))}</th><th colspan="2"></th></tr></tfoot></table>`,'',null,{lg:true,noOk:true,cancelText:'<span class="fa fa-times"></span> Close'});}
+
+/* ---------- TAMPUNGAN ---------- */
+
+// ===== Daftar UNL (AP-R-41): record semua nomor Unlocated, tidak hilang walau sudah dipindahkan / diterima =====
+// Dicari dua arah: dari No UNL ke bank / rekening koran, dan dari bank / nominal / invoice / no penerimaan ke No UNL.
+function unlRecs(){return S.tx.flatMap(t=>t.splits.filter(s=>s.proc&&s.proc.type==='unl').map(s=>({t,s}))).map(({t,s})=>{
+  const st=s.used?'diterima':s.j===2?'belum':'draft';
+  const dipakai=s.used?[s.used].concat(s.pu?s.pu.docs:[]).concat(s.pu&&s.pu.cust?[s.pu.cust]:[]):s.j===1?['Draft Penerimaan Piutang Invoice']:s.j===8?['Draft Kwitansi Deposit'+(s.kw?' '+s.kw:'')]:[];
+  return {t,s,no:s.proc.no,st,dipakai,jvU:s.proc.jv,jvP:s.pu?s.pu.jv:null};});}
+const UNL_ST={belum:['bg-yellow','Belum dipindahkan'],draft:['bg-blue','Draft di Penerimaan Piutang'],diterima:['bg-green','Sudah diterima']};
+function rUnlReg(){const q=U.tq.toLowerCase();const all=unlRecs();
+  const L=all.filter(r=>inF(r.t,U.tf)&&(!q||[r.no,tgl(r.t.tgl),bankTxt(r.t.bank),bk(r.t.bank).nmcoa,r.t.ket,r.s.nominal,nf2(r.s.nominal),r.jvU,r.jvP,UNL_ST[r.st][1]].concat(r.dipakai).some(v=>String(v||'').toLowerCase().includes(q))));
+  const open=all.filter(r=>r.st!=='diterima'),saldo=open.reduce((a,r)=>a+r.s.nominal,0);
+  const per=['STM','SUSTAIN','VUCA'].map(c=>[c,open.filter(r=>bk(r.t.bank).acc===c).reduce((a,r)=>a+r.s.nominal,0)]).filter(x=>x[1]);
+  $('unlReg').innerHTML=`<div class="unl-sum"><div><label>Jumlah nomor UNL</label><b>${all.length}</b></div><div><label>Belum diterima (masih di Penerimaan Belum Teridentifikasi)</label><b id="unlSaldo">Rp ${nf2(saldo)}</b><small>${per.map(([c,v])=>c+' '+nf2(v)).join(' · ')||'-'}</small></div><div><label>Sudah diterima</label><b>${all.length-open.length}</b></div></div>
+   <p class="text-muted" style="font-size:12px;margin:6px 0 10px">Record semua nomor Unlocated sejak dibuat sampai diterima di Penerimaan Piutang. Cari dengan No UNL, bank, keterangan rekening koran, nominal, no invoice / kwitansi, customer, atau no penerimaan. Total "Belum diterima" seharusnya sama dengan saldo akun Penerimaan Belum Teridentifikasi per company.</p>
+   <div class="dt-top"><span>Search: <input class="form-control input-sm" id="unlQ" value="${esc(U.tq)}" placeholder="No UNL, bank, nominal, invoice…"></span></div>
+   <div style="overflow-x:auto"><table class="table table-bordered" id="unlRegT" style="font-size:12.5px"><thead><tr><th class="text-center">No.</th><th>No UNL</th><th>Tgl Rekening Koran</th><th>Bank</th><th>Keterangan Rekening Koran</th><th class="text-right">Nominal</th><th>Jurnal UNL</th><th>Status</th><th>Dipakai di</th><th>Jurnal Penerimaan</th></tr></thead>
+   <tbody>${L.map((r,i)=>`<tr data-unl="${esc(r.no)}"><td class="text-center">${i+1}</td><td><b>${esc(r.no)}</b></td><td>${jvDate(r.t.tgl)}</td><td>${esc(bankTxt(r.t.bank))}</td><td>${esc(r.t.ket)}</td><td class="money">${nf2(r.s.nominal)}</td>
+     <td>${r.jvU?`<a data-jv="${esc(r.jvU)}">${esc(r.jvU)}</a>`:'-'}</td><td><span class="badge ${UNL_ST[r.st][0]}">${UNL_ST[r.st][1]}</span></td>
+     <td>${r.st==='diterima'?`<b>${esc(r.dipakai[0])}</b><br><small>${esc(r.dipakai.slice(1).join(' · '))}</small>`:r.st==='draft'?`<a data-gopp="${r.s.j===8?'dep':'inv'}">${esc(r.dipakai[0])} <i class="fa fa-external-link"></i></a>`:'<span class="text-muted">-</span>'}</td>
+     <td>${r.jvP?`<a data-jv="${esc(r.jvP)}">${esc(r.jvP)}</a>`:'-'}</td></tr>`).join('')||'<tr><td colspan="10" class="dt-empty">Belum ada nomor Unlocated'+(q?' yang cocok dengan pencarian':'')+'.</td></tr>'}</tbody>
+   <tfoot><tr><th colspan="5" class="text-right">Total</th><th class="money">${nf2(L.reduce((a,r)=>a+r.s.nominal,0))}</th><th colspan="4"></th></tr></tfoot></table></div>`;
+  $('unlQ').oninput=e=>{U.tq=e.target.value;$('tQ').value=U.tq;rUnlReg();const el=$('unlQ');el.focus();el.setSelectionRange(el.value.length,el.value.length);};
+  $('unlReg').querySelectorAll('[data-jv]').forEach(a=>a.onclick=()=>showJv(a.dataset.jv));
+  $('unlReg').querySelectorAll('[data-gopp]').forEach(a=>a.onclick=()=>{U.pptab=a.dataset.gopp;U.ppProc=null;go('pp');render();});}
+// buka Daftar UNL dari mana saja (Alokasi, Penerimaan Piutang) dengan pencarian nomor UNL
+function openUnlReg(no){closeDlg();U.tq=no||'';go('unl');U.utab='daftar';U.sel.clear();render();}
+function rTamp(){const c=TAMP[U.tamp];const q=U.tq.toLowerCase();
+  $('tTitle').innerHTML=esc(c.title)+(c.baru?'<span class="newtag">BARU</span>':'');$('tJenis').textContent=JENIS[c.j];$('tNote').textContent=NOTE[U.tamp];
+  $('tCases').classList.toggle('hidden',!c.baru);const showProc=U.tamp==='mut'||U.tamp==='tb'||U.tamp==='kas'||U.tamp==='unl';$('tProcTh').classList.toggle('hidden',!showProc);
+  if(U.tamp==='mut')$('tNote').textContent='Tampungan pemindahbukuan antar rekening. Klik Proses Mutasi, lalu pilih Request Mutasi (approved) yang sesuai, baik untuk baris uang keluar maupun uang masuk. Setiap sisi membuat jurnalnya sendiri di buku company rekening itu (usulan versi awal). Realisasi (MTR) mengikat kedua sisi.';
+  if(U.tamp==='tb')$('tNote').textContent='Tampungan biaya admin, bunga jasa giro, pajak bunga, biaya transfer, dan autodebet pembayaran (mis. BPJS). Klik Proses: form Transaksi Bank terisi dari rekening koran (jenis, tanggal, bank, nilai), user tinggal memilih COA lawan. ';if(U.tamp!=='unl')$('tMoveWrap').classList.add('hidden');
+  if(U.tamp==='unl')$('tNote').textContent=U.utab==='belum'?'Uang masuk yang belum diketahui asalnya. Klik Proses untuk menjurnal: Debit Bank / Kredit Penerimaan Belum Teridentifikasi, dan terbentuk nomor Unlocated baru (referensi). Setelah diproses, baris pindah ke tab Sudah Diproses.':'Unlocated yang sudah dijurnal. Kalau belakangan diketahui uangnya pembayaran invoice, centang lalu klik Pindahkan ke Penerimaan Piutang Invoice; kalau pembayaran kwitansi deposit, klik Pindahkan ke Penerimaan Piutang Kwitansi Deposit. Jurnal penerimaannya nanti Debit Penerimaan Belum Teridentifikasi (bukan Bank), dengan nomor Unlocated sebagai referensi.';
+  $('tUnlTabs').classList.toggle('hidden',U.tamp!=='unl');
+  {const reg=U.tamp==='unl'&&U.utab==='daftar';['tTop','tWrap','tInfo'].forEach(i=>$(i).classList.toggle('hidden',reg));$('tRollback').parentElement.classList.toggle('hidden',reg);$('unlReg').classList.toggle('hidden',!reg);
+   if(U.tamp==='unl')$('cnt_unld').textContent=unlRecs().length;if(reg){$('tNote').textContent='Daftar UNL: record semua nomor Unlocated, dari dibuat (jurnal Debit Bank / Kredit Penerimaan Belum Teridentifikasi) sampai diterima di Penerimaan Piutang (jurnal Debit Penerimaan Belum Teridentifikasi / Kredit Piutang). Tidak hilang walau sudah dipindahkan.';
+     document.querySelectorAll('#tUnlTabs li').forEach(li=>li.classList.toggle('active',li.firstElementChild.dataset.utab==='daftar'));rUnlReg();return;}}
+  if(U.tamp==='unl'){document.querySelectorAll('#tUnlTabs li').forEach(li=>li.classList.toggle('active',li.firstElementChild.dataset.utab===U.utab));const A=splitsOf(2);$('cnt_unlb').textContent=A.filter(x=>!x.s.proc).length;$('cnt_unls').textContent=A.filter(x=>x.s.proc).length;
+    $('tMoveWrap').classList.toggle('hidden',U.utab!=='sudah');$('tRollback').classList.toggle('hidden',U.utab==='sudah');}
+  else $('tRollback').classList.remove('hidden');
+  const L=splitsOf(c.j).filter(({s})=>U.tamp!=='unl'||(U.utab==='sudah')===!!s.proc).filter(({t})=>inF(t,U.tf)&&(!q||[t.tgl,bankTxt(t.bank),t.ket,t.debit,t.kredit].some(v=>String(v).toLowerCase().includes(q))));
+  document.querySelector('#tT tbody').innerHTML=L.map(({t,s},i)=>`<tr><td class="text-center">${i+1}</td><td>${tgl(t.tgl)}</td><td>${esc(bankTxt(t.bank))}</td><td>${esc(t.ket)}${t.splits.length>1?`<br><small class="text-muted">dipecah: ${t.splits.map(x=>JENIS[x.j]).join(' + ')}</small>`:''}</td><td class="money">${nf2(t.debit)}</td><td class="money">${nf2(t.kredit)}</td><td class="money"><b>${nf2(s.nominal)}</b> <span class="${t.debit>0?'dir-in':'dir-out'}">${t.debit>0?'masuk':'keluar'}</span></td><td class="money">${nf2(t.saldo)}</td><td><span class="badge bg-green">${JENIS[c.j]}</span></td><td class="text-center tproc" style="white-space:nowrap">${procCell(t,s)}</td><td class="text-center"><input type="checkbox" class="check_item" data-id="${s.id}" ${U.sel.has(s.id)?'checked':''}></td></tr>`).join('')||'<tr><td colspan="11" class="dt-empty">No data available in table</td></tr>';
+  const tIn=L.filter(x=>x.t.debit>0).reduce((a,x)=>a+x.s.nominal,0),tOut=L.filter(x=>!(x.t.debit>0)).reduce((a,x)=>a+x.s.nominal,0);$('tTot').innerHTML='<span class="dir-in">masuk</span> '+nf2(tIn)+'<br><span class="dir-out">keluar</span> '+nf2(tOut);
+  if(!showProc)document.querySelectorAll('#tT .tproc').forEach(td=>td.classList.add('hidden'));
+  $('tAll').checked=L.length>0&&L.every(x=>U.sel.has(x.s.id));
+  $('tInfo').innerHTML=`<span>Showing ${L.length?1:0} to ${L.length} of ${L.length} entries</span>`;}
+$('tSearch').onclick=()=>{U.tf={from:$('tFrom').value,to:$('tTo').value,bank:$('tBank').value};rTamp();};
+$('tReset').onclick=()=>{['tFrom','tTo','tBank','tQ'].forEach(i=>$(i).value='');U.tf={from:'',to:'',bank:''};U.tq='';rTamp();};
+$('tQ').oninput=e=>{U.tq=e.target.value;rTamp();};
+$('tUnlTabs').onclick=e=>{const a=e.target.closest('[data-utab]');if(!a)return;U.utab=a.dataset.utab;U.sel.clear();rTamp();};
+document.querySelector('#tT tbody').addEventListener('change',e=>{const c=e.target;if(!c.classList.contains('check_item'))return;c.checked?U.sel.add(c.dataset.id):U.sel.delete(c.dataset.id);rTamp();});
+$('tAll').onchange=e=>{document.querySelectorAll('#tT .check_item').forEach(c=>{e.target.checked?U.sel.add(c.dataset.id):U.sel.delete(c.dataset.id);});rTamp();};
+document.querySelector('#tT tbody').addEventListener('click',e=>{const a=e.target.closest('[data-jv]');if(a){showJv(a.dataset.jv);}});
+$('tRollback').onclick=()=>{if(!U.sel.size){swal('warning','Warning','Silakan pilih minimal satu data untuk di-rollback!');return;}
+  // pilihan B: hanya alokasi terpilih di menu ini yang dibatalkan; alokasi lain di transaksi yang sama tetap
+  const T=[...new Set([...U.sel].map(id=>S.tx.find(t=>t.splits.some(s=>s.id===id))).filter(Boolean))];
+  const done=T.flatMap(t=>t.splits.filter(s=>U.sel.has(s.id)&&s.proc));
+  if(done.length){swal('error','Rollback ditolak','Data yang sudah diproses tidak bisa di-rollback: '+done.map(s=>esc(s.proc.no)).join(', ')+'. Batalkan dulu di modul Mutasi / Transaksi Bank.');return;}
+  const other=T.filter(t=>t.splits.some(s=>!U.sel.has(s.id)));
+  swal('warning','Are you sure?',`Anda akan me-rollback ${U.sel.size} data terpilih ke menu Alokasi!`+(other.length?`<br><br><span class="chg">Alokasi lain pada transaksi yang sama <b>tetap</b>: ${other.map(t=>t.splits.filter(s=>!U.sel.has(s.id)).map(s=>JENIS[s.j]+' Rp '+nf2(s.nominal)).join(', ')).join('; ')}. Transaksinya menjadi <b>Sebagian</b>.</span>`:''),()=>{
+    T.forEach(t=>{const out=t.splits.filter(s=>U.sel.has(s.id));t.splits=t.splits.filter(s=>!U.sel.has(s.id));
+      logIt(t,'ROLLBACK','Rollback alokasi: '+out.map(s=>JENIS[s.j]+' (Rp. '+nf2(s.nominal)+')').join(', ')+(t.splits.length?'. Alokasi lain tetap; sisa Rp. '+nf2(sisaOf(t))+' kembali bisa dialokasikan.':'. Transaksi dikembalikan ke status Open.'));});
+    U.sel.clear();setTimeout(()=>swal('success','Success','Data berhasil di-rollback ke menu Alokasi.'),0);render();},'Yes, Rollback All!');};
+
+// Unlocated → Penerimaan Piutang: jenis alokasi diganti 2 → 1 (draft), nominal & transaksi tetap
+const selUnl=()=>splitsOf(2).filter(x=>U.sel.has(x.s.id)&&x.s.proc);
+const unlRefNote=L=>`<p class="chg" style="font-size:12.5px">Referensi: <b>${L.map(x=>esc(x.s.proc.no)).join(', ')}</b>. Jurnal penerimaannya nanti <b>Debit Penerimaan Belum Teridentifikasi</b> (bukan Bank) / Kredit sesuai penerimaan (Piutang, PPh 23, biaya admin, dll.), karena bank sudah dijurnal saat Unlocated diproses.</p>`;
+const moveUnl=(L,to,kw)=>{L.forEach(({t,s})=>{s.j=to;s.used=null;s.kw=kw||null;logIt(t,'PINDAH_UNLOCATED','Unlocated Penerimaan '+s.proc.no+' (Rp. '+nf2(s.nominal)+') dipindahkan ke '+(to===8?'Penerimaan Piutang Kwitansi Deposit'+(kw?' '+kw:''):'Penerimaan Piutang Invoice')+'.');});
+  U.sel.clear();setTimeout(()=>swal('success','Success','Data dipindahkan. Lanjutkan di menu Penerimaan Piutang, tab '+(to===8?'Penerimaan Piutang Kwitansi Deposit':'Penerimaan Piutang Invoice')+'.'),0);render();};
+$('tMove').onclick=()=>{if(!U.sel.size){swal('warning','Warning','Silakan pilih minimal satu data untuk dipindahkan!');return;}
+  const L=selUnl();
+  swal('warning','Pindahkan ke Penerimaan Piutang Invoice?',`${L.length} data Unlocated (total Rp ${nf2(L.reduce((a,x)=>a+x.s.nominal,0))}) akan menjadi draft di tab Penerimaan Piutang Invoice untuk dialokasikan ke invoice.`+unlRefNote(L),()=>moveUnl(L,1),'Ya, pindahkan');};
+$('tMoveKw').onclick=()=>{if(!U.sel.size){swal('warning','Warning','Silakan pilih minimal satu data untuk dipindahkan!');return;}
+  const L=selUnl();const tot=L.reduce((a,x)=>a+x.s.nominal,0);
+  const used=new Set(S.tx.flatMap(t=>t.splits.filter(x=>x.kw).map(x=>x.kw)));
+  const K=S.kwd.filter(k=>k.sts==='MENUNGGU_PEMBAYARAN'&&!used.has(k.no));
+  modal('<span class="fa fa-share"></span>&nbsp;Pindahkan ke Penerimaan Piutang Kwitansi Deposit',`<p>${L.length} data Unlocated, total <b>Rp ${nf2(tot)}</b>, akan menjadi draft di tab <b>Penerimaan Piutang Kwitansi Deposit</b>.</p>${unlRefNote(L)}
+    <label>Kwitansi Deposit <small class="text-muted">(opsional; kwitansi yang menunggu pembayaran, sama seperti jenis Deposit di Alokasi)</small></label>
+    <select class="form-control input-sm" id="mvKwSel"><option value="">-- Kwitansi Deposit (opsional) --</option>${K.map(k=>'<option value="'+k.no+'">'+k.no+' · '+esc(k.cust)+' · '+k.spk+' · Rp '+nf2(k.nilai)+(L.length===1&&k.nilai===L[0].s.nominal?' (cocok)':'')+'</option>').join('')}</select>`,
+  'Ya, pindahkan',()=>{const kw=$('mvKwSel').value;
+    if(kw&&L.length>1)return 'Kwitansi deposit hanya bisa dipilih untuk 1 data. Pindahkan satu per satu.';
+    moveUnl(L,8,kw);},{lg:true});};
+
+/* ---------- proses lanjutan Mutasi & Transaksi Bank ---------- */
+const findSplit=id=>{for(const t of S.tx){const sp=t.splits.find(x=>x.id===id);if(sp)return {t,s:sp};}return null;};
+const pad=(p,n)=>p+'-2611'+String(n).padStart(5,'0');
+function procCell(t,s){
+  if(s.proc)return `<span class="badge bg-green">${esc(s.proc.no)}</span><br><small class="text-muted">${esc(s.proc.ket)}</small>`+(s.proc.jv?`<br><a class="chg" style="cursor:pointer;font-size:12px" data-jv="${s.proc.jv}"><i class="fa fa-book"></i> Lihat jurnal</a>`:'');
+  if(s.j===4)return `<button type="button" class="btn btn-sm btn-success" data-mproc="${s.id}"><i class="fa fa-exchange"></i> Proses Mutasi</button>`;
+  if(s.j===3)return '<span class="text-muted">Belum diverifikasi</span>';
+  if(s.j===5)return `<button type="button" class="btn btn-sm btn-success" data-tbp="${s.id}"><i class="fa fa-pencil"></i> Proses</button>`;
+  if(s.j===2)return `<button type="button" class="btn btn-sm btn-success" data-uproc="${s.id}"><i class="fa fa-book"></i> Proses</button>`;
+  return '-';}
+document.querySelector('#tT tbody').addEventListener('click',e=>{const m=e.target.closest('[data-mproc]'),b=e.target.closest('[data-tbp]');
+  if(m)openMut(m.dataset.mproc);if(b)openTb(b.dataset.tbp);const u=e.target.closest('[data-uproc]');if(u)openUnl(u.dataset.uproc);});
+// --- Unlocated: Proses = jurnal Debit Bank / Kredit Penerimaan Belum Teridentifikasi + nomor Unlocated baru (AP-R-35)
+const PBT=['(diisi user)','Penerimaan Belum Teridentifikasi'];
+const unlJv=(t,s,no,ket)=>{const b=bk(t.bank),n=no||'UNL-… (otomatis)',k=ket||t.ket;return {acc:b.acc,tipe:'BUM',tgl:t.tgl,jenis:'Unlocated Penerimaan',trx:n,ref:'RK '+tgl(t.tgl)+' '+b.nmcoa,ket:k,
+  lines:[[b.coa,b.nmcoa,s.nominal,0,'Penerimaan belum teridentifikasi - '+k+' (masuk '+b.nmcoa+' '+tgl(t.tgl)+')'],[PBT[0],PBT[1],0,s.nominal,'Unlocated '+(no||'baru')+' - '+k+', menunggu dipindahkan ke Penerimaan Piutang']]};};
+function openUnl(id){const {t,s}=findSplit(id);
+  const lain=t.splits.filter(x=>x.id!==s.id);
+  modal('<span class="fa fa-book"></span>&nbsp;Proses Unlocated Penerimaan',`<div class="un-sec chg"><div class="un-h"><i class="fa fa-university"></i> Detail Transaksi Bank <small>(dari upload rekening koran)</small><span class="newtag">BARU</span></div>
+    <table class="table table-bordered" id="unTrx" style="font-size:12.5px;margin-bottom:6px"><thead><tr class="bg-blue"><th>Tanggal Transaksi</th><th>Bank</th><th>Keterangan Rekening Koran</th><th class="text-right">Total Debit</th><th class="text-right">Total Credit</th><th class="text-right">Saldo Akhir</th></tr></thead>
+    <tbody><tr><td style="white-space:nowrap">${tgl(t.tgl)}</td><td>${esc(bankTxt(t.bank))}<div class="text-muted" style="font-size:11px">${esc(bk(t.bank).coa)} · ${esc(bk(t.bank).nmcoa)} · buku ${bk(t.bank).acc}</div></td><td>${esc(t.ket)}</td><td class="money">${nf2(t.debit)}</td><td class="money">${nf2(t.kredit)}</td><td class="money">${nf2(t.saldo)}</td></tr></tbody>
+    <tfoot><tr><th colspan="5" class="text-right">Nominal dialokasikan ke Unlocated Penerimaan</th><th class="money">${nf2(s.nominal)}</th></tr></tfoot></table>
+    ${lain.length?`<div class="text-muted" style="font-size:12px">Transaksi ini dipecah: ${t.splits.map(x=>(x.id===s.id?'<b>':'')+JENIS[x.j]+' '+nf2(x.nominal)+(x.id===s.id?' (diproses di sini)</b>':'')).join(' + ')}.</div>`:''}</div>
+    <div class="un-sec"><div class="un-h"><i class="fa fa-pencil"></i> Data Unlocated</div><table class="table table-bordered" style="font-size:12.5px;margin:0">${fRow('No Unlocated',ro('Automatic (UNL-…)'))+fRow('Tanggal Jurnal',ro(tgl(t.tgl)+' (tanggal transaksi bank)'))+fRow('Keterangan','<input class="form-control input-sm" id="unKet" value="'+esc(t.ket)+'">')}</table></div>
+    <div class="un-h"><i class="fa fa-book"></i> Jurnal</div> <span class="chg" style="font-size:12px">(saat disimpan masuk <b>Jurnal All · tab Penerimaan</b>, Kategori Transaksi Unlocated Penerimaan, belum posting; + Post → Posting)</span><div id="unJv">${jvAll(unlJv(t,s),{preview:true})}</div><p class="text-muted chg" style="font-size:12px">Nomor COA <b>Penerimaan Belum Teridentifikasi</b> dan format nomor Unlocated <b>(diisi user)</b>. Nomor Unlocated menjadi referensi saat dipindahkan ke Penerimaan Piutang.</p>`,
+  '<i class="fa fa-save"></i> Simpan',()=>{const no=pad('UNL',S.n.unl++);const j=unlJv(t,s,no,$('unKet').value);const key=j.acc+j.tipe;S.n.jv[key]=(S.n.jv[key]||0)+1;
+    const jno=j.tipe+'/'+j.acc+'/2611/'+String(S.n.jv[key]).padStart(4,'0');S.jur.push(Object.assign({no:jno,unl:no,jt:'RCV',arah:'in',sts:'pending'},j));
+    s.proc={type:'unl',no,jv:jno,ket:'jurnal '+jno,uket:$('unKet').value};logIt(t,'PROSES_UNLOCATED','Dibuat '+no+', jurnal '+jno+' (Debit Bank / Kredit Penerimaan Belum Teridentifikasi).');
+    setTimeout(()=>swal('success','Success','Unlocated '+no+' dibuat, jurnal '+jno+' (Jurnal All · Penerimaan, belum posting). Data pindah ke tab Sudah Diproses.'),0);render();},{lg:true});
+  $('unKet').oninput=()=>{$('unJv').innerHTML=jvAll(unlJv(t,s,null,$('unKet').value),{preview:true});};}
+const rkInfo=(t,s)=>`<div class="tamp-note">Dari rekening koran: <b>${tgl(t.tgl)}</b> · ${esc(bankTxt(t.bank))} · ${esc(t.ket)} · <b>Rp ${nf2(s.nominal)}</b> <span class="${t.debit>0?'dir-in':'dir-out'}">${t.debit>0?'masuk':'keluar'}</span></div>`;
+const fRow=(l,v)=>`<tr><td width="32%">${l}</td><td>${v}</td></tr>`;
+const ro=v=>`<input class="form-control input-sm" value="${esc(v)}" readonly>`;
+// --- Mutasi: satu tombol "Proses Mutasi" untuk baris keluar & masuk. User memilih Request Mutasi (approved).
+//     Belum ada realisasi → sistem membuat MTR. Jurnal dibuat PER SISI di buku company rekening koran baris itu (usulan versi awal).
+const sideOf=t=>t.debit>0?'in':'out';
+const mtrOf=m=>m.mtr?S.mtr.find(x=>x.no===m.mtr):null;
+function reqChoices(t){const side=sideOf(t);
+  return S.mts.filter(m=>m.sts==='approved'&&(()=>{const r=mtrOf(m);return !r||!r[side];})());}
+// usulan jurnal 1 sisi; antar company = piutang/hutang antar PT, satu company = akun perantara
+function jvLines(m,side,nominal){const ca=bk(m.dari).acc,cb=bk(m.ke).acc,antar=ca!==cb,A=bk(m.dari).nmcoa,B=bk(m.ke).nmcoa;
+  const base={jenis:'Mutasi',ref:m.no,ket:m.ket+' ('+(side==='out'?'keluar':'masuk')+')'};
+  if(side==='out')return Object.assign(base,{acc:ca,tipe:'BUK',antar,lines:[
+    antar?['(belum ada)','Piutang ke '+cb,nominal,0,'Mutasi '+m.no+' ke '+B+' ('+cb+') - '+m.ket]:['(belum ada)','Kas/Bank dalam Perjalanan',nominal,0,'Mutasi '+m.no+' ke '+B+', dana dalam perjalanan - '+m.ket],
+    [bk(m.dari).coa,A,0,nominal,'Mutasi keluar '+m.no+' dari '+A+' ke '+B+' - '+m.ket]]});
+  return Object.assign(base,{acc:cb,tipe:'BUM',antar,lines:[
+    [bk(m.ke).coa,B,nominal,0,'Mutasi masuk '+m.no+' dari '+A+' ke '+B+' - '+m.ket],
+    antar?['(belum ada)','Hutang ke '+ca,0,nominal,'Mutasi '+m.no+' dari '+A+' ('+ca+') - '+m.ket]:['(belum ada)','Kas/Bank dalam Perjalanan',0,nominal,'Mutasi '+m.no+' dari '+A+', dana sampai - '+m.ket]]});}
+// Template jurnal mengikuti Jurnal All (jurnal_all/views/preview.php), AP-R-39: kotak info (No. Transaksi, No. Referensi, Company,
+// Divisi, Tgl Jurnal, Status, Kategori) + tabel Tanggal · Tipe · No. COA · Nama COA · Keterangan · No. Reff · Debit · Kredit + GRAND TOTAL.
+// Baris jurnal: [coa, nama, debit, kredit, keterangan baris, no reff baris]; keterangan kosong = keterangan jurnal.
+const JV_CO={STM:'PT Sentral Tehnologi Managemen',SUSTAIN:'PT Sustain',VUCA:'PT Vuca'};
+const jvDate=d=>{if(!d)return '—';const [y,m,dd]=d.split('-');return dd+'-'+JA_BLN[+m-1].slice(0,3)+'-'+y;};
+const jvSum=(j,i)=>j.lines.reduce((a,l)=>a+l[i],0);
+function jvAll(j,o){o=o||{};const D=jvSum(j,2),K=jvSum(j,3),pv=!!o.preview,posted=j.sts==='posted';
+  const meta=[['No. Transaksi',j.trx||'-'],['No. Referensi',j.ref||'-'],['Company',j.acc+(JV_CO[j.acc]?' · '+JV_CO[j.acc]:'')],['Divisi',j.divisi||'-'],['Tgl Jurnal',jaDate(j.tgl)],
+    ['Status',pv?'Preview · terbentuk saat Simpan':posted?'Sudah posting':'Belum posting'],['Kategori Transaksi',j.jenis||'-']]
+    .concat(posted?[['No. Jurnal Accounting',j.no],['Tgl Posting',j.postedAt||'-'],['Diposting Oleh','Admin']]:[]);
+  return `<div class="jv-all chg">${pv?'':`<dl class="ja-meta">${meta.map(([a,b])=>`<div><dt>${a}</dt><dd>${esc(b)}</dd></div>`).join('')}</dl>`}
+   <div style="overflow-x:auto"><table class="ja-lines jvT"${o.id?` id="${o.id}"`:''}><thead><tr><th>Tanggal</th><th>Tipe</th><th>No. COA</th><th>Nama COA</th><th>Keterangan</th><th>No. Reff</th><th class="ja-money">Debit</th><th class="ja-money">Kredit</th></tr></thead>
+   <tbody>${j.lines.map(l=>`<tr><td>${jvDate(j.tgl)}</td><td>${esc(j.jenis||'-')}</td><td>${esc(l[0])}</td><td>${esc(l[1])}</td><td>${esc(l[4]||j.ket||'')}</td><td>${esc(l[5]||j.trx||'-')}</td><td class="ja-money">${nf2(l[2])}</td><td class="ja-money">${nf2(l[3])}</td></tr>`).join('')}</tbody>
+   <tfoot><tr><th colspan="6">GRAND TOTAL</th><th class="ja-money">${nf2(D)}</th><th class="ja-money">${nf2(K)}</th></tr></tfoot></table></div>
+   <p class="${Math.round(D*100)===Math.round(K*100)?'text-success':'text-danger'}" style="margin:8px 0 0">${Math.round(D*100)===Math.round(K*100)?'Debit dan kredit seimbang.':'Debit dan kredit tidak seimbang.'}</p></div>`;}
+const jvTable=j=>jvAll(j);
+function openMut(id){const {t,s}=findSplit(id);const side=sideOf(t);const L=reqChoices(t);
+  const opt=L.map(m=>{const cocok=(side==='out'?m.dari:m.ke)===t.bank&&m.nilai===s.nominal;return `<option value="${m.no}">${m.no} · ${esc(bk(m.dari).nmcoa)} → ${esc(bk(m.ke).nmcoa)} · Rp ${nf2(m.nilai)}${cocok?' (cocok)':''}</option>`;}).join('');
+  modal('<span class="fa fa-exchange"></span>&nbsp;Proses Mutasi',rkInfo(t,s)+(L.length?`<table class="table table-bordered" style="font-size:12.5px">${fRow('No Request Mutasi','<select class="form-control input-sm" id="rmReq"><option value="">- Pilih Request Mutasi (approved) -</option>'+opt+'</select>')}<tbody id="rmDet"></tbody></table><div id="rmInfo"></div><div id="rmJv"></div>`:'<div class="alert alert-warning" id="rmNone">Belum ada Request Mutasi yang di-approve untuk transaksi ini. Buat Request Mutasi dulu di menu Request Mutasi.</div>')
+    +'<p class="text-muted" style="font-size:12px">Baris ini uang <b>'+(side==='out'?'keluar':'masuk')+'</b> di rekening '+esc(bk(t.bank).nmcoa)+' (buku '+bk(t.bank).acc+'), jadi bank '+(side==='out'?'asal':'tujuan')+' request harus '+esc(bk(t.bank).nmcoa)+'.</p>',
+  '<i class="fa fa-save"></i> Simpan',()=>saveMut(t,s),{lg:true});
+  const sel=$('rmReq');if(sel)sel.onchange=()=>{const m=S.mts.find(x=>x.no===sel.value);const r=m&&mtrOf(m);
+    $('rmDet').innerHTML=m?fRow('Dari',ro(coaTxt(m.dari)+' ('+bk(m.dari).acc+')'))+fRow('Ke',ro(coaTxt(m.ke)+' ('+bk(m.ke).acc+')'))+fRow('Keterangan',ro(m.ket))+fRow('Nilai Request',ro(nf2(m.nilai)))+fRow('Tanggal <small class="text-muted">(rekening koran)</small>',ro(tgl(t.tgl)))+fRow('Aktual <small class="text-muted">(rekening koran)</small>',ro(nf2(s.nominal))):'';
+    if(!m){$('rmInfo').innerHTML='';$('rmJv').innerHTML='';return;}
+    const j=jvLines(m,side,s.nominal);
+    $('rmInfo').innerHTML=`<div class="tamp-note chg">${r?'Request ini sudah punya realisasi <b>'+r.no+'</b> dari sisi '+(side==='out'?'masuk':'keluar')+'. Baris ini ditautkan ke realisasi itu':'Request ini belum punya realisasi. Simpan akan membuat <b>realisasi mutasi (MTR) baru</b>'} dan membuat <b>jurnal sisi ${side==='out'?'keluar':'masuk'} di buku ${j.acc}</b>${j.antar?' (mutasi antar company '+bk(m.dari).acc+' → '+bk(m.ke).acc+')':''}:<span class="newtag">BARU</span></div>`;
+    $('rmJv').innerHTML=jvAll(Object.assign({tgl:t.tgl,trx:r?r.no:'MTR-… (otomatis)'},j),{preview:true});};}
+function saveMut(t,s){const sel=$('rmReq');if(!sel||!sel.value)return 'Pilih Request Mutasi yang sudah di-approve.';
+  const side=sideOf(t);const m=S.mts.find(x=>x.no===sel.value);
+  if(side==='out'&&m.dari!==t.bank)return 'Bank asal request ('+bk(m.dari).nmcoa+') beda dengan bank rekening koran ('+bk(t.bank).nmcoa+').';
+  if(side==='in'&&m.ke!==t.bank)return 'Bank tujuan request ('+bk(m.ke).nmcoa+') beda dengan bank rekening koran ('+bk(t.bank).nmcoa+').';
+  let r=mtrOf(m),baru=false;
+  if(r){if(r[side])return 'Sisi '+(side==='out'?'keluar':'masuk')+' request ini sudah ditautkan.';if(r.nilai!==s.nominal)return 'Nilai rekening koran (Rp '+nf2(s.nominal)+') beda dengan realisasi '+r.no+' (Rp '+nf2(r.nilai)+').';}
+  else{r={no:pad('MTR',S.n.mtr++),mts:m.no,tgl:t.tgl,dari:m.dari,ke:m.ke,nilai:s.nominal,ket:m.ket,out:null,in:null};S.mtr.push(r);m.mtr=r.no;baru=true;}
+  r[side]=s.id;let jno=null;
+  {const j=jvLines(m,side,s.nominal);const key=j.acc+j.tipe;S.n.jv[key]=(S.n.jv[key]||0)+1;
+    jno=j.tipe+'/'+j.acc+'/2611/'+String(S.n.jv[key]).padStart(4,'0');S.jur.push(Object.assign({no:jno,mtr:r.no,side,tgl:t.tgl,jt:'BANK',trx:r.no,arah:side,sts:'pending'},j));}
+  s.proc={type:'mtr',no:r.no,jv:jno,ket:m.no+' · '+(side==='out'?'keluar':'masuk')+(baru?' · realisasi baru':' · ditautkan')+(jno?' · jurnal '+jno:' · tanpa jurnal (MTR manual)')};
+  logIt(t,'PROSES_MUTASI',(baru?'Realisasi '+r.no+' dibuat':'Ditautkan ke '+r.no)+' dari '+m.no+' ('+(side==='out'?'keluar':'masuk')+')'+(jno?', jurnal '+jno:'')+'.');
+  setTimeout(()=>swal('success','Success',(baru?'Realisasi mutasi '+r.no+' dibuat.':'Ditautkan ke '+r.no+'.')+(jno?' Jurnal '+jno+' (buku '+jno.split('/')[1]+').':' Tanpa jurnal baru (MTR manual).')),0);render();}
+// --- Transaksi Bank: form terisi dari rekening koran, akun lawan dipilih user
+// baris jurnal + keterangan per baris (AP-R-39): uang keluar = Dr lawan / Cr Bank, uang masuk = Dr Bank / Cr lawan
+function tbLines(out,b,lw,nominal,ket){const k=ket||'-';
+  const bank=[b.coa,b.nmcoa,out?0:nominal,out?nominal:0,(out?'Uang keluar dari ':'Uang masuk ke ')+b.nmcoa+' - '+k+' (lawan '+lw[1]+')'];
+  const lawan=[lw[0],lw[1],out?nominal:0,out?0:nominal,k+' - '+(out?'dibayar dari ':'diterima di ')+b.nmcoa];
+  return out?[lawan,bank]:[bank,lawan];}
+function openTb(id){const {t,s}=findSplit(id);const out=!(t.debit>0);const jenis=out?'keluar':'terima';
+  const exist=S.tbk.filter(x=>!x.src&&x.bank===t.bank&&x.jenis===(out?'keluar':'terima'));
+  const lawan='<select class="form-control input-sm" id="tbLawan"><option value="">- Pilih COA -</option>'+LAWAN.map(([c,n])=>`<option value="${c} - ${n}">${c} - ${n}</option>`).join('')+'</select><div class="text-muted chg" style="font-size:11.5px;margin-top:3px">Di sistem: pilihan berisi <b>seluruh COA master</b> (bisa dicari), termasuk untuk autodebet pembayaran seperti BPJS. Arah debit/kredit mengikuti rekening koran.<span class="newtag">BARU</span></div>';
+  modal('<span class="fa fa-pencil"></span>&nbsp;Form Transaksi Bank',rkInfo(t,s)+`
+
+    <table class="table table-bordered" style="font-size:12.5px" id="tbNew">${fRow('No Transaksi',ro('Automatic ('+(out?'KK':'KM')+'-…)'))+fRow('Jenis Transaksi',ro(out?'Pengeluaran (uang keluar)':'Penerimaan (uang masuk)')+(out?'<span class="badge chg" style="background:#dd4b39;margin-top:4px" id="tbArah">UANG KELUAR · kolom Total Credit</span>':'<span class="badge chg" style="background:#00a65a;margin-top:4px" id="tbArah">UANG MASUK · kolom Total Debit</span>'))+fRow('Tgl <small class="text-muted">(rekening koran)</small>',ro(tgl(t.tgl)))+fRow('Company <small class="text-muted">(dari rekening)</small>',ro(bk(t.bank).acc))
+      +fRow('Bank <small class="text-muted">(COA Tujuan, dari rekening koran)</small>',ro(coaTxt(t.bank)))+fRow('Akun Lawan <small class="text-muted">(COA Asal)</small>',lawan)+fRow('Keterangan Transaksi','<input class="form-control input-sm" id="tbKet" value="'+esc(t.ket)+'">')+fRow('Mata Uang',ro('IDR'))+fRow('Kurs',ro('1'))+fRow('Nilai Transaksi <small class="text-muted">(rekening koran)</small>',ro(nf2(s.nominal)))}</table>
+    <div id="tbJv"></div>
+    <p class="text-muted" style="font-size:12px">Sistem menyimpan rekening koran dari sisi buku perusahaan: ${out?'uang keluar (kode <b>DB</b> di mutasi bank) ada di kolom <b>Total Credit</b> → akun Bank <b>Kredit</b>':'uang masuk (kode <b>CR</b> di mutasi bank) ada di kolom <b>Total Debit</b> → akun Bank <b>Debit</b>'}. Jurnal ${out?'BUK':'BUM'} di buku ${bk(t.bank).acc}.</p>`,
+  '<i class="fa fa-save"></i> Simpan',()=>{let no;
+    {const lw=$('tbLawan').value;if(!lw)return 'Pilih COA lawan.';no=out?pad('KK',S.n.kk++):pad('KM',S.n.km++);
+      S.tbk.push({no,tgl:t.tgl,jenis:out?'keluar':'terima',bank:t.bank,lawan:lw,nilai:s.nominal,ket:$('tbKet').value,acc:bk(t.bank).acc,src:s.id});
+      const lc=lw.split(' - ')[0],ln=lw.split(' - ').slice(1).join(' - '),b=bk(t.bank),tp=out?'BUK':'BUM',key=b.acc+tp;S.n.jv[key]=(S.n.jv[key]||0)+1;
+      const jno=tp+'/'+b.acc+'/2611/'+String(S.n.jv[key]).padStart(4,'0');
+      S.jur.push({no:jno,acc:b.acc,tipe:tp,tgl:t.tgl,jt:'BANK',jenis:'Transaksi Bank',trx:no,ref:'RK '+tgl(t.tgl)+' '+b.nmcoa,arah:out?'out':'in',ket:$('tbKet').value,sts:'pending',lines:tbLines(out,b,[lc,ln],s.nominal,$('tbKet').value)});}
+    s.proc={type:'tb',no,ket:'transaksi baru'};logIt(t,'TRANSAKSI_BANK','Dibuat '+no+'.');
+    setTimeout(()=>swal('success','Success','Transaksi Bank tersimpan: '+no+'.'),0);render();},{lg:true});
+  const jv=()=>{const lw=$('tbLawan').value;const nm=lw?lw.split(' - ').slice(1).join(' - '):'(akun lawan belum dipilih)';const cl=lw?lw.split(' - ')[0]:'-';const b=bk(t.bank);
+    $('tbJv').innerHTML=jvAll({acc:b.acc,tgl:t.tgl,jenis:'Transaksi Bank',trx:(out?'KK':'KM')+'-… (otomatis)',ref:'RK '+tgl(t.tgl)+' '+b.nmcoa,ket:$('tbKet').value,lines:tbLines(out,b,[cl,nm],s.nominal,$('tbKet').value)},{preview:true,id:'tbJvT'});};
+  $('tbLawan').onchange=jv;$('tbKet').oninput=jv;jv();}
+// --- daftar modul
+const rkLink=id=>{if(!id)return '<span class="text-muted">-</span>';const x=findSplit(id);return x?`<small>${tgl(x.t.tgl)} · ${esc(bankTxt(x.t.bank).split(' - ')[0])} · Rp ${nf2(x.s.nominal)}</small>`:'-';};
+function rMts(){document.querySelector('#mtsT tbody').innerHTML=S.mts.map((m,i)=>`<tr><td class="text-center">${i+1}</td><td>${tgl(m.tgl)}</td><td>${m.no}</td><td>${esc(m.ket)}</td><td>${esc(coaTxt(m.dari))}</td><td>${esc(coaTxt(m.ke))}</td><td>IDR</td><td>${coTxt(m.dari,m.ke)}</td><td class="money">${nf2(m.nilai)}</td><td class="text-center">${m.mtr?'<span class="badge bg-green">Terealisasi '+m.mtr+'</span>':m.sts==='approved'?'<span class="badge bg-blue">Approved</span>':(m.sts==='rejected'?'<span class="badge" style="background:#dd4b39">Ditolak</span><br><small>'+esc(m.alasan)+'</small>':'<span class="badge bg-yellow">Menunggu Approval</span>')}</td></tr>`).join('');}
+function showJv(no){const j=S.jur.find(x=>x.no===no);modal('Jurnal '+esc(no),jvAll(j)+'<p class="text-muted" style="font-size:12px">Usulan jurnal versi awal; COA "(belum ada)" disetting IT Developer.</p>','',null,{lg:true,noOk:true,cancelText:'Close'});}
+function rTbk(){document.querySelector('#tbkT tbody').innerHTML=S.tbk.map((x,i)=>`<tr><td class="text-center">${i+1}</td><td>${tgl(x.tgl)}</td><td>${x.no}<br><span class="badge chg" style="background:${x.jenis==='keluar'?'#dd4b39':'#00a65a'}">${x.jenis==='keluar'?'Uang Keluar':'Uang Masuk'}</span></td><td>${esc(x.ket)}</td><td>${esc(x.lawan)}<br><small class="text-muted">${x.jenis==='keluar'?'Debit':'Kredit'}</small></td><td>${esc(coaTxt(x.bank))}<br><small class="text-muted">${x.jenis==='keluar'?'Kredit':'Debit'}</small></td><td>${bk(x.bank).acc}</td><td class="money">${nf2(x.nilai)}</td><td>${rkLink(x.src)}</td></tr>`).join('');}
+
+// --- Request Mutasi (form disederhanakan dari request_mutasi/views/form.php)
+const bankSel=(id)=>'<select class="form-control input-sm" id="'+id+'"><option value="">-- Pilih Bank --</option>'+BANKS.map(b=>'<option value="'+b.id+'">'+esc(coaTxt(b.id))+'</option>').join('')+'</select>';
+$('mtsAdd').onclick=()=>{const no=pad('MTS',S.n.mts);
+  modal('<span class="fa fa-plus"></span>&nbsp;Form Request Mutasi',`<table class="table table-bordered" style="font-size:12.5px">${fRow('No Request',ro(no))+fRow('Tgl','<input type="date" class="form-control input-sm" id="mfTgl" value="2026-11-18">')
+    +fRow('Dari',bankSel('mfDari'))+fRow('Ke',bankSel('mfKe'))+fRow('Company <small class="text-muted">(otomatis dari rekening)</small>','<div class="ro-box chg" id="mfCo">-</div>')+fRow('Keterangan','<input class="form-control input-sm" id="mfKet">')+fRow('Mata Uang',ro('IDR'))+fRow('Nilai','<input type="number" class="form-control input-sm text-right" id="mfNilai">')}</table>`,
+  '<i class="fa fa-save"></i> Simpan',()=>{const v=k=>$(k).value.trim();
+    if(!v('mfTgl')||!v('mfDari')||!v('mfKe')||!v('mfKet')||!(+v('mfNilai')>0))return 'Semua field wajib diisi.';
+    if(v('mfDari')===v('mfKe'))return 'Bank asal dan bank tujuan tidak boleh sama.';
+    S.mts.push({no,tgl:v('mfTgl'),dari:v('mfDari'),ke:v('mfKe'),nilai:+v('mfNilai'),ket:v('mfKet'),sts:'pending',mtr:null});S.n.mts++;
+    setTimeout(()=>swal('success','Success','Request '+no+' tersimpan, menunggu approval.'),0);render();},{lg:true});
+  const upd=()=>{$('mfCo').textContent=coTxt($('mfDari').value,$('mfKe').value);};$('mfDari').onchange=upd;$('mfKe').onchange=upd;};
+function rApv(){const L=S.mts.filter(m=>m.sts==='pending');
+  document.querySelector('#apvT tbody').innerHTML=L.map((m,i)=>`<tr><td class="text-center">${i+1}</td><td>${tgl(m.tgl)}</td><td>${m.no}</td><td>${esc(m.ket)}</td><td>${esc(coaTxt(m.dari))}</td><td>${esc(coaTxt(m.ke))}</td><td>${coTxt(m.dari,m.ke)}</td><td class="money">${nf2(m.nilai)}</td><td class="text-center" style="white-space:nowrap"><button type="button" class="btn btn-sm btn-success" data-apv="${m.no}"><i class="fa fa-check"></i> Approve</button> <button type="button" class="btn btn-sm btn-danger" data-rej="${m.no}"><i class="fa fa-times"></i> Reject</button></td></tr>`).join('')||'<tr><td colspan="9" class="dt-empty">No data available in table</td></tr>';}
+document.querySelector('#apvT tbody').addEventListener('click',e=>{const a=e.target.closest('[data-apv]'),r=e.target.closest('[data-rej]');
+  if(a){const m=S.mts.find(x=>x.no===a.dataset.apv);swal('warning','Approve request?','Approve '+m.no+'?',()=>{m.sts='approved';setTimeout(()=>swal('success','Success','Approve Process Success.'),0);render();},'Ya, approve');}
+  if(r){const m=S.mts.find(x=>x.no===r.dataset.rej);modal('Reject Request','<label>Alasan reject</label><textarea class="form-control" id="rjAl" rows="3"></textarea>','Reject',()=>{const al=$('rjAl').value.trim();if(!al)return 'Alasan wajib diisi.';m.sts='rejected';m.alasan=al;render();},{okClass:'btn-danger'});}});
+// --- Upload rekening koran: file contoh per rekening (format CSV mengikuti jenis bank)
+const FILES=[
+ {id:'f1',bank:'b2',file:'rekening_koran_BCA_SUSTAIN_18112026.csv',rows:[['2026-11-18','TRSF E-BANKING DB 1811 KE 4363005287 SENTRAL TEHNOLOGI',0,15000000],['2026-11-18','BIAYA ADM',0,30000]]},
+ {id:'f2',bank:'b1',file:'rekening_koran_BCA_STM_18112026.csv',rows:[['2026-11-18','TRSF E-BANKING CR 1811 DARI 4364000300 SENTRAL SUSTAINABILITY',15000000,0],['2026-11-18','TRSF E-BANKING CR PT ARWANA CITRAMULIA TBK',8800000,0]]},
+ {id:'f3',bank:'b3',file:'rekening_koran_OCBC_VUCA_18112026.csv',rows:[['2026-11-18','TRF MASUK PT KERETA API INDONESIA',12500000,0],['2026-11-18','ADMINISTRATION FEE',0,25000],['2026-11-18','TRANSFER FEE SKN',0,5000]]}];
+$('aUpload').onclick=()=>{
+  modal('<span class="fa fa-money"></span>&nbsp;Upload Rekening Koran',`<table class="table table-bordered" style="font-size:12.5px">${fRow('Bank','<select class="form-control input-sm" id="upBank"><option value="">- Bank -</option>'+BANKS.map(b=>'<option value="'+b.id+'">'+esc(b.txt)+'</option>').join('')+'</select>')}
+    ${fRow('Upload File CSV','<select class="form-control input-sm" id="upFile"><option value="">- pilih file contoh -</option></select><small class="text-muted" id="upFmt"></small>')}</table>
+    <p><button type="button" class="btn btn-sm btn-info" id="upPrev"><i class="fa fa-eye"></i> Preview</button></p><div id="upTbl"></div>`,
+  '<i class="fa fa-check"></i> Proses',()=>{const fid=$('upFile').value;if(!fid)return 'Pilih bank dan file dulu.';const F=FILES.find(x=>x.id===fid);
+    if(S.files[fid])return 'File ini sudah pernah diupload.';
+    F.rows.forEach(r=>{const id='U'+String(S.n.up++).padStart(2,'0');const last=[...S.tx].reverse().find(t=>t.bank===F.bank);const saldo=(last?last.saldo:0)+r[2]-r[3];
+      const t={id,tgl:r[0],bank:F.bank,ket:r[1],debit:r[2],kredit:r[3],saldo,splits:[]};S.tx.push(t);logIt(t,'UPLOAD_REKENING','Upload rekening koran: '+r[1]);});
+    S.files[fid]=true;setTimeout(()=>swal('success','Success !','Upload rekening koran berhasil ! '+F.rows.length+' baris berstatus Open.'),0);render();},{lg:true});
+  $('upBank').onchange=()=>{const b=$('upBank').value;$('upFmt').textContent=b?'Format dibaca sebagai '+bk(b).fmt:'';$('upTbl').innerHTML='';
+    $('upFile').innerHTML='<option value="">- pilih file contoh -</option>'+FILES.filter(x=>x.bank===b).map(x=>'<option value="'+x.id+'">'+x.file+(S.files[x.id]?' (sudah diupload)':'')+'</option>').join('');};
+  $('upPrev').onclick=()=>{const F=FILES.find(x=>x.id===$('upFile').value);if(!F){$('upTbl').innerHTML='<p class="text-danger">Pilih file dulu.</p>';return;}
+    $('upTbl').innerHTML='<table class="table table-bordered" id="upPrevT" style="font-size:12px"><thead><tr><th>No</th><th>Tanggal</th><th>Description</th><th class="text-right">Debit</th><th class="text-right">Credit</th></tr></thead><tbody>'+F.rows.map((r,i)=>'<tr><td>'+(i+1)+'</td><td>'+tgl(r[0])+'</td><td>'+esc(r[1])+'</td><td class="money">'+nf2(r[2])+'</td><td class="money">'+nf2(r[3])+'</td></tr>').join('')+'</tbody></table>';};};
+
+/* ---------- Verifikasi Pengembalian Kasbon: mulai dari baris rekening koran, pilih Expense Report ---------- */
+const ROMAN=['','I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
+const kasDraft=()=>splitsOf(3).filter(x=>!x.s.proc);
+const bankLbl=id=>{const b=bk(id);return b.txt?b.txt.split(' - ').slice(0,2).join(' - '):'-';};
+U.vtab=U.vtab||'mb';
+document.querySelectorAll('[data-vtab]').forEach(x=>x.onclick=()=>{U.vtab=x.dataset.vtab;rVerk();});
+function rVerk(){
+  document.querySelectorAll('#verkTabs li').forEach(li=>li.classList.toggle('active',li.firstElementChild.dataset.vtab===U.vtab));
+  document.querySelectorAll('[data-vpane]').forEach(p=>p.classList.toggle('hidden',p.dataset.vpane!==U.vtab));
+  const D=kasDraft(),A=S.er.filter(e=>e.sts===4||(e.sts===3&&e.alasan)),O=S.er.filter(e=>e.sts===2);
+  $('cnt_vmb').textContent=D.length;$('cnt_vaj').textContent=A.filter(e=>e.sts===4).length;$('cnt_vok').textContent=O.length;
+  const empty=n=>'<tr><td colspan="'+n+'" class="dt-empty">No data available in table</td></tr>';
+  document.querySelector('#verkT tbody').innerHTML=D.map(({t,s},i)=>`<tr><td>${i+1}</td><td>${tgl(t.tgl)}</td><td>${esc(bankTxt(t.bank))}</td><td>${esc(t.ket)}</td><td class="money">${nf2(s.nominal)}</td><td><span class="badge bg-gray">Draft</span></td><td class="text-center"><button type="button" class="btn btn-primary btn-xs" data-verk="${s.id}"><i class="fa fa-check-square-o"></i> Proses Verifikasi</button></td></tr>`).join('')||empty(7);
+  document.querySelector('#verkAT tbody').innerHTML=A.map((e,i)=>`<tr><td>${i+1}</td><td><b>${e.no}</b></td><td><span class="badge bg-blue">${e.kasbon}</span></td><td>${e.tgl}</td><td>${esc(e.pelapor)}</td><td>${esc(e.info)}</td><td class="money"><b>Rp ${nf2(e.lebih)}</b></td><td>${esc(bankLbl(e.bank))}</td><td>${e.ttgl}</td><td class="text-center">${e.sts===3?'<span class="badge" style="background:#dd4b39">Ditolak</span><br><small>'+esc(e.alasan)+'</small>':'<span class="badge" style="background:#fd7e14">Menunggu Verifikasi</span>'}</td><td class="text-center">${e.sts===4?`<button type="button" class="btn btn-danger btn-xs" data-vrej="${e.no}"><i class="fa fa-times"></i> Tolak</button>`:'-'}</td></tr>`).join('')||empty(11);
+  document.querySelector('#verkDT tbody').innerHTML=O.map((e,i)=>{const x=findSplit(e.rk);return `<tr><td>${i+1}</td><td><b>${e.no}</b></td><td>${e.kasbon}</td><td>${esc(e.pelapor)}</td><td class="money">Rp ${nf2(e.lebih)}</td><td>${tgl(x.t.tgl)} · ${esc(bankLbl(x.t.bank))}<br><small>${esc(x.t.ket)} · Rp ${nf2(x.s.nominal)}</small></td><td><span class="badge bg-green">Selesai</span> ${e.jv}</td></tr>`;}).join('')||empty(7);}
+document.querySelector('#verkT tbody').addEventListener('click',e=>{const b=e.target.closest('[data-verk]');if(b)openVerk(b.dataset.verk);});
+document.querySelector('#verkAT tbody').addEventListener('click',e=>{const b=e.target.closest('[data-vrej]');if(b)rejectEr(S.er.find(x=>x.no===b.dataset.vrej));});
+function rejectEr(e){modal('Tolak Pengajuan Pengembalian Kasbon','<p>'+e.no+' · '+esc(e.pelapor)+'</p><label>Alasan penolakan (wajib)</label><textarea class="form-control" id="vkAl" rows="3"></textarea>','Tolak',()=>{const al=$('vkAl').value.trim();if(!al)return 'Alasan penolakan verifikasi wajib diisi!';
+  e.sts=3;e.alasan=al;setTimeout(()=>swal('success','Success','Pengembalian kasbon ditolak. Dokumen dikembalikan ke pelapor untuk perbaikan.'),0);render();},{okClass:'btn-danger'});}
+function openVerk(id){const x=findSplit(id);const E=S.er.filter(e=>e.sts===4);
+  modal('<span class="fa fa-check-square-o"></span>&nbsp;Proses Verifikasi Pengembalian Kasbon',
+   `<b>Mutasi bank (rekening koran)</b><table class="table table-bordered" style="font-size:12.5px">${fRow('Tanggal Transaksi',tgl(x.t.tgl))+fRow('Bank',esc(bankTxt(x.t.bank)))+fRow('Keterangan',esc(x.t.ket))+fRow('Nominal','<b>Rp '+nf2(x.s.nominal)+'</b>')}</table>
+    <label>Expense Report <span class="text-danger">*</span></label>
+    <select class="form-control input-sm" id="vkEr"><option value="">- Pilih Expense Report (pengajuan pengembalian kasbon) -</option>${E.map(e=>'<option value="'+e.no+'">'+e.no+' · '+e.kasbon+' · '+esc(e.pelapor)+' · Lebih Kasbon Rp '+nf2(e.lebih)+'</option>').join('')}</select>
+    <div id="vkEd" style="margin-top:10px"></div><div id="vkCmp"></div><div id="vkJv"></div>
+    <div style="margin-top:8px"><b>Checklist verifikasi (wajib semua)</b>
+      <label style="display:block;margin:6px 0"><input type="checkbox" id="chk_bukti"> 1. Bukti Transfer Valid &amp; Jelas: bukti transfer yang diunggah asli, sah, dan dapat terbaca jelas.</label>
+      <label style="display:block;margin:6px 0"><input type="checkbox" id="chk_mutasi"> 2. Mutasi Rekening Bank Cocok: dana telah dicek dan terkonfirmasi masuk ke rekening bank perusahaan (rekening koran/e-banking).</label>
+      <label style="display:block;margin:6px 0"><input type="checkbox" id="chk_nominal"> 3. Nominal Sesuai: jumlah uang yang masuk sesuai dengan sisa kelebihan kasbon yang tercatat.</label></div>
+    <p style="margin-top:8px"><button type="button" class="btn btn-danger btn-sm" id="vkReject"><i class="fa fa-times"></i> Tolak Pengajuan Terpilih</button></p>`,
+   '<i class="fa fa-check"></i> Setujui &amp; Buat Jurnal',()=>approveVerk(x),{lg:true});
+  const cur=()=>S.er.find(e=>e.no===$('vkEr').value);
+  $('vkEr').onchange=()=>{const e=cur();$('chk_bukti').checked=false;$('chk_mutasi').checked=false;$('chk_nominal').checked=false;
+    if(!e){$('vkEd').innerHTML=$('vkCmp').innerHTML=$('vkJv').innerHTML='';return;}
+    $('vkEd').innerHTML=`<div class="tamp-note"><b>Pengajuan karyawan</b><br>No. Kasbon Asal: ${e.kasbon} · Pelapor: ${esc(e.pelapor)} (${esc(e.dept)})<br>Keterangan: ${esc(e.info)}<br>Lebih Kasbon: <b>Rp ${nf2(e.lebih)}</b><br>Bukti transfer: ${esc(bankLbl(e.bank))} · ${tgl(e.ttgl)} · Rp ${nf2(e.tjml)} · File: <a>${esc(e.bukti)}</a></div>`;
+    const ok=(a,b)=>a===b?'<span class="ctl-ok">✔ sama</span>':'<span class="ctl-bad">✖ beda</span>';
+    $('vkCmp').innerHTML=`<table class="table table-bordered" id="vkCmpT" style="font-size:12.5px"><thead><tr class="bg-blue"><th></th><th>Bukti transfer user</th><th>Rekening koran (bank)</th><th>Hasil</th></tr></thead><tbody>
+      <tr><td>Bank tujuan</td><td>${esc(bankLbl(e.bank))}</td><td>${esc(bankLbl(x.t.bank))}</td><td>${ok(e.bank,x.t.bank)}</td></tr>
+      <tr><td>Tanggal</td><td>${tgl(e.ttgl)}</td><td>${tgl(x.t.tgl)}</td><td>${ok(e.ttgl,x.t.tgl)}</td></tr>
+      <tr><td>Nominal</td><td>${nf2(e.tjml)}</td><td>${nf2(x.s.nominal)}</td><td>${ok(e.tjml,x.s.nominal)}</td></tr>
+      <tr><td>Lebih kasbon tercatat</td><td colspan="2">${nf2(e.lebih)}</td><td>${ok(e.lebih,x.s.nominal)}</td></tr></tbody></table>`;
+    const b=bk(x.t.bank);
+    $('vkJv').innerHTML=`<b>Jurnal 2</b> <span class="chg" style="font-size:12px">(dibuat saat disetujui, masuk <b>Jurnal All · tab Expense Report</b>, belum posting; + Post → Posting)</span>`+jvAll(kasJv(e,x),{preview:true});};
+  $('vkReject').onclick=()=>{const e=cur();if(!e){$('dlgErr').textContent='Pilih Expense Report yang akan ditolak.';return;}rejectEr(e);};}
+// jurnal Pengembalian Kasbon + keterangan per baris (AP-R-39)
+function kasJv(e,x){const b=bk(x.t.bank),n=x.s.nominal;return {acc:b.acc,tipe:'BUM',tgl:x.t.tgl,jenis:'Pengembalian Kasbon',trx:e.no,ref:e.kasbon,ket:'Pengembalian kasbon '+e.no+' ('+e.pelapor+')',
+  lines:[[b.coa,b.nmcoa,n,0,'Pengembalian lebih kasbon '+e.kasbon+' - '+e.pelapor+' ('+e.dept+'), '+e.no+', masuk '+b.nmcoa+' '+tgl(x.t.tgl)],['1103-01-14','Piutang Lain-lain Konsultan',0,n,'Pelunasan sisa kasbon '+e.kasbon+' - '+e.pelapor+' via '+e.no]]};}
+function approveVerk(x){const e=S.er.find(r=>r.no===$('vkEr').value);
+  if(!e)return 'Pilih Expense Report yang dibayar oleh mutasi bank ini.';
+  if(!$('chk_bukti').checked||!$('chk_mutasi').checked||!$('chk_nominal').checked)return 'Ketiga butir checklist verifikasi wajib dicentang sebelum menyetujui!';
+  const jno=String(S.n.bum++).padStart(5,'0')+'-BUM-'+ROMAN[+x.t.tgl.slice(5,7)]+'-'+x.t.tgl.slice(2,4);
+  S.jur.push(Object.assign({no:jno,jt:'EXP',arah:'in',sts:'pending'},kasJv(e,x)));
+  e.sts=2;e.rk=x.s.id;e.jv=jno;e.alasan=null;x.s.proc={type:'kas',no:e.no,ket:'Terverifikasi · '+jno};
+  logIt(x.t,'VERIFIKASI_PENGEMBALIAN','Diverifikasi untuk '+e.no+' ('+e.kasbon+'), jurnal '+jno+'.');
+  setTimeout(()=>swal('success','Success','Verifikasi pengembalian kasbon selesai! Jurnal 2 '+jno+' masuk Jurnal All (tab Expense Report, belum posting) dan status laporan telah Selesai.'),0);render();}
+
+/* ---------- Dashboard Alokasi ---------- */
+const DASH_TODAY='2026-11-18';
+const ageOf=d=>Math.round((Date.parse(DASH_TODAY)-Date.parse(d))/864e5);
+const coOf=bankId=>bk(bankId).acc||'-';
+const DASH=[
+ {k:'open',t:'Belum Dialokasikan',st:'belum dialokasikan',go:'alo',rows:()=>S.tx.filter(t=>sisaOf(t)>0).map(t=>({t,nominal:sisaOf(t)}))},
+ {k:'inv',t:'Penerimaan Piutang Invoice',st:'draft',go:'pp',tab:'inv',rows:()=>splitsOf(1).filter(x=>!x.s.used).map(x=>({t:x.t,nominal:x.s.nominal}))},
+ {k:'dep',t:'Penerimaan Piutang Kwitansi Deposit',st:'draft',go:'pp',tab:'dep',rows:()=>splitsOf(8).filter(x=>!x.s.used).map(x=>({t:x.t,nominal:x.s.nominal}))},
+ {k:'unl',t:'Unlocated Penerimaan',st:'belum dipindahkan (belum / sudah diproses)',go:'unl',rows:()=>splitsOf(2).map(x=>({t:x.t,nominal:x.s.nominal}))},
+ {k:'kal',t:'Alokasi Kalibrasi',st:'di tampungan',go:'kal',rows:()=>splitsOf(7).map(x=>({t:x.t,nominal:x.s.nominal}))},
+ {k:'kas',t:'Pengembalian Kasbon',st:'belum diverifikasi',go:'verk',rows:()=>splitsOf(3).filter(x=>!x.s.proc).map(x=>({t:x.t,nominal:x.s.nominal}))},
+ {k:'mut',t:'Mutasi',st:'belum diproses',go:'mut',rows:()=>splitsOf(4).filter(x=>!x.s.proc).map(x=>({t:x.t,nominal:x.s.nominal}))},
+ {k:'tb',t:'Transaksi Bank',st:'belum diproses',go:'tb',rows:()=>splitsOf(5).filter(x=>!x.s.proc).map(x=>({t:x.t,nominal:x.s.nominal}))},
+ {k:'pay',t:'Pembayaran',st:'belum diproses',go:'pay',rows:()=>splitsOf(6).map(x=>({t:x.t,nominal:x.s.nominal}))}];
+U.df=U.df||{start:'',end:'',co:'',bank:''};
+function dashPass(t){const F=U.df;return (!F.start||t.tgl>=F.start)&&(!F.end||t.tgl<=F.end)&&(!F.co||coOf(t.bank)===F.co)&&(!F.bank||t.bank===F.bank);}
+function dashData(){return DASH.map(c=>{const R=c.rows().filter(r=>dashPass(r.t)).map(r=>Object.assign(r,{age:ageOf(r.t.tgl)}));
+  return {c,R,n:R.length,tot:R.reduce((a,r)=>a+r.nominal,0),old:R.length?Math.max(...R.map(r=>r.age)):0,b:[R.filter(r=>r.age<=7).length,R.filter(r=>r.age>7&&r.age<=30).length,R.filter(r=>r.age>30).length]};});}
+function dashBankOpts(){const F=U.df;const L=BANKS.filter(b=>!F.co||b.acc===F.co);if(F.bank&&!L.some(b=>b.id===F.bank))F.bank='';
+  $('dfBank').innerHTML='<option value="">Semua Bank</option>'+L.map(b=>'<option value="'+b.id+'"'+(b.id===F.bank?' selected':'')+'>'+esc(b.txt)+'</option>').join('');}
+function rDash(){const F=U.df;$('dfStart').value=F.start;$('dfEnd').value=F.end;$('dfCo').value=F.co;dashBankOpts();
+  const D=dashData();const N=D.reduce((a,d)=>a+d.n,0),T=D.reduce((a,d)=>a+d.tot,0);
+  $('dashTot').innerHTML='Total belum diproses: <b>'+N+' baris</b> · <b>Rp '+nf2(T)+'</b>'+(F.start||F.end||F.co||F.bank?' <span class="text-muted">(sesuai filter)</span>':' <span class="text-muted">(semua data)</span>');
+  $('dashCards').innerHTML=D.map(d=>`<div class="dash-card${d.n?'':' done'}" data-dash="${d.c.k}"><div class="dc-t">${d.c.t}</div><div class="dc-n">${d.n?d.n+' '+d.c.st:'<span style="color:#00a65a">✔ Tuntas</span>'}</div><div class="dc-v">Rp ${nf2(d.tot)}</div>
+    <div class="dc-a">${d.n?'Tertua: <b>'+d.old+' hari</b><br><span>0–7: '+d.b[0]+'</span><span>8–30: '+d.b[1]+'</span><span class="'+(d.b[2]?'old':'')+'">&gt;30: '+d.b[2]+'</span>':'&nbsp;'}</div></div>`).join('');
+  const S1=U.dsel?D.filter(d=>d.c.k===U.dsel):D;const sc=U.dsel?DASH.find(x=>x.k===U.dsel):null;
+  document.querySelectorAll('#dashCards .dash-card').forEach(el=>el.classList.toggle('sel',el.dataset.dash===U.dsel));
+  $('dashH').textContent='Rincian Belum Diproses'+(sc?' — '+sc.t:' — semua jenis');$('dashAll').classList.toggle('hidden',!sc);$('dashGo').classList.toggle('hidden',!sc);
+  if(sc)$('dashGo').innerHTML='Buka menu '+(sc.k==='kas'?'Verifikasi Pengembalian Kasbon':sc.k==='open'?'Alokasi':sc.k==='inv'||sc.k==='dep'?'Penerimaan Piutang':sc.t)+' <i class="fa fa-arrow-right"></i>';
+  const rows=S1.flatMap(d=>d.R.map(r=>({d,r}))).sort((a,b)=>b.r.age-a.r.age);
+  document.querySelector('#dashT tbody').innerHTML=rows.map(({d,r},i)=>`<tr><td>${i+1}</td><td>${d.c.t}</td><td>${tgl(r.t.tgl)}</td><td>${coOf(r.t.bank)}</td><td>${esc(bankTxt(r.t.bank))}</td><td>${esc(r.t.ket)}</td><td class="money">${nf2(r.nominal)}</td><td class="text-right">${r.age}</td><td>${d.c.st}</td></tr>`).join('')||'<tr><td colspan="9" class="dt-empty">Tidak ada yang belum diproses.</td></tr>';}
+['dfStart','dfEnd','dfCo','dfBank'].forEach(id=>$(id).addEventListener('change',()=>{U.df={start:$('dfStart').value,end:$('dfEnd').value,co:$('dfCo').value,bank:$('dfBank').value};rDash();}));
+$('dfReset').onclick=()=>{U.df={start:'',end:'',co:'',bank:''};rDash();};
+U.dsel=U.dsel||'';
+$('dashCards').addEventListener('click',e=>{const c=e.target.closest('[data-dash]');if(!c)return;U.dsel=U.dsel===c.dataset.dash?'':c.dataset.dash;rDash();});
+$('dashAll').onclick=()=>{U.dsel='';rDash();};
+$('dashGo').onclick=()=>{const d=DASH.find(x=>x.k===U.dsel);if(!d)return;if(d.tab)U.pptab=d.tab;go(d.go);};
+$('dfXls').onclick=()=>{if(!window.XLSX){swal('error','Gagal','Library Excel belum termuat (butuh koneksi internet).');return;}
+  const F=U.df,D=dashData();const bn=F.bank?bk(F.bank).txt:'Semua Bank';
+  const head=[['Dashboard Alokasi'],['Periode',(F.start?tgl(F.start):'Semua')+' s.d. '+(F.end?tgl(F.end):'Semua')],['Company',F.co||'Semua Company'],['Bank',bn],['Dicetak pada',tgl(DASH_TODAY)],[]];
+  const ring=head.concat([['JENIS ALOKASI','JUMLAH BELUM DIPROSES','TOTAL NOMINAL','UMUR TERTUA (HARI)','0-7 HARI','8-30 HARI','>30 HARI']],D.map(d=>[d.c.t,d.n,d.tot,d.n?d.old:'',d.b[0],d.b[1],d.b[2]]),[['TOTAL',D.reduce((a,d)=>a+d.n,0),D.reduce((a,d)=>a+d.tot,0)]]);
+  const rows=D.flatMap(d=>d.R.map(r=>({d,r}))).sort((a,b)=>b.r.age-a.r.age);
+  const rinci=head.concat([['NO','JENIS ALOKASI','TANGGAL TRANSAKSI','COMPANY','BANK','KETERANGAN','NOMINAL','UMUR (HARI)','STATUS']],rows.map(({d,r},i)=>[i+1,d.c.t,tgl(r.t.tgl),coOf(r.t.bank),bankTxt(r.t.bank),r.t.ket,r.nominal,r.age,d.c.st]));
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(ring),'Ringkasan');XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rinci),'Rincian');
+  XLSX.writeFile(wb,'Dashboard_Alokasi_'+DASH_TODAY.replace(/-/g,'')+'.xlsx');};
+
+/* ---------- lainnya ---------- */
+U.pptab=U.pptab||'inv';
+document.querySelectorAll('[data-pptab]').forEach(x=>x.onclick=()=>{U.pptab=x.dataset.pptab;rPP();});
+
+// ================= PROSES PENERIMAAN PIUTANG (AP-R-40) =================
+// Mengikuti sistem: penerimaan_uang/views/add.php (pilih customer, PPh 23 dipotong, invoice dicentang, Process)
+// lalu views/consulting_process.php (alokasi per invoice, kontrol 0, preview jurnal, Proses = simpan).
+// Jurnal per invoice seperti Invoice_consulting::receipt_lines: Dr Bank (kas) / Dr PPh 23 / Dr Biaya Admin / Cr Deposit Customer (lebih bayar)
+// / Cr Piutang (saldo awal) / Dr Piutang (sisa). Draft dari Unlocated: baris kas = Dr Penerimaan Belum Teridentifikasi (AP-R-35).
+function INV_SEED(){const I=(no,tgl,cust,co,spk,jual)=>{const dpp=Math.round(jual*11/12*100)/100,ppn=Math.round(dpp*12)/100;return {no,tgl,cust,co,tax:'PKP',spk,jual,dpp,ppn,tagihan:jual+ppn,saldo:jual+ppn,pphUsed:0,hist:[]};};
+  return [I('INV 281/STM/2026','2026-10-28','PT ASAHI DENSO INDONESIA','STM','SPK-2026-0133',11000000),
+    I('INV 283/STM/2026','2026-11-02','PT ASAHI DENSO INDONESIA','STM','SPK-2026-0139',5000000),
+    I('INV 195/STM/2026','2026-10-25','PT MADA WIKRI TUNGGAL','STM','SPK-2026-0126',4000000),
+    I('INV 058/SSC/2026','2026-10-20','PT INDO KORDSA TBK','SUSTAIN','SPK-2026-0120',7500000),
+    I('INV 036/VSB/2026','2026-10-15','PT KERETA API INDONESIA','VUCA','SPK-2026-0118',30000000),
+    I('INV 040/VSB/2026','2026-10-30','PT SURYA BANGUN FAJAR','VUCA','SPK-2026-0130',5500000)];}
+const PU_ACC={pph:['(sesuai master)','PPh 23 Disetor'],admin:['7201-01-04','Biaya Administrasi Bank'],dep:['2102-01-02','Deposit Customer'],piutang:['1102-01-01','Piutang Dagang Usaha']};
+const PU_MAX_ADMIN=10000;
+const rnd2=n=>Math.round(n*100)/100;
+const pnum=v=>{const x=parseFloat(String(v==null?'':v).replace(/,/g,''));return isNaN(x)?0:x;};
+function ppOpen(id,kind){U.ppProc={id,kind,step:1,cust:'',pph:kind==='dep'?'N':'',chk:[],alloc:{}};render();}
+const ppCustList=kind=>kind==='dep'?[...new Set(S.kwd.filter(k=>k.sts==='MENUNGGU_PEMBAYARAN').map(k=>k.cust.toUpperCase()))]:[...new Set(S.inv.filter(i=>i.saldo>0).map(i=>i.cust))];
+const ppDocs=P=>P.kind==='dep'?S.kwd.filter(k=>k.sts==='MENUNGGU_PEMBAYARAN'&&k.cust.toUpperCase()===P.cust).map(k=>({no:k.no,tgl:k.tgl||'2026-11-01',cust:k.cust,co:k.co||'-',tax:'DEP',spk:k.spk,jual:k.nilai,dpp:0,ppn:0,tagihan:k.nilai,saldo:k.nilai,kw:k}))
+  :S.inv.filter(i=>i.saldo>0&&i.cust===P.cust);
+const pphDefault=(P,d)=>P.pph==='Y'&&d.tax!=='DEP'?Math.max(0,rnd2(d.jual*0.02-(d.pphUsed||0))):0;
+function ppRows(P){const x=findSplit(P.id),docs=ppDocs(P).filter(d=>P.chk.includes(d.no));let sisaKas=x.s.nominal;
+  return docs.map(d=>{const a=P.alloc[d.no]||(P.alloc[d.no]={});
+    if(a.pph==null)a.pph=pphDefault(P,d);if(a.admin==null)a.admin=0;if(a.lebih==null)a.lebih=0;
+    if(a.alok==null){const maxKas=rnd2(d.saldo-a.pph);const kas=Math.max(0,Math.min(sisaKas,maxKas));a.alok=d.tax==='DEP'?d.saldo:rnd2(kas+a.pph);sisaKas=rnd2(sisaKas-kas);}
+    const kas=rnd2(a.alok-a.pph-a.admin+a.lebih),sisa=rnd2(d.saldo-a.alok);return {d,a,kas,sisa};});}
+function ppCalc(P){const x=findSplit(P.id),R=ppRows(P);const uang=x.s.nominal,kas=rnd2(R.reduce((t,r)=>t+r.kas,0));
+  return {R,uang,kas,piutang:rnd2(R.reduce((t,r)=>t+r.d.saldo,0)),pph:rnd2(R.reduce((t,r)=>t+r.a.pph,0)),admin:rnd2(R.reduce((t,r)=>t+r.a.admin,0)),lebih:rnd2(R.reduce((t,r)=>t+r.a.lebih,0)),alok:rnd2(R.reduce((t,r)=>t+r.a.alok,0)),kontrol:rnd2(uang-kas)};}
+function ppErr(P,c){const e=[];
+  c.R.forEach(({d,a,sisa})=>{if(a.alok<=0)e.push(d.no+': Alokasi Penerimaan harus lebih dari 0.');
+    if(sisa<0)e.push(d.no+': Alokasi melebihi Piutang Dagang.');
+    if(d.tax==='DEP'&&(sisa!==0||a.pph||a.lebih))e.push(d.no+': Kwitansi Deposit harus lunas penuh, tanpa PPh dan tanpa lebih bayar.');
+    if(a.pph>rnd2(d.jual*0.02-(d.pphUsed||0))+0.001)e.push(d.no+': PPh 23 melebihi sisa batas 2% Penjualan.');
+    if(a.lebih>0&&sisa>0)e.push(d.no+': Lebih Bayar hanya boleh bila invoice lunas (Sisa Piutang 0).');
+    if(a.pph<0||a.admin<0||a.lebih<0)e.push(d.no+': nilai tidak boleh negatif.');});
+  if(c.admin>PU_MAX_ADMIN)e.push('Total biaya admin melebihi batas maksimal Rp 10.000.');
+  if(c.kontrol!==0)e.push('Kontrol belum 0 (selisih Rp '+nf2(c.kontrol)+'). Uang masuk harus sama dengan total kas yang dialokasikan.');
+  return e;}
+function ppJournal(P,c,no){const x=findSplit(P.id),b=bk(x.t.bank),unl=x.s.proc&&x.s.proc.type==='unl';
+  const kasAcc=unl?[PBT[0],PBT[1]]:[b.coa,b.nmcoa];const L=[];
+  c.R.forEach(({d,a,kas,sisa})=>{const sfx=' - '+d.no+(d.spk?' - '+d.spk:'');
+    if(kas)L.push([kasAcc[0],kasAcc[1],kas,0,kasAcc[1]+sfx+(unl?' (Unlocated '+x.s.proc.no+')':' ('+tgl(x.t.tgl)+')'),no]);
+    if(a.pph)L.push([PU_ACC.pph[0],PU_ACC.pph[1],a.pph,0,PU_ACC.pph[1]+sfx,no]);
+    if(a.admin)L.push([PU_ACC.admin[0],PU_ACC.admin[1],a.admin,0,PU_ACC.admin[1]+sfx,no]);
+    if(a.lebih)L.push([PU_ACC.dep[0],PU_ACC.dep[1],0,a.lebih,'Lebih bayar penerimaan '+d.no+' - '+d.cust,no]);
+    L.push([PU_ACC.piutang[0],PU_ACC.piutang[1],0,d.saldo,PU_ACC.piutang[1]+sfx,no]);
+    if(sisa>0)L.push([PU_ACC.piutang[0],PU_ACC.piutang[1],sisa,0,PU_ACC.piutang[1]+sfx+' (sisa piutang)',no]);});
+  return {acc:b.acc,tipe:'BUM',tgl:x.t.tgl,jenis:'Penerimaan Piutang',trx:no,ref:c.R.map(r=>r.d.no).join(', ')+(unl?' · '+x.s.proc.no:''),ket:(c.R[0]?c.R[0].d.cust:'')+' '+c.R.map(r=>r.d.no).join(', '),lines:L};}
+function rPPProc(){const P=U.ppProc,box=$('ppProcBox');$('ppMain').classList.toggle('hidden',!!P);if(!P){box.innerHTML='';return;}
+  const x=findSplit(P.id),dep=P.kind==='dep',unl=x.s.proc&&x.s.proc.type==='unl';
+  const head='';
+  if(P.step===1){const docs=P.cust?ppDocs(P):[];
+    box.innerHTML=`<div class="box"><div class="box-header"><h3 class="box-title">${dep?'Penerimaan Piutang Kwitansi Deposit':'Penerimaan Piutang Invoice'}</h3></div><div class="box-body">${head}
+     <div class="row"><div class="col-md-6"><div class="form-group"><label>Nama Customer <b class="text-red">*</b></label><select class="form-control input-sm" id="puCust"><option value="">- Pilih Customer -</option>${ppCustList(P.kind).map(c=>`<option ${P.cust===c?'selected':''}>${esc(c)}</option>`).join('')}</select>${dep?'<small class="text-muted">Hanya customer yang punya Kwitansi Deposit belum lunas.</small>':''}</div>
+      ${dep?'':`<div class="form-group"><label>PPh 23/PPh Final Disetor <b class="text-red">*</b></label><select class="form-control input-sm" id="puPph"><option value="">- Pilih -</option><option value="Y" ${P.pph==='Y'?'selected':''}>Dipotong PPh</option><option value="N" ${P.pph==='N'?'selected':''}>Tidak Dipotong PPh</option></select></div>`}</div>
+      <div class="col-md-6">${dep?`<div class="form-group"><label>Tanggal &amp; Bank</label>${ro(tgl(x.t.tgl)+' · '+bankTxt(x.t.bank))}</div>`:`<div class="form-group"><label>Deposit <b class="text-red">*</b></label><select class="form-control input-sm" disabled><option>Tidak Pakai Deposit</option></select><small class="text-muted">Pakai Deposit tidak dimockup.</small></div>`}
+      <div class="form-group"><label>Nominal Penerimaan Bank <b class="text-red">*</b></label>${ro(nf2(x.s.nominal))}</div></div></div>
+     <div style="overflow-x:auto"><table class="table table-bordered" id="puDocT" style="font-size:12.5px"><thead><tr class="bg-blue">${dep?'<th>Tgl Kwitansi</th><th>No Kwitansi</th><th>No SPK</th><th class="text-right">Nilai Kwitansi</th><th class="text-right">Saldo Piutang</th><th class="text-center">Action</th>':'<th>Tgl Invoice</th><th>Nomor Invoice</th><th>TAX Code</th><th class="text-right">Penjualan</th><th class="text-right">DPP</th><th class="text-right">PPN</th><th class="text-right">PPH 23</th><th class="text-right">Total Tagihan<br>(Penjualan + PPN)</th><th class="text-right">Total Tagihan<br>- PPH</th><th class="text-right">Saldo Piutang</th><th class="text-center">Action</th>'}</tr></thead>
+     <tbody>${docs.map(d=>{const ph=rnd2(d.jual*0.02);return dep?`<tr><td>${tgl(d.tgl)}</td><td>${esc(d.no)}</td><td>${esc(d.spk)}</td><td class="money">${nf2(d.tagihan)}</td><td class="money">${nf2(d.saldo)}</td><td class="text-center"><input type="checkbox" data-puchk="${esc(d.no)}" ${P.chk.includes(d.no)?'checked':''}></td></tr>`
+       :`<tr><td>${tgl(d.tgl)}</td><td>${esc(d.no)}<div class="text-muted" style="font-size:11px">${esc(d.spk)} · ${d.co}</div></td><td>${d.tax}</td><td class="money">${nf2(d.jual)}</td><td class="money">${nf2(d.dpp)}</td><td class="money">${nf2(d.ppn)}</td><td class="money">${nf2(ph)}</td><td class="money">${nf2(d.tagihan)}</td><td class="money">${nf2(d.tagihan-ph)}</td><td class="money">${nf2(d.saldo)}</td><td class="text-center"><input type="checkbox" data-puchk="${esc(d.no)}" ${P.chk.includes(d.no)?'checked':''}></td></tr>`;}).join('')||`<tr><td colspan="${dep?6:11}" class="dt-empty">${P.cust?'Tidak ada '+(dep?'kwitansi deposit':'invoice')+' terbuka untuk customer ini.':(dep?'Pilih customer untuk menampilkan kwitansi deposit yang masih terbuka.':'No Data Found')}</td></tr>`}</tbody></table></div>
+     <button type="button" class="btn btn-danger btn-sm" id="puBack">Back</button> <button type="button" class="btn btn-success btn-sm" id="puNext">Process</button></div></div>`;
+    $('puCust').onchange=e=>{P.cust=e.target.value;P.chk=[];P.alloc={};rPPProc();};
+    if($('puPph'))$('puPph').onchange=e=>{P.pph=e.target.value;P.alloc={};};
+    box.querySelectorAll('[data-puchk]').forEach(c=>c.onchange=()=>{const n=c.dataset.puchk;P.chk=c.checked?[...P.chk,n]:P.chk.filter(v=>v!==n);P.alloc={};});
+    $('puBack').onclick=()=>{U.ppProc=null;render();};
+    $('puNext').onclick=()=>{if(!P.cust)return swal('error','Warning','Pilih customer.');if(!dep&&!P.pph)return swal('error','Warning','Pilih PPh 23/PPh Final Disetor.');
+      if(!P.chk.length)return swal('error','Warning','Centang minimal satu '+(dep?'kwitansi':'invoice')+'.');P.step=2;P.alloc={};rPPProc();};
+    return;}
+  // ---- langkah 2: alokasi + kontrol + preview jurnal (consulting_process.php) ----
+  const c=ppCalc(P),err=ppErr(P,c),no='(otomatis saat Proses)';
+  const inp=(dno,k,v,dis)=>`<input class="form-control input-sm text-right" style="min-width:92px;padding:4px 6px" data-pu="${esc(dno)}" data-k="${k}" value="${nf2(v)}"${dis?' readonly':''}>`;
+  box.innerHTML=`<div class="box"><div class="box-header"><h3 class="box-title">Proses ${dep?'Penerimaan Kwitansi Deposit':'Penerimaan Piutang'} · ${esc(P.cust)}</h3></div><div class="box-body">${head}
+   <div style="overflow-x:auto"><table class="table table-bordered" id="puAlT" style="font-size:12.5px"><thead><tr class="bg-blue">${dep
+     ?'<th>Nomor Kwitansi</th><th>No SPK</th><th>Company</th><th class="text-right">Nilai Kwitansi</th><th class="text-right">Piutang Dagang</th><th class="text-right">Alokasi Penerimaan</th><th class="text-right">Biaya Admin</th>'
+     :`<th>Nomor Invoice</th><th>TAX Code</th><th class="text-right">Penjualan</th><th class="text-right">DPP</th><th class="text-right">PPN</th><th class="text-right">PPH 23${P.pph==='Y'?'<br><small>default 2% Penjualan, bisa diedit</small>':''}</th><th class="text-right">Total Tagihan<br>(Penjualan + PPN)</th><th class="text-right">Total Tagihan<br>- PPH</th><th class="text-right">Piutang Dagang<br>(Penjualan + PPN)</th><th class="text-right">Alokasi Penerimaan</th><th class="text-right">Biaya Admin</th><th class="text-right">Lebih Bayar</th><th class="text-right">Sisa Piutang</th>`}</tr></thead>
+   <tbody>${c.R.map(({d,a,sisa})=>dep
+     ?`<tr><td>${esc(d.no)}</td><td>${esc(d.spk||'-')}</td><td>${esc(d.co||'-')}</td><td class="money">${nf2(d.tagihan)}</td><td class="money">${nf2(d.saldo)}</td><td>${inp(d.no,'alok',a.alok,true)}</td><td>${inp(d.no,'admin',a.admin)}</td></tr>`
+     :`<tr><td>${esc(d.no)}</td><td>${d.tax}</td><td class="money">${nf2(d.jual)}</td><td class="money">${nf2(d.dpp)}</td><td class="money">${nf2(d.ppn)}</td><td>${inp(d.no,'pph',a.pph,P.pph!=='Y')}</td><td class="money">${nf2(d.tagihan)}</td><td class="money">${nf2(d.tagihan-a.pph)}</td><td class="money">${nf2(d.saldo)}</td><td>${inp(d.no,'alok',a.alok)}</td><td>${inp(d.no,'admin',a.admin)}</td><td>${inp(d.no,'lebih',a.lebih)}</td><td class="money">${nf2(sisa)}</td></tr>`).join('')}</tbody>
+   <tfoot>${dep
+     ?`<tr><th colspan="4" class="text-right">Total</th><th class="money">${nf2(c.piutang)}</th><th class="money">${nf2(c.alok)}</th><th class="money">${nf2(c.admin)}</th></tr><tr><th colspan="5" class="text-right">Uang Masuk</th><th class="money" colspan="2">${nf2(c.uang)}</th></tr><tr><th colspan="5" class="text-right">Kontrol</th><th class="money" colspan="2"><span id="puKontrol" class="${c.kontrol===0?'text-green':'text-red'}">${nf2(c.kontrol)}</span></th></tr>`
+     :`<tr><th colspan="5" class="text-right">Total</th><th class="money">${nf2(c.pph)}</th><th class="money">${nf2(c.R.reduce((t,r)=>t+r.d.tagihan,0))}</th><th class="money">${nf2(c.R.reduce((t,r)=>t+r.d.tagihan-r.a.pph,0))}</th><th class="money">${nf2(c.piutang)}</th><th class="money">${nf2(c.alok)}</th><th class="money">${nf2(c.admin)}</th><th class="money">${nf2(c.lebih)}</th><th class="money">${nf2(c.piutang-c.alok)}</th></tr>
+      <tr><th colspan="8" class="text-right">Total Piutang (Penjualan + PPN)</th><th class="money" colspan="5">${nf2(c.piutang)}</th></tr><tr><th colspan="8" class="text-right">Uang Masuk</th><th class="money" colspan="5">${nf2(c.uang)}</th></tr><tr><th colspan="8" class="text-right">Lebih Bayar</th><th class="money" colspan="5">${nf2(c.lebih)}</th></tr><tr><th colspan="8" class="text-right">Kontrol</th><th class="money" colspan="5"><span id="puKontrol" class="${c.kontrol===0?'text-green':'text-red'}">${nf2(c.kontrol)}</span></th></tr>`}</tfoot></table></div>
+   ${err.length?`<div class="alert alert-danger" id="puErr">${err.map(esc).join('<br>')}</div>`:'<div class="alert alert-info" id="puOk"><b>Kontrol 0.</b> Periksa jurnal di bawah, lalu klik Proses untuk menyimpan.</div>'}
+   <div id="puJv">${jvAll(ppJournal(P,c,no),{preview:true,id:'puJvT'})}</div>
+   <p class="text-muted chg" id="puJvNote" style="font-size:12px">Yang berubah hanya jurnal: baris kas Debit <b>${unl?'Penerimaan Belum Teridentifikasi':'Bank'}</b> mengikuti asal uangnya (${unl?'dari Unlocated '+esc(x.s.proc.no)+', bank sudah dijurnal saat Proses Unlocated':'langsung dari rekening koran'}). Baris lain sama dengan sistem (<code>Invoice_consulting</code>). COA PPh 23 Disetor mengikuti master company.<span class="newtag">BARU</span></p>
+   <button type="button" class="btn btn-danger btn-sm" id="puBack2">Back</button> <button type="button" class="btn btn-success btn-sm" id="puSave" ${err.length?'disabled':''}>Proses</button></div></div>`;
+  box.querySelectorAll('[data-pu]').forEach(el=>el.onchange=()=>{P.alloc[el.dataset.pu][el.dataset.k]=Math.max(0,rnd2(pnum(el.value)));rPPProc();});
+  $('puBack2').onclick=()=>{P.step=1;rPPProc();};
+  $('puSave').onclick=()=>{const c2=ppCalc(P);if(ppErr(P,c2).length)return;ppSave(P,c2);};}
+function ppSave(P,c){const x=findSplit(P.id),no=String(S.n.pu++).padStart(5,'0')+'/PU/XI/26';const j=ppJournal(P,c,no);
+  const jno=String(S.n.bum++).padStart(5,'0')+'-BUM-'+ROMAN[+x.t.tgl.slice(5,7)]+'-'+x.t.tgl.slice(2,4);
+  S.jur.push(Object.assign({no:jno,jt:'RCV',arah:'in',sts:'pending'},j));
+  c.R.forEach(({d,a,sisa})=>{if(P.kind==='dep'){d.kw.sts='LUNAS';d.kw.noPenerimaan=no;}else{d.saldo=sisa;d.pphUsed=rnd2((d.pphUsed||0)+a.pph);d.hist.push({no,tgl:x.t.tgl,alok:a.alok,pph:a.pph,admin:a.admin,lebih:a.lebih});}});
+  x.s.used=no;x.s.pu={no,jv:jno,docs:c.R.map(r=>r.d.no),cust:P.cust};
+  logIt(x.t,'PENERIMAAN_PIUTANG','Diproses '+no+' ('+c.R.map(r=>r.d.no).join(', ')+'), jurnal '+jno+'.');
+  U.ppProc=null;U.pptab='rep';setTimeout(()=>swal('success','Success','Penerimaan piutang '+no+' tersimpan. Jurnal '+jno+' masuk Jurnal All · Penerimaan (belum posting).'),0);render();}
+
+function rPP(){rPPProc();
+  document.querySelectorAll('#ppTabs li').forEach(li=>li.classList.toggle('active',li.firstElementChild.dataset.pptab===U.pptab));
+  document.querySelectorAll('[data-pppane]').forEach(p=>p.classList.toggle('hidden',p.dataset.pppane!==U.pptab));
+  const all=splitsOf(1).concat(splitsOf(8));const inv=splitsOf(1).filter(x=>!x.s.used),dep=splitsOf(8).filter(x=>!x.s.used),rep=all.filter(x=>x.s.used);
+  $('cnt_ppinv').textContent=inv.length;$('cnt_ppdep').textContent=dep.length;$('cnt_pprep').textContent=rep.length;
+  const empty=n=>'<tr><td colspan="'+n+'" class="dt-empty">No data available in table</td></tr>';
+  const uref=s=>s.proc&&s.proc.type==='unl'?`<br><small class="chg">Dari Unlocated <b>${esc(s.proc.no)}</b> · jurnal penerimaan: Debit Penerimaan Belum Teridentifikasi (bukan Bank)</small>`:'';
+  const proc=(s,k)=>`<button type="button" class="btn btn-primary btn-xs" data-ppgo="${s.id}" data-kind="${k}">Proses</button>`;
+  document.querySelector('#ppT tbody').innerHTML=inv.map(({t,s},i)=>`<tr><td>${i+1}</td><td>${tgl(t.tgl)}</td><td>${esc(bankTxt(t.bank))}</td><td>${esc(t.ket)}${uref(s)}</td><td class="money">${nf2(s.nominal)}</td><td><span class="badge bg-gray">Draft</span></td><td class="text-center">${proc(s,'inv')}</td></tr>`).join('')||empty(7);
+  document.querySelector('#ppKT tbody').innerHTML=dep.map(({t,s},i)=>`<tr><td>${i+1}</td><td>${tgl(t.tgl)}</td><td>${esc(bankTxt(t.bank))}</td><td>${esc(t.ket)}${s.kw?'<br><small class="text-muted">Kwitansi: '+esc(s.kw)+'</small>':''}${uref(s)}</td><td class="money">${nf2(s.nominal)}</td><td><span class="badge bg-gray">Draft</span></td><td class="text-center">${proc(s,'dep')}</td></tr>`).join('')||empty(7);
+  document.querySelector('#ppRT tbody').innerHTML=rep.map(({t,s},i)=>`<tr><td>${i+1}</td><td>${tgl(t.tgl)}</td><td>${esc(bankTxt(t.bank))}</td><td>${esc(t.ket)}</td><td>${s.j===8?'Penerimaan Piutang Kwitansi Deposit':'Penerimaan Piutang Invoice'}${uref(s)}</td><td class="money">${nf2(s.nominal)}</td><td><span class="badge bg-green">Used</span> ${esc(s.used)}</td></tr>`).join('')||empty(7);
+  document.querySelectorAll('[data-ppgo]').forEach(b=>b.onclick=()=>ppOpen(b.dataset.ppgo,b.dataset.kind));
+}
+function rHis(){document.querySelector('#hisT tbody').innerHTML=S.log.map(l=>`<tr><td>${l.w}</td><td>${esc(tx(l.t).ket)}</td><td>${l.a}</td><td>${esc(l.k)}</td></tr>`).join('')||'<tr><td colspan="4" class="dt-empty">Belum ada aktivitas di sesi ini.</td></tr>';}
+$('chgToggle').onchange=e=>document.body.classList.toggle('show-chg',e.target.checked);
+$('btnReset').onclick=()=>swal('warning','Reset data mockup?','Semua alokasi dan rollback hasil uji coba akan dihapus.',()=>{S=seed();U.sel.clear();U.utab='belum';setTimeout(()=>go('alo'),0);},'Ya, reset');
+go('alo');
+
+/* ================= JURNAL ALL (AP-R-37) — meniru jurnal_all/views/workspace.php + assets/js/jurnal-all.js ================= */
+// Sumber (tab) seperti sistem; BANK = tab baru Jurnal Bank. INV / PAY / PCS tidak dimockup di sini.
+const JA_SRC=[['INV','Invoicing','Jurnal Invoicing'],['RCV','Penerimaan','Jurnal Penerimaan'],['PAY','Pembayaran','Jurnal Pembayaran'],['EXP','Expense Report','Jurnal Expense Report'],['PCS','Pencatatan Petty Cash','Jurnal Pencatatan Petty Cash'],['BANK','Jurnal Bank','Jurnal Bank (Mutasi & Transaksi Bank)']];
+const JA_CAT={RCV:['Penerimaan Piutang','Unlocated Penerimaan'],BANK:['Mutasi','Transaksi Bank']};
+const JA_MOCK=['RCV','BANK','EXP'];
+const JA_BLN=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+const jaTot=j=>j.lines.reduce((a,l)=>a+l[2],0);
+const jaDate=d=>{if(!d)return '—';const [y,m,dd]=d.split('-');return dd+' '+JA_BLN[+m-1]+' '+y;};
+function jaRows(src,posted){const F=U.ja;const q=(F.q||'').toLowerCase();
+  return S.jur.filter(j=>j.jt===src&&(posted?j.sts==='posted':j.sts!=='posted')&&(!F.month||+j.tgl.slice(5,7)===+F.month)&&(!F.co||j.acc===F.co)&&(!F.cat||j.jenis===F.cat)&&(src!=='BANK'||!F.ar||j.arah===F.ar)
+    &&(!q||[j.trx,j.ref,j.ket,j.acc,j.no].concat(j.lines.map(l=>l[0]+' '+l[1])).join(' ').toLowerCase().includes(q))).sort((a,b)=>a.tgl.localeCompare(b.tgl)||a.no.localeCompare(b.no));}
+function rJaws(posted){const F=U.ja;const host=posted?$('jaRep'):$('jaWs');(posted?$('jaWs'):$('jaRep')).innerHTML=''; // id unik: hanya halaman yang terbuka yang dirender
+  if(!JA_SRC.some(x=>x[0]===F.t))F.t='RCV';
+  const pend=src=>S.jur.filter(j=>j.jt===src&&j.sts!=='posted');
+  const card=([k,short])=>{const L=pend(k),old=L.map(j=>j.tgl).sort()[0];const age=old?Math.round((Date.parse(DASH_TODAY)-Date.parse(old))/864e5):0;const mock=JA_MOCK.includes(k);
+    return `<button type="button" class="ja-card${F.t===k?' active':''}${k==='BANK'?' chg':''}" data-src="${k}" data-jcard="${k}"><span class="ja-card-title">${short}${k==='BANK'?' <span class="newtag">BARU</span>':''}</span><span class="ja-card-count"><strong>${mock?L.length:'—'}</strong><span>belum posting</span></span><small>${mock?'Debit Rp '+nf2(L.reduce((a,j)=>a+jaTot(j),0)):'Tidak dimockup'}</small><small class="ja-age">${mock?(old?'Tertua: '+old.split('-').reverse().join('/')+' ('+age+' hari)':'Tertua: —'):''}</small></button>`;};
+  const cat=JA_CAT[F.t];const cols=['No.'].concat(posted?['No. Jurnal Accounting','Tgl Posting']:[],['Tgl Jurnal','No. Transaksi','No. Referensi'],cat?['Kategori Transaksi']:[],['Keterangan','Company','Debit','Kredit','Aksi']);
+  const L=JA_MOCK.includes(F.t)?jaRows(F.t,posted):[];const title=JA_SRC.find(x=>x[0]===F.t)[2];
+  host.innerHTML=`<p class="ja-intro">${posted?'Telusuri jurnal yang sudah diposting dan periksa detail pencatatannya.':'Periksa transaksi yang menunggu posting ke accounting.'}</p>
+   ${posted?'':'<div class="ja-cards" id="jaCards">'+JA_SRC.map(card).join('')+'</div><p class="ja-hint">Ringkasan mengikuti filter setiap tab. Pilih sumber untuk melihat transaksinya.</p>'}
+   <div class="ja-tabs" id="jaTabs" role="tablist">${JA_SRC.map(([k,short])=>`<button type="button" class="ja-tab${F.t===k?' active':''}${k==='BANK'?' chg':''}" data-jt="${k}">${short}${k==='BANK'?' <span class="newtag">BARU</span>':''}<span class="ja-badge">${posted||!JA_MOCK.includes(k)?'':pend(k).length}</span></button>`).join('')}</div>
+   <div class="ja-panel"><div class="ja-section-head"><div><h2 id="jaTitle">${title}</h2><p>${posted?'Riwayat jurnal sesuai filter yang dipilih.':'Pilih transaksi untuk memeriksa detail sebelum posting.'}</p></div><button type="button" class="btn ja-btn-export" id="jaExport" ${L.length?'':'disabled'}><i class="fa fa-download"></i> Export Excel</button></div>
+    <div class="ja-filters" id="jaFlt">
+     <label>Tahun<select class="form-control" id="jaYear"><option>2026</option></select></label>
+     <label>Bulan<select class="form-control" id="jaMonth"><option value="">Semua Bulan</option>${JA_BLN.map((m,i)=>`<option value="${i+1}"${+F.month===i+1?' selected':''}>${m}</option>`).join('')}</select></label>
+     <label>Company<select class="form-control" id="jaCo"><option value="">Semua Company</option>${['STM','VUCA','SUSTAIN'].map(c=>`<option${F.co===c?' selected':''}>${c}</option>`).join('')}</select></label>
+     ${cat?`<label class="chg">Kategori Transaksi <span class="newtag">BARU</span><select class="form-control" id="jaCat"><option value="">Semua Kategori</option>${cat.map(c=>`<option${F.cat===c?' selected':''}>${c}</option>`).join('')}</select></label>`:''}
+     ${F.t==='BANK'?`<label class="chg">Arah <span class="newtag">BARU</span><select class="form-control" id="jaAr"><option value="">Semua Arah</option><option value="in"${F.ar==='in'?' selected':''}>Uang masuk</option><option value="out"${F.ar==='out'?' selected':''}>Uang keluar</option></select></label>`:''}
+     <div class="ja-buttons"><button type="button" class="btn ja-btn-apply" id="jaApply">Terapkan filter</button><button type="button" class="btn ja-btn-reset" id="jaReset">Reset</button></div></div>
+    ${F.t==='RCV'?'<p class="ja-hint chg">Kategori <b>Unlocated Penerimaan</b> = jurnal Proses Unlocated (Dr Bank / Cr Penerimaan Belum Teridentifikasi). Unlocated yang sudah diproses boleh dipindahkan ke Penerimaan Piutang walau jurnalnya belum diposting.</p>':''}
+    ${F.t==='BANK'?'<p class="ja-hint chg">Tab baru. Di sistem sekarang Mutasi dan Transaksi Bank langsung menulis jurnal ke accounting tanpa lewat Jurnal All.</p>':''}
+    <div class="ja-table-tools"><label>Tampilkan <select class="form-control" style="width:70px"><option>10</option><option>25</option><option>50</option></select> baris</label><label><i class="fa fa-search"></i><input class="form-control ja-search" id="jaQ" type="search" placeholder="Cari transaksi, referensi, customer, COA…" value="${esc(F.q)}"></label></div>
+    <div class="ja-scroll"><table class="ja-table" id="jaT"><thead><tr>${cols.map(c=>`<th${c==='Debit'||c==='Kredit'?' class="ja-money"':''}>${c}</th>`).join('')}</tr></thead><tbody>${L.map((j,i)=>`<tr data-row="${esc(j.no)}"><td>${i+1}</td>${posted?`<td>${esc(j.no)}</td><td>${esc(j.postedAt||'-')}</td>`:''}<td class="ja-reference">${jaDate(j.tgl)}</td><td class="ja-transaction">${esc(j.trx)}</td><td class="ja-reference">${esc(j.ref||'-')}</td>${cat?`<td>${esc(j.jenis)}${F.t==='BANK'?'<br><span class="'+(j.arah==='out'?'dir-out':'dir-in')+'">'+(j.arah==='out'?'uang keluar':'uang masuk')+'</span>':''}</td>`:''}<td class="ja-desc">${esc(j.ket||'')}</td><td>${j.acc}</td><td class="ja-money">${nf2(jaTot(j))}</td><td class="ja-money">${nf2(jaTot(j))}</td><td><button type="button" class="btn btn-sm ja-post" data-jdet="${esc(j.no)}">${posted?'Detail':'+ Post'}</button></td></tr>`).join('')||`<tr><td colspan="${cols.length}" class="ja-empty">${JA_MOCK.includes(F.t)?'Tidak ada jurnal sesuai filter dan pencarian. Ubah filter atau pilih Reset untuk memeriksa kembali.':'Tab ini tidak dimockup (menu yang sudah berjalan).'}</td></tr>`}</tbody></table></div>
+    <div class="ja-footer"><span id="jaCount">Menampilkan ${L.length?1:0}–${L.length} dari ${L.length} transaksi</span><span>Halaman 1 / 1</span></div></div>`;
+  host.querySelectorAll('[data-jt],[data-jcard]').forEach(b=>b.onclick=()=>{U.ja={t:b.dataset.jt||b.dataset.jcard,cat:'',ar:'',month:'',co:'',q:''};rJaws(posted);});
+  const ap=()=>{F.month=$('jaMonth').value;F.co=$('jaCo').value;F.cat=$('jaCat')?$('jaCat').value:'';F.ar=$('jaAr')?$('jaAr').value:'';rJaws(posted);};
+  $('jaApply').onclick=ap;$('jaReset').onclick=()=>{Object.assign(F,{cat:'',ar:'',month:'',co:'',q:''});rJaws(posted);};
+  $('jaQ').onchange=e=>{F.q=e.target.value;rJaws(posted);};
+  $('jaExport').onclick=()=>swal('success','Export Excel','Mockup: file berisi detail COA seluruh hasil filter dan pencarian.');
+  host.querySelectorAll('[data-jdet]').forEach(b=>b.onclick=()=>jaDetail(b.dataset.jdet,posted));}
+function jaDetail(no,posted){const j=S.jur.find(x=>x.no===no);
+  modal('Detail jurnal',jvAll(j,{id:'jaLines'})+`
+   <p class="text-muted" style="font-size:12px">Usulan jurnal versi awal; COA "(belum ada)" / "(diisi user)" disetting IT Developer. Nomor ${esc(j.no)} di mockup dibuat saat proses; di sistem nomor jurnal accounting terbentuk saat posting.</p>`,
+   posted||j.sts==='posted'?'':'Posting',posted||j.sts==='posted'?null:()=>{j.sts='posted';j.postedAt='23 November 2026 '+String(9+S.jur.filter(x=>x.postedAt).length).padStart(2,'0')+':00 WIB';badges();rJaws(false);swal('success','Berhasil','Jurnal '+esc(j.trx)+' diposting ke accounting '+j.acc+' (No. Jurnal Accounting '+esc(j.no)+'). Lihat di Report Jurnal All.');},
+   {lg:true,noOk:posted||j.sts==='posted',cancelText:'Tutup',okClass:'btn-success'});}
+function rJall(){rJaws(false);}
+function rJrep(){rJaws(true);}
+
+/* ================= TUTORIAL (driver.js) ================= */
+// Langkah per halaman. Langkah yang elemennya tidak tampil di halaman itu dilewati otomatis.
+function tourDef(){const c=TAMP[U.tamp]||{};return {
+ alo:[
+  {element:'#aUpload',popover:{title:'Upload Rekening Koran',description:'Pilih rekening, pilih file CSV, Preview, lalu Proses. Format dibaca sesuai bank (BCA kode 7, OCBC kode 22). Semua baris uang masuk dan keluar tersimpan berstatus Open.'}},
+  {element:'#aBank',popover:{title:'Filter',description:'Saring berdasarkan tanggal dan rekening, lalu klik Search.'}},
+  {element:'#aT',popover:{title:'Baris rekening koran',description:'Total Debit = uang masuk, Total Credit = uang keluar (sudut pandang perusahaan). Status Alokasi: Open, Sebagian (masih ada sisa), atau jenis alokasinya.'}},
+  {element:'#aT [data-alo]',popover:{title:'Alokasi',description:'Tentukan baris ini transaksi apa. Boleh dipecah ke beberapa jenis; total harus sama dengan nominal (atau sisa). Pilihan jenis menyesuaikan arah dana: uang keluar hanya Mutasi, Transaksi Bank, Pembayaran.'}},
+  {element:'#aT [data-view]',popover:{title:'View',description:'Lihat rincian alokasi baris ini dan buka menu tampungannya.'}}],
+ tamp:[
+  {element:'#tTitle',popover:{title:'Tampungan '+(c.title||''),description:'Menampung semua alokasi berjenis '+(c.title||'')+' dari menu Alokasi, satu baris per alokasi.'}},
+  {element:'#tNote',popover:{title:'Fungsi menu ini',description:NOTE[U.tamp]||''}},
+  {element:'#tT',popover:{title:'Daftar',description:'Kolom Nominal Alokasi = bagian yang masuk tampungan ini (bisa lebih kecil dari baris rekening koran kalau dipecah), dengan tanda masuk/keluar.'}},
+  {element:'#tUnlTabs',popover:{title:'Belum / Sudah Diproses',description:'Belum Diproses: klik Proses untuk menjurnal Debit Bank / Kredit Penerimaan Belum Teridentifikasi; terbentuk nomor Unlocated (UNL-…). Sudah Diproses: nomor + jurnalnya, lalu dipindahkan ke Penerimaan Piutang Invoice atau Kwitansi Deposit.'}},
+  {element:'#tProcTh',popover:{title:U.tamp==='kas'?'Status':'Proses',description:U.tamp==='unl'?'Tombol Proses membuka form dengan preview jurnal Debit Bank / Kredit Penerimaan Belum Teridentifikasi. Setelah disimpan, kolom ini berisi nomor Unlocated dan link Lihat jurnal.':U.tamp==='kas'?'Status berjalan: Belum diverifikasi, atau Terverifikasi beserta nomor jurnalnya. Verifikasi (memilih Expense Report) dilakukan di menu Expense → Verifikasi Pengembalian Kasbon.':U.tamp==='mut'?'Proses Mutasi: pilih Request Mutasi yang sudah di-approve, untuk baris keluar maupun masuk. Baris yang diproses duluan membuat realisasi (MTR); setiap sisi membuat jurnal di buku company rekeningnya.':'Proses: form Transaksi Bank terisi dari rekening koran (jenis, tanggal, company, bank, nilai); user memilih akun lawan, preview jurnal ikut berubah. Hasilnya KM (uang masuk) atau KK (uang keluar).'}},
+  {element:'#tMove',popover:{title:'Pindahkan ke Penerimaan Piutang Invoice',description:'Ada di tab Sudah Diproses. Kalau belakangan diketahui uangnya pembayaran invoice, centang lalu klik. Jenis berubah jadi Penerimaan Piutang, muncul sebagai draft di tab Penerimaan Piutang Invoice dengan referensi nomor Unlocated; jurnal penerimaannya Debit Penerimaan Belum Teridentifikasi (bukan Bank).'}},
+  {element:'#tMoveKw',popover:{title:'Pindahkan ke Penerimaan Piutang Kwitansi Deposit',description:'Kalau ternyata pembayaran kwitansi deposit. Jenis berubah jadi Deposit, muncul di tab Penerimaan Piutang Kwitansi Deposit. Nomor kwitansi (Menunggu Pembayaran) boleh dipilih, 1 data per kwitansi.'}},
+  {element:'#tRollback',popover:{title:'Rollback',description:'Membatalkan alokasi yang dicentang di menu ini saja. Alokasi lain di baris yang sama tetap; baris jadi Open atau Sebagian di menu Alokasi. Baris yang sudah diproses tidak bisa di-rollback.'}}],
+ pp:[{element:'#ppTabs',popover:{title:'Penerimaan Piutang',description:'Menu yang sudah berjalan, 3 tab: Invoice (draft jenis Penerimaan Piutang), Kwitansi Deposit (draft jenis Deposit), dan Report Penerimaan (yang sudah diproses).'}}],
+ mts:[
+  {element:'#mtsAdd',popover:{title:'Tambah Request Mutasi',description:'Isi tanggal, bank Dari dan Ke, keterangan, nilai. Company tampil otomatis dari rekening (asal → tujuan); tidak ada Target Accounting.'}},
+  {element:'#mtsT',popover:{title:'Status request',description:'Menunggu Approval → Approved → Terealisasi MTR-… setelah baris rekening korannya diproses di tampungan Mutasi. Request belum membuat jurnal.'}}],
+ dash:[
+  {element:'.dash-filter',popover:{title:'Filter',description:'Rentang tanggal transaksi, Company (STM / VUCA / SUSTAIN), dan Bank. Pilihan Bank menyesuaikan Company. Tanpa filter = semua data.'}},
+  {element:'#dashCards',popover:{title:'Card per jenis alokasi',description:'Jumlah dan total nominal yang belum diproses, umur tertua, dan sebaran umur 0–7 / 8–30 / >30 hari. Hijau = tuntas. Klik card untuk menampilkan rinciannya di tabel bawah; klik lagi untuk kembali ke semua jenis.'}},
+  {element:'#dashT',popover:{title:'Rincian',description:'Baris yang belum diproses, urut dari yang paling lama. Saat satu card dipilih, ada tombol Buka menu untuk langsung memprosesnya.'}},
+  {element:'#dfXls',popover:{title:'Export to Excel',description:'Mengikuti filter yang aktif: sheet Ringkasan (per card) dan Rincian (per baris). Tanpa filter, semua data terekspor.'}}],
+ verk:[
+  {element:'#verkTabs',popover:{title:'Verifikasi Pengembalian Kasbon',description:'Tab Mutasi Bank: baris rekening koran yang dialokasikan Pengembalian Kasbon (draft). Tab Pengajuan Karyawan: Expense Report yang buktinya sudah diunggah, bisa ditolak. Tab Selesai: yang sudah diverifikasi dan dijurnal.'}},
+  {element:'#verkT [data-verk]',popover:{title:'Proses Verifikasi',description:'Seperti Penerimaan Piutang: pilih sendiri Expense Report yang dibayar oleh uang ini. Perbandingan bank, tanggal, nominal membantu checklist. Finance mencentang sendiri ketiga checklist (Bukti, Mutasi, Nominal), lalu Setujui. Jurnal: Dr Bank / Cr Piutang Lain-lain Konsultan.'}}],
+ mtsapv:[{element:'#apvT',popover:{title:'Approval Mutasi',description:'Approve atau Reject (alasan wajib). Hanya request yang di-approve yang bisa dipilih saat Proses Mutasi.'}}],
+ tbk:[{element:'#tbkT',popover:{title:'Data Transaksi Bank',description:'Daftar KM (uang masuk) dan KK (uang keluar) hasil proses tampungan Transaksi Bank. Input manual ditutup. Penerimaan: Dr Bank / Cr Akun Lawan. Pengeluaran: Dr Akun Lawan / Cr Bank.'}}],
+ jall:[
+  {element:'#jaCards',popover:{title:'Ringkasan per sumber',description:'Seperti Jurnal All di sistem: jumlah belum posting, total debit, dan tanggal tertua per sumber. Card <b>Jurnal Bank</b> baru.'}},
+  {element:'#jaTabs',popover:{title:'Tab sumber',description:'Penerimaan (kategori Penerimaan Piutang / Unlocated Penerimaan), Expense Report (Pengembalian Kasbon), dan tab baru Jurnal Bank (Mutasi, Transaksi Bank). Invoicing, Pembayaran, Petty Cash tidak dimockup.'}},
+  {element:'#jaFlt',popover:{title:'Filter',description:'Tahun, Bulan, Company seperti sistem; Kategori Transaksi di Penerimaan dan Jurnal Bank (baru); Arah di Jurnal Bank.'}},
+  {element:'#jaT',popover:{title:'Daftar jurnal belum posting',description:'Klik <b>+ Post</b> untuk membuka detail jurnal, lalu <b>Posting</b>. Yang sudah diposting pindah ke Report Jurnal All.'}}],
+ jrep:[{element:'#jaT',popover:{title:'Report Jurnal All',description:'Jurnal yang sudah diposting, dengan No. Jurnal Accounting dan Tgl Posting.'}}],
+ his:[{element:'#hisT',popover:{title:'Historical Alokasi',description:'Riwayat aktivitas alokasi selama sesi uji.'}}],
+};}
+function tourPage(){return U.page;}
+function startTour(){
+  if(!(window.driver&&window.driver.js)){swal('warning','Tutorial','Tutorial butuh koneksi internet (driver.js dimuat dari CDN).');return;}
+  const steps=(tourDef()[tourPage()]||[]).filter(s=>{const el=document.querySelector(s.element);return el&&el.getClientRects().length>0;});
+  if(!steps.length){swal('warning','Tutorial','Belum ada tutorial untuk halaman ini.');return;}
+  window.driver.js.driver({showProgress:true,progressText:'{{current}} dari {{total}}',nextBtnText:'Lanjut',prevBtnText:'Kembali',doneBtnText:'Selesai',steps}).drive();}
+// tombol lama (mengambang) diganti tombol Tutorial di baris atas konten (TOUR v2)
+
+const TOUR_CFG={wait:180,
+ msg:t=>swal('warning','Tutorial',t),
+ cleanup:()=>{closeDlg();},
+ page:()=>tourDef()[tourPage()]||[],
+ flows:()=>{
+  const G=p=>()=>{closeDlg();go(p);};
+  const UT=t=>()=>{closeDlg();go('unl');U.utab=t;U.sel.clear();rTamp();};
+  const pick=id=>{const s=$(id);if(s&&s.options.length>1&&!s.value){s.selectedIndex=1;s.dispatchEvent(new Event('change',{bubbles:true}));}};
+  return [
+  {title:'Upload & alokasi rekening koran',desc:'Alokasi → Dashboard Alokasi',steps:[
+   {pg:'Penerimaan → Alokasi',go:G('alo'),el:'#aUpload',t:'1. Upload rekening koran',d:'Mulai dari sini: klik <b>Upload Rekening Koran</b> untuk memasukkan mutasi bank.'},
+   {pg:'Form Upload Rekening Koran',go:()=>{closeDlg();go('alo');$('aUpload').click();},el:'#upBank',t:'2. Pilih rekening',d:'Pilih rekening perusahaan. Format file dibaca otomatis sesuai bank (BCA kode 7, OCBC kode 22).'},
+   {el:'#upFile',t:'3. Pilih file',d:'Pilih file CSV rekening koran. Preview baris tampil sebelum diproses.'},
+   {el:'#dlgOk',t:'4. Proses',d:'Klik <b>Proses</b>: semua baris masuk daftar Alokasi dengan status Open. Tutorial tidak menyimpan apa pun.'},
+   {pg:'Penerimaan → Alokasi',go:G('alo'),el:'#aT',t:'5. Daftar rekening koran',d:'Total Debit = uang masuk, Total Credit = uang keluar. Status: <b>Open</b> (belum dialokasikan), <b>Sebagian</b> (masih ada sisa), <b>Teralokasi</b>.'},
+   {el:'#aT [data-alo]',t:'6. Alokasi',d:'Klik <b>Alokasi</b> di baris Open untuk menentukan baris ini transaksi apa.'},
+   {pg:'Modal Alokasi Split',go:()=>{closeDlg();go('alo');const t=S.tx.find(t=>sisaOf(t)>0);if(t)openSplit(t.id);},el:'#spT [data-sj="0"]',t:'7. Pilih jenis alokasi',d:'Pilihan menyesuaikan arah dana. Uang masuk: Penerimaan Piutang, Unlocated, Pengembalian Kasbon, Alokasi Kalibrasi, Deposit. Uang keluar: Pembayaran. Keduanya: Mutasi, Transaksi Bank.'},
+   {el:'#spAdd',t:'8. Pecah ke beberapa jenis',d:'Satu baris boleh dipecah, mis. 15.000.000 Penerimaan Piutang + 500.000 Unlocated.'},
+   {el:'#spSisa',t:'9. Sisa',d:'Total alokasi idealnya sama dengan nominal baris. Kalau masih ada sisa, baris berstatus Sebagian dan sisanya bisa dialokasikan nanti.'},
+   {el:'#dlgOk',t:'10. Simpan',d:'Setiap bagian masuk ke menu tampungan sesuai jenisnya (Penerimaan Piutang, Unlocated, Mutasi, dst.).'},
+   {pg:'Penerimaan → Dashboard Alokasi',go:G('dash'),el:'#dashCards',t:'11. Pantau yang belum diproses',d:'Satu card per jenis: jumlah, total, umur tertua. Klik card untuk melihat rinciannya.'},
+   {el:'#dashT',t:'12. Rincian',d:'Baris yang belum diproses, urut dari yang paling lama. Saat satu card dipilih ada tombol <b>Buka menu</b> untuk langsung memprosesnya.'}]},
+  {title:'Unlocated → Penerimaan Piutang',desc:'Unlocated Penerimaan → Penerimaan Piutang',steps:[
+   {pg:'Penerimaan → Unlocated Penerimaan',go:UT('belum'),el:'#tUnlTabs',t:'1. Dua tab',d:'<b>Belum Diproses</b>: Unlocated yang belum dijurnal. <b>Sudah Diproses</b>: sudah dijurnal dan punya nomor Unlocated.'},
+   {el:'#tT [data-uproc]',t:'2. Proses',d:'Klik <b>Proses</b> di baris yang mau dijurnal.'},
+   {pg:'Form Proses Unlocated',go:()=>{UT('belum')();const x=splitsOf(2).find(x=>!x.s.proc);if(x)openUnl(x.s.id);},el:'#dlgB .jvT',t:'3. Jurnal',d:'Debit <b>Bank</b> / Kredit <b>Penerimaan Belum Teridentifikasi</b>, di buku company pemilik rekening.'},
+   {el:'#dlgOk',t:'4. Simpan',d:'Terbentuk 1 nomor Unlocated baru (UNL-…) beserta jurnalnya, lalu baris pindah ke tab Sudah Diproses.'},
+   {pg:'Unlocated · Sudah Diproses',go:UT('sudah'),el:'#tT',t:'5. Sudah Diproses',d:'Kolom Proses berisi nomor Unlocated, nomor jurnal, dan link <b>Lihat jurnal</b>. Di tab ini tidak ada Rollback.'},
+   {el:'#tMove',t:'6. Ternyata pembayaran invoice',d:'Centang barisnya lalu klik ini: jadi draft di Penerimaan Piutang tab Invoice dengan referensi nomor Unlocated.'},
+   {el:'#tMoveKw',t:'7. Ternyata kwitansi deposit',d:'Kwitansi deposit yang menunggu pembayaran boleh dipilih (opsional, 1 data per kwitansi). Jadi draft di tab Kwitansi Deposit.'},
+   {pg:'Penerimaan → Penerimaan Piutang',go:()=>{U.ppProc=null;U.pptab='inv';G('pp')();},el:'#ppTabs',t:'8. Lanjut di Penerimaan Piutang',d:'Draft muncul di tab Invoice / Kwitansi Deposit dengan keterangan "Dari Unlocated UNL-…".'},
+   {go:()=>{U.ppProc=null;U.pptab='inv';G('pp')();},el:'#ppT',t:'9. Proses penerimaan',d:'Klik <b>Proses</b>: pilih customer, PPh 23 dipotong atau tidak, centang invoice, Process, lalu isi alokasi sampai Kontrol 0. Jurnalnya Debit <b>Penerimaan Belum Teridentifikasi</b> (bukan Bank) / Kredit Piutang, karena bank sudah dijurnal saat Unlocated diproses.'},
+   {pg:'Accounting → Jurnal All · Penerimaan',go:()=>{closeDlg();U.ja={t:'RCV',cat:'',ar:'',month:'',co:'',q:''};go('jall');},el:'#jaT',t:'10. Jurnal All',d:'Jurnal Proses Unlocated masuk tab <b>Penerimaan</b> (Kategori Transaksi: Unlocated Penerimaan), belum posting sampai diklik + Post → Posting.'}]},
+  {title:'Pengembalian Kasbon',desc:'Alokasi → Verifikasi Pengembalian Kasbon',steps:[
+   {pg:'Penerimaan → Alokasi',go:G('alo'),el:'#aT',t:'1. Alokasikan sebagai Pengembalian Kasbon',d:'Uang masuk dari karyawan (mis. SETORAN TUNAI BUDI SANTOSO) dialokasikan jenis <b>Pengembalian Kasbon</b>.'},
+   {pg:'Penerimaan → Pengembalian Kasbon',go:G('kas'),el:'#tT',t:'2. Status berjalan',d:'Tampungan ini hanya menampilkan status: Belum diverifikasi, atau Terverifikasi beserta nomor jurnalnya.'},
+   {pg:'Expense → Verifikasi Pengembalian Kasbon',go:G('verk'),el:'#verkTabs',t:'3. Verifikasi di menu Expense',d:'Tab <b>Mutasi Bank</b>: baris rekening koran (draft). Tab <b>Pengajuan Karyawan</b>: Expense Report yang menunggu verifikasi. Tab <b>Selesai</b>.'},
+   {el:'#verkT [data-verk]',t:'4. Proses Verifikasi',d:'Klik di baris rekening koran.'},
+   {pg:'Form Verifikasi',go:()=>{closeDlg();go('verk');const x=kasDraft()[0];if(x){openVerk(x.s.id);pick('vkEr');}},el:'#vkEr',t:'5. Pilih Expense Report',d:'Finance memilih sendiri Expense Report yang dibayar oleh uang ini (tidak dicocokkan otomatis).'},
+   {el:'#vkCmp',t:'6. Bandingkan & checklist',d:'Bank, tanggal, dan nominal rekening koran dibandingkan dengan bukti karyawan. Centang 3 checklist secara manual.'},
+   {el:'#vkJv',t:'7. Jurnal',d:'Debit Bank / Kredit Piutang Lain-lain Konsultan. Dibuat saat disetujui, masuk Jurnal All tab Expense Report (belum posting), lalu diposting dari sana.'},
+   {el:'#dlgOk',t:'8. Setujui & Buat Jurnal',d:'Atau <b>Tolak</b> dengan alasan; karyawan memperbaiki buktinya.'},
+   {pg:'Penerimaan → Pengembalian Kasbon',go:G('kas'),el:'#tT',t:'9. Terverifikasi',d:'Setelah disetujui, status di tampungan berubah jadi Terverifikasi + nomor jurnal.'},
+   {pg:'Accounting → Jurnal All · Expense',go:()=>{closeDlg();U.ja={t:'EXP',cat:'',ar:'',month:'',co:'',q:''};go('jall');},el:'#jaT',t:'10. Jurnal All',d:'Jurnalnya masuk tab <b>Expense Report</b> (belum posting), lalu + Post → Posting.'}]},
+  {title:'Mutasi antar rekening',desc:'Request → Approval → Alokasi → Proses Mutasi',steps:[
+   {pg:'Mutasi Bank → Request Mutasi',go:G('mts'),el:'#mtsAdd',t:'1. Buat Request Mutasi',d:'Sebelum memindahkan dana antar rekening, buat request dulu.'},
+   {pg:'Form Request Mutasi',go:()=>{closeDlg();go('mts');$('mtsAdd').click();},el:'#mfDari',t:'2. Dari & Ke',d:'Pilih rekening asal dan tujuan. Company tampil otomatis dari rekening (asal → tujuan), tanpa Target Accounting.'},
+   {el:'#dlgOk',t:'3. Simpan',d:'Request berstatus <b>Menunggu Approval</b>.'},
+   {pg:'Mutasi Bank → Approval Mutasi',go:G('mtsapv'),el:'#apvT',t:'4. Approval',d:'Approver menyetujui atau menolak (alasan wajib). Hanya request yang approved yang bisa dipakai saat Proses Mutasi.'},
+   {pg:'Penerimaan → Alokasi',go:G('alo'),el:'#aT',t:'5. Alokasikan sebagai Mutasi',d:'Setelah transfer, upload rekening koran kedua rekening. Baris keluar dan baris masuk sama-sama dialokasikan jenis <b>Mutasi</b>.'},
+   {pg:'Penerimaan → Mutasi',go:G('mut'),el:'#tT [data-mproc]',t:'6. Proses Mutasi',d:'Klik <b>Proses Mutasi</b>, baik di baris keluar maupun masuk.'},
+   {pg:'Form Proses Mutasi',go:()=>{closeDlg();go('mut');const x=splitsOf(4).find(x=>!x.s.proc);if(x){openMut(x.s.id);pick('rmReq');}},el:'#rmReq',t:'7. Pilih Request Mutasi',d:'Pilih request yang approved; yang rekening dan nominalnya sama ditandai <b>(cocok)</b>.'},
+   {el:'#rmJv',t:'8. Jurnal per sisi',d:'Sisi keluar dijurnal di buku company bank asal, sisi masuk di buku company bank tujuan.'},
+   {el:'#dlgOk',t:'9. Simpan',d:'Sisi pertama membuat realisasi MTR-…; sisi pasangannya ditautkan ke MTR yang sama.'},
+   {pg:'Mutasi Bank → Request Mutasi',go:G('mts'),el:'#mtsT',t:'10. Status request',d:'Request berubah jadi Terealisasi MTR-… setelah diproses.'},
+   {pg:'Accounting → Jurnal All · Jurnal Bank',go:()=>{closeDlg();U.ja={t:'BANK',cat:'',ar:'',month:'',co:'',q:''};go('jall');},el:'#jaT',t:'11. Jurnal All',d:'Jurnal per sisi masuk tab baru <b>Jurnal Bank</b> (Kategori Transaksi Mutasi, arah keluar / masuk), belum posting sampai + Post → Posting.'}]},
+  {title:'Transaksi Bank',desc:'Tampungan Transaksi Bank → Data Transaksi Bank',steps:[
+   {pg:'Penerimaan → Transaksi Bank',go:G('tb'),el:'#tT [data-tbp]',t:'1. Proses',d:'Tampungan bunga, pajak bunga, biaya admin, biaya transfer, dan autodebet. Klik <b>Proses</b>.'},
+   {pg:'Form Transaksi Bank',go:()=>{closeDlg();go('tb');const x=splitsOf(5).find(x=>!x.s.proc);if(x)openTb(x.s.id);},el:'#tbNew',t:'2. Terisi dari rekening koran',d:'Jenis (uang masuk / keluar), tanggal, bank, dan nilai terisi otomatis.'},
+   {el:'#tbLawan',t:'3. Pilih akun lawan',d:'Dipilih manual dari seluruh COA (mis. Pendapatan Bunga, Admin Charge, Hutang BPJS).'},
+   {el:'#tbJv',t:'4. Preview jurnal',d:'Uang masuk: Debit Bank / Kredit akun lawan. Uang keluar: Debit akun lawan / Kredit Bank.'},
+   {el:'#dlgOk',t:'5. Simpan',d:'Terbentuk KM-… (uang masuk) atau KK-… (uang keluar).'},
+   {pg:'Transaksi Bank → Data Transaksi Bank',go:G('tbk'),el:'#tbkT',t:'6. Data Transaksi Bank',d:'Semua KM / KK hasil proses tampungan, dengan baris rekening koran asalnya.'},
+   {pg:'Accounting → Jurnal All · Jurnal Bank',go:()=>{closeDlg();U.ja={t:'BANK',cat:'',ar:'',month:'',co:'',q:''};go('jall');},el:'#jaT',t:'7. Jurnal All',d:'Jurnal KM / KK masuk tab <b>Jurnal Bank</b> (Kategori Transaksi: Transaksi Bank). Sebelumnya Transaksi Bank langsung ke accounting.'}]}];}};
+
+/* ===== TUTORIAL v2 (driver.js 1.3.1) =====
+   Tombol "Tutorial" di baris atas konten (bukan mengambang di bawah, supaya tidak menutupi Simpan / action lain).
+   Menu: "Halaman ini" (bagian-bagian halaman yang sedang dibuka) dan "Alur proses": langkah demi langkah lintas halaman;
+   sebelum langkah tampil, halaman / form yang dibutuhkan dibuka otomatis. Tutorial tidak menyimpan data. */
+const TOUR_ID=id=>document.getElementById(id);
+let TOUR_ON=null;
+function tourVisible(sel){const el=document.querySelector(sel);return !!(el&&el.getClientRects().length);}
+function tourNorm(st){let lp='';return st.map(s=>{const o=s.element?{el:s.element,t:s.popover.title,d:s.popover.description}:Object.assign({},s);if(o.pg)lp=o.pg;else o.pg=lp;return o;});}
+function tourRun(title,steps){
+  tourMenuClose();
+  if(!(window.driver&&window.driver.js)){TOUR_CFG.msg('Tutorial belum termuat (driver.js). Buka dengan koneksi internet, atau pastikan folder lib ikut diekstrak.');return;}
+  if(TOUR_ON){try{TOUR_ON.destroy();}catch(e){}}
+  steps=tourNorm(steps);const n=steps.length;if(!n){TOUR_CFG.msg('Belum ada tutorial untuk halaman ini.');return;}
+  const run=(i,cb)=>{let j=i;while(j>0&&!steps[j].go)j--;const s=steps[j];
+    if(s&&s.go){try{s.go();}catch(e){console.warn('tutorial',e);}setTimeout(cb,s.wait!=null?s.wait:TOUR_CFG.wait);}else cb();};
+  const drv=window.driver.js.driver({showProgress:true,progressText:'{{current}} dari {{total}}',nextBtnText:'Lanjut &rarr;',prevBtnText:'&larr; Kembali',doneBtnText:'Selesai',
+    allowKeyboardControl:false,overlayOpacity:.45,stagePadding:6,popoverClass:'tour-pop',
+    steps:steps.map(s=>({element:s.el,popover:{title:s.t,description:'<div class="tour-fl">'+title+'</div>'+(s.pg?'<span class="tour-pg">'+s.pg+'</span><br>':'')+s.d,side:s.side,align:s.align}})),
+    onNextClick:()=>{const i=drv.getActiveIndex();if(i>=n-1){drv.destroy();return;}const go=steps[i+1].go;if(go)run(i+1,()=>drv.moveNext());else drv.moveNext();},
+    onPrevClick:()=>{const i=drv.getActiveIndex();if(!i)return;run(i-1,()=>drv.movePrevious());},
+    onDestroyed:()=>{TOUR_ON=null;try{TOUR_CFG.cleanup();}catch(e){}}});
+  TOUR_ON=drv;run(0,()=>drv.drive());}
+function tourPageRun(){const st=tourNorm(TOUR_CFG.page()||[]).filter(s=>s.go||tourVisible(s.el));tourRun('Halaman ini',st);}
+function tourMenuClose(){const m=TOUR_ID('tourMenu');if(m)m.hidden=true;const b=TOUR_ID('tourBtn');if(b)b.setAttribute('aria-expanded','false');}
+function tourMenuOpen(){const m=TOUR_ID('tourMenu');const F=TOUR_CFG.flows();
+  m.innerHTML='<h4>Halaman ini</h4><button type="button" data-tour="page"><b>Tutorial halaman ini</b><small>Penjelasan bagian-bagian halaman yang sedang dibuka.</small></button>'
+    +'<h4>Alur proses (pindah halaman otomatis)</h4>'+F.map((f,i)=>'<button type="button" data-tour="'+i+'"><b>'+f.title+'</b><small>'+f.desc+' · '+f.steps.length+' langkah</small></button>').join('');
+  m.hidden=false;TOUR_ID('tourBtn').setAttribute('aria-expanded','true');}
+document.addEventListener('click',e=>{
+  if(e.target.closest('#tourBtn')){const m=TOUR_ID('tourMenu');if(m.hidden)tourMenuOpen();else tourMenuClose();return;}
+  const it=e.target.closest('#tourMenu [data-tour]');
+  if(it){const k=it.dataset.tour;tourMenuClose();if(k==='page')tourPageRun();else{const f=TOUR_CFG.flows()[+k];tourRun(f.title,f.steps);}return;}
+  if(!e.target.closest('#tourMenu'))tourMenuClose();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')tourMenuClose();});
+</script>
+</body>
+</html>
