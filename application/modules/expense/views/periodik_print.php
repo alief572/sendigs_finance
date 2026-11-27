@@ -4,6 +4,14 @@ function formatDate($date)
 	if (empty($date) || $date == '0000-00-00') return '-';
 	return date('d-M-y', strtotime($date));
 }
+
+// Jadwal item disalin dari ms_budget_rutin: hari ("25", bulanan) atau MM/DD/YYYY (tahunan). Data lama bisa Y-m-d.
+function formatJadwal($tanggal)
+{
+	$t = trim((string) $tanggal);
+	if (preg_match('/^\d{4}-\d{2}-\d{2}/', $t)) return formatDate(substr($t, 0, 10));
+	return periodik_schedule_text(ctype_digit($t) ? 'bulan' : 'tahun', $t);
+}
 ?>
 <!DOCTYPE html>
 <html>
@@ -236,7 +244,7 @@ function formatDate($date)
 					<td style="text-align: center;"><?= $i + 1 ?></td>
 					<td><?= $item->coa_display ?></td>
 					<td><?= $item->nama ?></td>
-					<td style="text-align: center;"><?= formatDate($item->tanggal) ?></td>
+					<td style="text-align: center;"><?= formatJadwal($item->tanggal) ?></td>
 					<td style="text-align: right;">Rp <?= number_format($item->budget, 0, ',', '.') ?></td>
 					<td style="text-align: right;">Rp <?= number_format($item->nilai, 0, ',', '.') ?></td>
 					<td><?= !empty($item->keterangan) ? $item->keterangan : '' ?></td>
