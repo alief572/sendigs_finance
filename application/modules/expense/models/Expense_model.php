@@ -351,8 +351,10 @@ class Expense_model extends BF_Model
 		$start = $this->input->post('start');
 		$search = $this->input->post('search');
 
-		$this->db->select('a.id, a.no_doc, a.tgl_doc, a.nama, a.keperluan, a.nopol, a.status, (a.bensin + a.tol + a.parkir + a.lainnya) as ttl_transport, a.created_by as nmuser');
+		$this->db->select('a.id, a.no_doc, a.tgl_doc, a.nama, a.keperluan, a.nopol, a.status, (a.bensin + a.tol + a.parkir + a.lainnya) as ttl_transport, a.created_by as nmuser, MAX(b.status) as req_status');
 		$this->db->from('tr_transport a');
+		// Status yang ditampilkan mengikuti dokumen pengajuan, sama dengan transport_req_all.
+		$this->db->join('tr_transport_req b', 'b.no_doc = a.no_req', 'left');
 		$this->db->where('a.created_by', $this->auth->user_name());
 		if (!empty($search['value'])) {
 			$this->db->group_start();
@@ -377,17 +379,15 @@ class Expense_model extends BF_Model
 		foreach ($get_data as $item) {
 			$no++;
 
+			// Item tanpa pengajuan (req_status null) tampil "Baru".
 			$status = '<span class="badge bg-yellow">Baru</span>';
-			if ($item->status == '1') {
-				$status = '<span class="badge bg-green">Disetujui</span>';
+			if ($item->req_status == '1') {
+				$status = '<span class="badge bg-blue">Disetujui</span>';
 			}
-			if ($item->status == '2') {
-				$status = '<span class="badge bg-green">Disetujui Management</span>';
+			if ($item->req_status == '2' || $item->req_status == '3') {
+				$status = '<span class="badge bg-green">Selesai</span>';
 			}
-			if ($item->status == '3') {
-				$status = '<span class="badge bg-blue">Selesai</span>';
-			}
-			if ($item->status == '9') {
+			if ($item->req_status == '9') {
 				$status = '<span class="badge bg-red">Ditolak</span>';
 			}
 
