@@ -1,0 +1,51 @@
+/* Evidence drag and drop - form Pencatatan Petty Cash */
+.evidence-container { min-width: 200px; max-width: 260px; }
+
+.evidence-dropzone {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    width: 100%; padding: 10px 8px; text-align: center; color: #44525c;
+    background: #f7fafc; border: 2px dashed #a9c3d6; border-radius: 6px; cursor: pointer;
+    transition: background-color .15s, border-color .15s;
+}
+.evidence-dropzone > * { pointer-events: none; }
+.evidence-dropzone:hover, .evidence-container.is-dragover .evidence-dropzone { background: #eaf4fb; border-color: #3c8dbc; }
+.evidence-container.is-dragover .evidence-dropzone { border-style: solid; }
+.evidence-dropzone:focus-visible { outline: 2px solid #3c8dbc; outline-offset: 2px; }
+.evidence-dropzone:disabled { cursor: default; background: #f4f4f4; border-color: #ccc; }
+.evidence-dz-icon { font-size: 20px; color: #3c8dbc; }
+.evidence-dz-title { font-size: 12.5px; line-height: 1.3; }
+.evidence-dz-hint { font-size: 11px; line-height: 1.3; color: #66737d; }
+
+.evidence-list { margin: 0; }
+.evidence-list:not(:empty) { margin-bottom: 6px; }
+.evidence-item small {
+    display: flex; align-items: center; gap: 6px; margin-bottom: 4px; padding: 3px 4px 3px 8px;
+    font-size: 12px; background: #fff; border: 1px solid #d8e0e6; border-radius: 4px;
+}
+.evidence-item small > .fa { color: #3c8dbc; }
+.evidence-item .evidence-name { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.evidence-item .btn-remove-evidence { padding: 2px 6px; border-radius: 3px; }
+.evidence-item .btn-remove-evidence:hover, .evidence-item .btn-remove-evidence:focus { background: #fbe9e7; }
+
+/* Thumbnail dan popup preview - Approval dan Detail Pelaporan */
+.ev-list { display: flex; flex-wrap: wrap; gap: 6px; min-width: 110px; }
+.ev-thumb {
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    width: 48px; height: 48px; overflow: hidden; background: #f4f7f9; border: 1px solid #d2dce3; border-radius: 4px;
+}
+.ev-thumb:hover, .ev-thumb:focus { border-color: #3c8dbc; box-shadow: 0 0 0 2px rgba(60, 141, 188, .35); text-decoration: none; }
+.ev-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.ev-thumb .fa { font-size: 20px; }
+.ev-thumb small { font-size: 9px; font-weight: 700; line-height: 1.2; color: #44525c; }
+.ev-thumb .fa-file-pdf-o { color: #c0392b; }
+.ev-thumb .fa-file-excel-o { color: #1e7e45; }
+
+#ev-modal .modal-title { overflow-wrap: anywhere; }
+#ev-modal .ev-stage { display: flex; align-items: center; justify-content: center; height: 70vh; padding: 8px; background: #222d32; }
+#ev-modal .ev-stage img { max-width: 100%; max-height: 100%; }
+#ev-modal .ev-stage iframe { width: 100%; height: 100%; border: 0; background: #fff; }
+#ev-modal .ev-nopreview { max-width: 360px; text-align: center; color: #fff; }
+#ev-modal .ev-nopreview .fa { font-size: 48px; margin-bottom: 12px; }
+#ev-modal .ev-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+#ev-modal .ev-open { margin-left: auto; }
+#ev-modal .ev-count { display: inline-block; min-width: 56px; text-align: center; }

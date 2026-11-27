@@ -261,6 +261,24 @@ $grand_total = (int) $pelaporan->header->grand_total;
             <td class="info-separator">:</td>
             <td><?= htmlspecialchars($pelaporan->header->company) ?></td>
         </tr>
+        <?php if (isset($pelaporan->header->saldo_petty_cash) && $pelaporan->header->saldo_petty_cash !== null) : ?>
+            <?php $print_selisih = (int) $pelaporan->header->selisih_saldo; ?>
+            <tr>
+                <td class="info-label">Saldo Seharusnya</td>
+                <td class="info-separator">:</td>
+                <td>Rp <?= number_format((int) $pelaporan->header->saldo_seharusnya, 0, ',', '.') ?></td>
+            </tr>
+            <tr>
+                <td class="info-label">Saldo Petty Cash</td>
+                <td class="info-separator">:</td>
+                <td>Rp <?= number_format((int) $pelaporan->header->saldo_petty_cash, 0, ',', '.') ?></td>
+            </tr>
+            <tr>
+                <td class="info-label">Selisih</td>
+                <td class="info-separator">:</td>
+                <td><?= $print_selisih === 0 ? 'Sesuai' : (($print_selisih < 0 ? '-' : '+') . 'Rp ' . number_format(abs($print_selisih), 0, ',', '.')) ?></td>
+            </tr>
+        <?php endif; ?>
     </table>
 
     <!-- Data Table -->

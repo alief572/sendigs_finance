@@ -12,6 +12,16 @@
             <input type="text" class="form-control" id="keterangan" value="<?= isset($data->keterangan) ? $data->keterangan : '' ?>" disabled>
         </div>
     </div>
+    <div class="form-group">
+        <label for="coa_petty_cash" class="col-sm-2 control-label">COA Petty Cash</label>
+        <div class="col-sm-10">
+            <?php
+            $coa_petty_view = isset($data->coa_petty_cash) ? (string) $data->coa_petty_cash : '';
+            $coa_petty_label = ($coa_petty_view !== '' && isset($coa_list[$coa_petty_view])) ? $coa_list[$coa_petty_view] : ($coa_petty_view !== '' ? $coa_petty_view : '-');
+            ?>
+            <input type="text" class="form-control" id="coa_petty_cash" value="<?= htmlspecialchars($coa_petty_label, ENT_QUOTES, 'UTF-8') ?>" disabled>
+        </div>
+    </div>
 </div>
 
 <!-- Detail Table -->

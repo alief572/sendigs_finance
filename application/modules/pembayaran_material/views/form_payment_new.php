@@ -46,6 +46,9 @@ foreach ($results['result_payment'] as $item) {
 
 $suffix_php = !empty($arr_no_doc_php) ? ' - ' . implode(', ', array_unique($arr_no_doc_php)) : '';
 
+// COA Payment Hutang menurut company (PC-R-05): Dr Hutang ke STM (company) / Cr Piutang (STM)
+$coa_hutang_company = isset(Pembayaran_material_model::PETTY_HUTANG_COA[$company_hutang]) ? Pembayaran_material_model::PETTY_HUTANG_COA[$company_hutang] : ['hutang' => '', 'piutang' => ''];
+
 foreach ($results['result_payment'] as $item) {
 
 	$get_rec_invoice = $this->db->get_where('tr_invoice_po', ['id' => $item->no_doc])->row();
@@ -153,12 +156,29 @@ $tgl_bayar = $results['result_payment'][0]->tanggal ?? date('Y-m-d');
 							<option value="">- Bank -</option>
 							<?php
 							foreach ($results['list_bank'] as $item_bank) {
-								echo '<option value="' . $item_bank->id . '">(' . $item_bank->rekening . ' a/n ' . $item_bank->nama . ') - ' . $item_bank->nama_bank . '</option>';
+								echo '<option value="' . $item_bank->id . '" data-coa="' . htmlspecialchars((string) $item_bank->coa_bank, ENT_QUOTES, 'UTF-8') . '" data-nama="' . htmlspecialchars((string) ($item_bank->nm_coa ?: $item_bank->nama_bank), ENT_QUOTES, 'UTF-8') . '">(' . $item_bank->rekening . ' a/n ' . $item_bank->nama . ') - ' . $item_bank->nama_bank . '</option>';
 							}
 							?>
 						</select>
 					</td>
 				</tr>
+				<?php if ($is_all_petty_cash_hutang) : ?>
+					<tr>
+						<td colspan="3"></td>
+						<td width="15%" style="">Bank STM Penerima <b class="text-red">*</b></td>
+						<td width="5%" class="text-center">:</td>
+						<td width="25%">
+							<select name="bank_stm" class="form-control form-control-sm bank_stm">
+								<option value="">- Bank STM -</option>
+								<?php
+								foreach ($results['list_bank'] as $item_bank) {
+									echo '<option value="' . $item_bank->id . '" data-coa="' . htmlspecialchars((string) $item_bank->coa_bank, ENT_QUOTES, 'UTF-8') . '" data-nama="' . htmlspecialchars((string) ($item_bank->nm_coa ?: $item_bank->nama_bank), ENT_QUOTES, 'UTF-8') . '">(' . $item_bank->rekening . ' a/n ' . $item_bank->nama . ') - ' . $item_bank->nama_bank . '</option>';
+								}
+								?>
+							</select>
+						</td>
+					</tr>
+				<?php endif; ?>
 				<tr>
 					<td colspan="3"></td>
 					<td width="15%" style="">Payment Bank</td>
@@ -485,16 +505,16 @@ $tgl_bayar = $results['result_payment'][0]->tanggal ?? date('Y-m-d');
 								<input type="hidden" name="jurnal_hutang_1[1][tanggal_jurnal]" value="<?= date('Y-m-d') ?>">
 							</td>
 							<td class="text-center">
-								2203-01-01
-								<input type="hidden" name="jurnal_hutang_1[1][coa]" value="2203-01-01">
+								<?= $coa_hutang_company['hutang'] ?>
+								<input type="hidden" name="jurnal_hutang_1[1][coa]" value="<?= $coa_hutang_company['hutang'] ?>">
 							</td>
 							<td class="text-center">
 								<?= $company_hutang ?>
 								<input type="hidden" name="jurnal_hutang_1[1][company]" value="<?= $company_hutang ?>">
 							</td>
 							<td class="text-center">
-								Hutang Hubungan Istimewa
-								<input type="hidden" name="jurnal_hutang_1[1][nama_account]" value="Hutang Hubungan Istimewa">
+								Hutang ke STM
+								<input type="hidden" name="jurnal_hutang_1[1][nama_account]" value="Hutang ke STM">
 							</td>
 							<td class="text-center">
 								Hutang ke STM<?= $suffix_php ?>
@@ -515,16 +535,16 @@ $tgl_bayar = $results['result_payment'][0]->tanggal ?? date('Y-m-d');
 								<input type="hidden" name="jurnal_hutang_1[2][tanggal_jurnal]" value="<?= date('Y-m-d') ?>">
 							</td>
 							<td class="text-center">
-								1101-02-09
-								<input type="hidden" name="jurnal_hutang_1[2][coa]" value="1101-02-09">
+								<span class="hutang-bank-coa text-muted">Pilih bank</span>
+								<input type="hidden" name="jurnal_hutang_1[2][coa]" class="hutang-bank-coa-input" value="">
 							</td>
 							<td class="text-center">
 								<?= $company_hutang ?>
 								<input type="hidden" name="jurnal_hutang_1[2][company]" value="<?= $company_hutang ?>">
 							</td>
 							<td class="text-center">
-								Bank <?= $company_hutang ?>
-								<input type="hidden" name="jurnal_hutang_1[2][nama_account]" value="Bank <?= $company_hutang ?>">
+								<span class="hutang-bank-nama text-muted">Bank <?= $company_hutang ?> (dipilih saat payment)</span>
+								<input type="hidden" name="jurnal_hutang_1[2][nama_account]" class="hutang-bank-nama-input" value="">
 							</td>
 							<td class="text-center">
 								Bank <?= $company_hutang ?>
@@ -573,16 +593,16 @@ $tgl_bayar = $results['result_payment'][0]->tanggal ?? date('Y-m-d');
 								<input type="hidden" name="jurnal_hutang_2[1][tanggal_jurnal]" value="<?= date('Y-m-d') ?>">
 							</td>
 							<td class="text-center">
-								1101-02-01
-								<input type="hidden" name="jurnal_hutang_2[1][coa]" value="1101-02-01">
+								<span class="hutang-bank-stm-coa text-muted">Pilih bank STM</span>
+								<input type="hidden" name="jurnal_hutang_2[1][coa]" class="hutang-bank-stm-coa-input" value="">
 							</td>
 							<td class="text-center">
 								STM
 								<input type="hidden" name="jurnal_hutang_2[1][company]" value="STM">
 							</td>
 							<td class="text-center">
-								Bank STM
-								<input type="hidden" name="jurnal_hutang_2[1][nama_account]" value="Bank STM">
+								<span class="hutang-bank-stm-nama text-muted">Bank STM penerima</span>
+								<input type="hidden" name="jurnal_hutang_2[1][nama_account]" class="hutang-bank-stm-nama-input" value="">
 							</td>
 							<td class="text-center">
 								Bank STM
@@ -603,16 +623,16 @@ $tgl_bayar = $results['result_payment'][0]->tanggal ?? date('Y-m-d');
 								<input type="hidden" name="jurnal_hutang_2[2][tanggal_jurnal]" value="<?= date('Y-m-d') ?>">
 							</td>
 							<td class="text-center">
-								1103-01-01
-								<input type="hidden" name="jurnal_hutang_2[2][coa]" value="1103-01-01">
+								<?= $coa_hutang_company['piutang'] ?>
+								<input type="hidden" name="jurnal_hutang_2[2][coa]" value="<?= $coa_hutang_company['piutang'] ?>">
 							</td>
 							<td class="text-center">
 								STM
 								<input type="hidden" name="jurnal_hutang_2[2][company]" value="STM">
 							</td>
 							<td class="text-center">
-								Piutang Hubungan Istimewa
-								<input type="hidden" name="jurnal_hutang_2[2][nama_account]" value="Piutang Hubungan Istimewa">
+								Piutang <?= $company_hutang ?>
+								<input type="hidden" name="jurnal_hutang_2[2][nama_account]" value="Piutang <?= $company_hutang ?>">
 							</td>
 							<td class="text-center">
 								Piutang <?= $company_hutang ?><?= $suffix_php ?>
@@ -755,9 +775,24 @@ $tgl_bayar = $results['result_payment'][0]->tanggal ?? date('Y-m-d');
 	$(document).ready(function() {
 		// $('.supplier').chosen();
 		$('.bank').chosen();
+		$('.bank_stm').chosen();
 		$('.mata_uang').chosen();
 		$('.pph').chosen();
 		$('.coa_dropdown').chosen();
+
+		// Payment Hutang Petty Cash (PC-R-07): bank pembayar dan Bank STM penerima dipilih saat payment.
+		// Server memvalidasi ulang akun jurnal terhadap ms_bank; ini hanya pratinjau.
+		function isiAkunBankHutang(selectSelector, prefix) {
+			var $opt = $(selectSelector + ' option:selected');
+			var coa = $opt.data('coa') || '';
+			var nama = $opt.data('nama') || '';
+			$('.' + prefix + '-coa-input').val(coa);
+			$('.' + prefix + '-nama-input').val(nama);
+			$('.' + prefix + '-coa').text(coa || 'Pilih bank').toggleClass('text-muted', !coa);
+			$('.' + prefix + '-nama').text(nama || (prefix === 'hutang-bank' ? 'Bank (dipilih saat payment)' : 'Bank STM penerima')).toggleClass('text-muted', !nama);
+		}
+		$(document).on('change', 'select.bank', function() { isiAkunBankHutang('select.bank', 'hutang-bank'); });
+		$(document).on('change', 'select.bank_stm', function() { isiAkunBankHutang('select.bank_stm', 'hutang-bank-stm'); });
 
 		$('.auto_num').autoNumeric();
 
@@ -1163,6 +1198,15 @@ $tgl_bayar = $results['result_payment'][0]->tanggal ?? date('Y-m-d');
 			swal({
 				title: 'Warning !',
 				text: 'Maaf, Bank wajib diisi!',
+				type: 'warning'
+			});
+
+			return false;
+		}
+		if (is_all_petty_cash_hutang && ($('.bank_stm').val() || '') == '') {
+			swal({
+				title: 'Warning !',
+				text: 'Maaf, Bank STM penerima wajib dipilih!',
 				type: 'warning'
 			});
 

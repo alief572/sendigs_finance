@@ -1,500 +1,74 @@
 <?php
 
 /**
- * Pelaporan Petty Cash - Halaman Konfirmasi (Review Detail + Jurnal)
- *
- * UI yang lebih polished dengan AdminLTE components:
- * - Summary cards di atas
- * - Collapsible panels per pencatatan
- * - Styled jurnal tables
+ * Pelaporan Petty Cash - Konfirmasi sebelum Ajukan (mockup specs/docs/petty-cash).
+ * Ringkasan, Kontrol Saldo, Detail Pencatatan (item + preview jurnal per pencatatan), tombol Ajukan.
  *
  * PHP vars:
- *   $pelaporan, $budget_info, $pencatatan_details, $coa_list, $has_add, $has_manage
+ *   $pelaporan, $budget_info, $pencatatan_details, $coa_names, $journal_preview,
+ *   $saldo_seharusnya, $has_add, $has_manage
  */
+require_once __DIR__ . '/../partials/pc_review.php';
 
-$header         = $pelaporan->header;
-$pencatatan_list = $pelaporan->pencatatan_list;
-$jumlah_item    = count($pencatatan_list);
+$header           = $pelaporan->header;
+$pencatatan_list  = $pelaporan->pencatatan_list;
+$saldo_seharusnya = isset($saldo_seharusnya) ? $saldo_seharusnya : null;
+$bisa_ajukan      = ($header->status === 'draft' && ($has_add || $has_manage));
 
-$periode_start_fmt = date('d/m/Y', strtotime($header->periode_start));
-$periode_end_fmt   = date('d/m/Y', strtotime($header->periode_end));
+$books_by_id = [];
+foreach ((isset($journal_preview) ? $journal_preview : []) as $jp) {
+    $books_by_id[$jp['pencatatan']->id] = $jp['books'];
+}
 
-$sisa_budget = isset($budget_info->sisa_budget) ? $budget_info->sisa_budget : 0;
-$budget_total = isset($budget_info->budget) ? $budget_info->budget : 0;
+pc_style();
 
-$coa_map = [];
-if (!empty($coa_list)) {
-    foreach ($coa_list as $coa) {
-        $coa_map[$coa->coa_code] = $coa->coa_code . ' - ' . (isset($coa->coa_nama) ? $coa->coa_nama : '');
-    }
+$tour_title = 'Konfirmasi Pelaporan';
+$tour_steps = [];
+if ($bisa_ajukan) {
+    $tour_steps[] = ['el' => '#box-kontrol-saldo', 't' => 'Kontrol Saldo Petty Cash', 'd' => 'Saldo seharusnya = Total Budget &minus; pengeluaran yang belum di-refill, dibandingkan dengan hitung fisik uang.'];
+}
+$tour_steps[] = ['el' => '#box-detail-pencatatan', 't' => 'Detail & jurnal', 'd' => 'Preview jurnal per pencatatan dengan tanggal pencatatan; dibuat saat approve.'];
+include __DIR__ . '/../_tutorial.php';
+
+pc_summary($header, count($pencatatan_list), isset($budget_info->sisa_budget) ? $budget_info->sisa_budget : 0);
+if ($bisa_ajukan) {
+    pc_kontrol($budget_info, $header->grand_total, $saldo_seharusnya, ['editable' => true]);
 }
 ?>
 
-<style>
-    .confirm-summary-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 8px;
-        padding: 20px 25px;
-        color: #fff;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    }
-
-    .confirm-summary-card .card-row {
-        display: flex;
-        justify-content: space-between;
-        flex-wrap: wrap;
-        gap: 15px;
-    }
-
-    .confirm-summary-card .card-item {
-        flex: 1;
-        min-width: 140px;
-    }
-
-    .confirm-summary-card .card-item .label-text {
-        font-size: 11px;
-        text-transform: uppercase;
-        opacity: 0.8;
-        letter-spacing: 0.5px;
-        margin-bottom: 4px;
-    }
-
-    .confirm-summary-card .card-item .value-text {
-        font-size: 18px;
-        font-weight: 700;
-    }
-
-    .confirm-summary-card .card-item .value-text.text-sm {
-        font-size: 14px;
-    }
-
-    .pencatatan-panel {
-        border: 1px solid #e0e0e0;
-        border-radius: 6px;
-        margin-bottom: 15px;
-        overflow: hidden;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-    }
-
-    .pencatatan-panel .panel-header {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        padding: 12px 18px;
-        cursor: pointer;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border-bottom: 1px solid #e0e0e0;
-        transition: background 0.2s;
-    }
-
-    .pencatatan-panel .panel-header:hover {
-        background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
-    }
-
-    .pencatatan-panel .panel-header .panel-title-text {
-        font-weight: 600;
-        font-size: 13px;
-        color: #333;
-    }
-
-    .pencatatan-panel .panel-header .panel-amount {
-        font-weight: 700;
-        font-size: 14px;
-        color: #2d6a4f;
-    }
-
-    .pencatatan-panel .panel-header .panel-meta {
-        font-size: 11px;
-        color: #666;
-        margin-top: 2px;
-    }
-
-    .pencatatan-panel .panel-body-content {
-        padding: 15px 18px;
-        background: #fff;
-    }
-
-    .jurnal-section {
-        margin-top: 12px;
-        padding-top: 12px;
-        border-top: 1px dashed #dee2e6;
-    }
-
-    .jurnal-section .jurnal-label {
-        display: inline-block;
-        padding: 3px 10px;
-        border-radius: 4px;
-        font-size: 11px;
-        font-weight: 600;
-        margin-bottom: 8px;
-    }
-
-    .jurnal-label-stm {
-        background: #d1ecf1;
-        color: #0c5460;
-    }
-
-    .jurnal-label-company {
-        background: #fff3cd;
-        color: #856404;
-    }
-
-    .jurnal-label-interco {
-        background: #cce5ff;
-        color: #004085;
-    }
-
-    .jurnal-table {
-        font-size: 11px;
-        margin-bottom: 10px;
-    }
-
-    .jurnal-table thead th {
-        background: #f8f9fa;
-        font-weight: 600;
-        font-size: 10px;
-        text-transform: uppercase;
-        letter-spacing: 0.3px;
-        padding: 6px 8px !important;
-    }
-
-    .jurnal-table tbody td {
-        padding: 5px 8px !important;
-    }
-
-    .jurnal-table .credit-row {
-        background: #fffbeb;
-    }
-
-    .jurnal-table tfoot td {
-        font-weight: 700;
-        background: #f1f3f5;
-        padding: 6px 8px !important;
-    }
-
-    .detail-item-table {
-        font-size: 12px;
-    }
-
-    .detail-item-table thead th {
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: 0.3px;
-        background: #f1f3f5;
-        padding: 7px 10px !important;
-    }
-
-    .detail-item-table tbody td {
-        padding: 6px 10px !important;
-    }
-
-    .detail-item-table tfoot th {
-        background: #e8f5e9;
-    }
-
-    .btn-ajukan-lg {
-        padding: 10px 30px;
-        font-size: 15px;
-        font-weight: 600;
-        border-radius: 6px;
-        box-shadow: 0 3px 10px rgba(0, 166, 101, 0.3);
-    }
-
-    .toggle-icon {
-        transition: transform 0.2s;
-        color: #999;
-    }
-
-    .collapsed .toggle-icon {
-        transform: rotate(-90deg);
-    }
-</style>
-
-<!-- Summary Card -->
-<div class="confirm-summary-card">
-    <div class="card-row">
-        <div class="card-item">
-            <div class="label-text">No Pelaporan</div>
-            <div class="value-text text-sm"><?= htmlspecialchars($header->no_pelaporan) ?></div>
-        </div>
-        <div class="card-item">
-            <div class="label-text">Periode</div>
-            <div class="value-text text-sm"><?= $periode_start_fmt ?> — <?= $periode_end_fmt ?></div>
-        </div>
-        <div class="card-item">
-            <div class="label-text">Company</div>
-            <div class="value-text text-sm"><?= htmlspecialchars($header->company) ?></div>
-        </div>
-        <div class="card-item">
-            <div class="label-text">Grand Total</div>
-            <div class="value-text">Rp <?= number_format($header->grand_total, 0, ',', '.') ?></div>
-        </div>
-        <div class="card-item">
-            <div class="label-text">Pencatatan</div>
-            <div class="value-text text-sm"><?= $jumlah_item ?> item</div>
-        </div>
-        <div class="card-item">
-            <div class="label-text">Sisa Budget</div>
-            <div class="value-text text-sm <?= ($sisa_budget < 0) ? 'text-danger' : '' ?>" style="<?= ($sisa_budget < 0) ? 'color:#ff6b6b;' : '' ?>">Rp <?= number_format($sisa_budget, 0, ',', '.') ?></div>
-        </div>
-    </div>
-</div>
-
 <!-- Detail Per Pencatatan -->
-<div class="box box-solid">
+<div class="box box-solid" id="box-detail-pencatatan">
     <div class="box-header with-border">
         <h3 class="box-title"><i class="fa fa-list-alt"></i>&nbsp;Detail Pencatatan</h3>
-        <div class="box-tools pull-right">
-            <button type="button" class="btn btn-box-tool" id="btn-expand-all" title="Expand All">
-                <i class="fa fa-expand"></i> Expand All
-            </button>
-        </div>
     </div>
-    <div class="box-body" style="padding: 15px;">
-        <?php if (!empty($pencatatan_list)) : ?>
-            <?php $no = 1; ?>
-            <?php foreach ($pencatatan_list as $item) : ?>
-                <?php
-                $detail_data = isset($pencatatan_details[$item->id]) ? $pencatatan_details[$item->id] : null;
-                $item_details = ($detail_data && isset($detail_data->details)) ? $detail_data->details : [];
-                $item_header = ($detail_data && isset($detail_data->header)) ? $detail_data->header : $item;
-                $panel_id = 'panel-' . $item->id;
-                ?>
-                <div class="pencatatan-panel">
-                    <div class="panel-header" data-toggle="collapse" data-target="#<?= $panel_id ?>">
-                        <div>
-                            <div class="panel-title-text">
-                                <i class="fa fa-file-text-o"></i>&nbsp;
-                                <?= $no++ ?>. <?= htmlspecialchars($item->no_pencatatan) ?>
-                            </div>
-                            <div class="panel-meta">
-                                <i class="fa fa-calendar-o"></i> <?= date('d/m/Y', strtotime($item->tanggal)) ?>
-                                &nbsp;&bull;&nbsp;
-                                <i class="fa fa-user"></i> <?= htmlspecialchars($item->request_by) ?>
-                                <?php if (!empty($item_header->keterangan)) : ?>
-                                    &nbsp;&bull;&nbsp;
-                                    <i class="fa fa-comment-o"></i> <?= htmlspecialchars(mb_substr($item_header->keterangan, 0, 50)) ?><?= mb_strlen($item_header->keterangan) > 50 ? '...' : '' ?>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            <span class="panel-amount">Rp <?= number_format($item->grand_total, 0, ',', '.') ?></span>
-                            <i class="fa fa-chevron-down toggle-icon"></i>
-                        </div>
-                    </div>
-                    <div class="collapse in" id="<?= $panel_id ?>">
-                        <div class="panel-body-content">
-                            <!-- Detail Item Table -->
-                            <table class="table table-bordered detail-item-table">
-                                <thead>
-                                    <tr>
-                                        <th width="30" class="text-center">#</th>
-                                        <th>COA</th>
-                                        <th>Pengeluaran</th>
-                                        <th>Spesifikasi</th>
-                                        <th class="text-center" width="55">Qty</th>
-                                        <th class="text-right" width="100">Nominal</th>
-                                        <th class="text-right" width="100">Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php if (!empty($item_details)) : ?>
-                                        <?php $d_no = 1;
-                                        foreach ($item_details as $d) : ?>
-                                            <tr>
-                                                <td class="text-center"><?= $d_no++ ?></td>
-                                                <td><?= isset($coa_map[$d->coa_code]) ? htmlspecialchars($coa_map[$d->coa_code]) : htmlspecialchars($d->coa_code) ?></td>
-                                                <td><?= htmlspecialchars($d->pengeluaran) ?></td>
-                                                <td><?= htmlspecialchars($d->spesifikasi) ?></td>
-                                                <td class="text-center"><?= $d->jumlah ?></td>
-                                                <td class="text-right"><?= number_format($d->nominal, 0, ',', '.') ?></td>
-                                                <td class="text-right"><?= number_format($d->total, 0, ',', '.') ?></td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    <?php else : ?>
-                                        <tr>
-                                            <td colspan="7" class="text-center text-muted"><em>Detail item tidak tersedia</em></td>
-                                        </tr>
-                                    <?php endif; ?>
-                                </tbody>
-                                <tfoot>
-                                    <tr>
-                                        <th colspan="6" class="text-right">Total</th>
-                                        <th class="text-right"><?= number_format($item->grand_total, 0, ',', '.') ?></th>
-                                    </tr>
-                                </tfoot>
-                            </table>
-
-                            <!-- Preview Jurnal -->
-                            <?php
-                            $jurnal_company = isset($item_header->company) ? $item_header->company : $header->company;
-                            $jurnal_tanggal = date('d/m/Y', strtotime($item->tanggal));
-                            $jurnal_total = (float) $item->grand_total;
-                            ?>
-                            <div class="jurnal-section">
-                                <h5 style="font-size: 12px; font-weight: 600; color: #555; margin-bottom: 10px;">
-                                    <i class="fa fa-book"></i>&nbsp;Preview Jurnal
-                                </h5>
-
-                                <?php if ($jurnal_company === 'STM') : ?>
-                                    <span class="jurnal-label jurnal-label-stm"><i class="fa fa-building"></i> Jurnal STM</span>
-                                    <table class="table table-bordered jurnal-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Tanggal</th>
-                                                <th>COA</th>
-                                                <th>Nama Account</th>
-                                                <th>Company</th>
-                                                <th class="text-right">Debit</th>
-                                                <th class="text-right">Kredit</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php if (!empty($item_details)) : foreach ($item_details as $d) :
-                                                    $coa_nama = isset($coa_map[$d->coa_code]) ? $coa_map[$d->coa_code] : $d->coa_code;
-                                            ?>
-                                                    <tr>
-                                                        <td><?= $jurnal_tanggal ?></td>
-                                                        <td><?= htmlspecialchars($d->coa_code) ?></td>
-                                                        <td><?= htmlspecialchars($coa_nama) ?></td>
-                                                        <td>STM</td>
-                                                        <td class="text-right"><?= number_format($d->total, 0, ',', '.') ?></td>
-                                                        <td class="text-right">-</td>
-                                                    </tr>
-                                                <?php endforeach; ?>
-                                                <tr class="credit-row">
-                                                    <td><?= $jurnal_tanggal ?></td>
-                                                    <td>1101-01-02</td>
-                                                    <td>Kas Kecil</td>
-                                                    <td>STM</td>
-                                                    <td class="text-right">-</td>
-                                                    <td class="text-right"><?= number_format($jurnal_total, 0, ',', '.') ?></td>
-                                                </tr>
-                                            <?php endif; ?>
-                                        </tbody>
-                                        <tfoot>
-                                            <tr>
-                                                <td colspan="4" class="text-right">Balancing</td>
-                                                <td class="text-right"><?= number_format($jurnal_total, 0, ',', '.') ?></td>
-                                                <td class="text-right"><?= number_format($jurnal_total, 0, ',', '.') ?></td>
-                                            </tr>
-                                        </tfoot>
-                                    </table>
-
-                                <?php elseif ($jurnal_company === 'VUCA' || $jurnal_company === 'SUSTAIN') : ?>
-                                    <?php
-                                    $coa_hutang = ($jurnal_company === 'VUCA') ? '2103-01-01' : '2103-01-02';
-                                    $coa_piutang = ($jurnal_company === 'VUCA') ? '1103-01-01' : '1103-01-02';
-                                    ?>
-                                    <span class="jurnal-label jurnal-label-company"><i class="fa fa-building"></i> Sisi <?= $jurnal_company ?></span>
-                                    <table class="table table-bordered jurnal-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Tanggal</th>
-                                                <th>COA</th>
-                                                <th>Nama Account</th>
-                                                <th>Company</th>
-                                                <th class="text-right">Debit</th>
-                                                <th class="text-right">Kredit</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php if (!empty($item_details)) : foreach ($item_details as $d) :
-                                                    $coa_nama = isset($coa_map[$d->coa_code]) ? $coa_map[$d->coa_code] : $d->coa_code;
-                                            ?>
-                                                    <tr>
-                                                        <td><?= $jurnal_tanggal ?></td>
-                                                        <td><?= htmlspecialchars($d->coa_code) ?></td>
-                                                        <td><?= htmlspecialchars($coa_nama) ?></td>
-                                                        <td><?= $jurnal_company ?></td>
-                                                        <td class="text-right"><?= number_format($d->total, 0, ',', '.') ?></td>
-                                                        <td class="text-right">-</td>
-                                                    </tr>
-                                                <?php endforeach; ?>
-                                                <tr class="credit-row">
-                                                    <td><?= $jurnal_tanggal ?></td>
-                                                    <td><?= $coa_hutang ?></td>
-                                                    <td>Hutang ke STM</td>
-                                                    <td><?= $jurnal_company ?></td>
-                                                    <td class="text-right">-</td>
-                                                    <td class="text-right"><?= number_format($jurnal_total, 0, ',', '.') ?></td>
-                                                </tr>
-                                            <?php endif; ?>
-                                        </tbody>
-                                        <tfoot>
-                                            <tr>
-                                                <td colspan="4" class="text-right">Balancing</td>
-                                                <td class="text-right"><?= number_format($jurnal_total, 0, ',', '.') ?></td>
-                                                <td class="text-right"><?= number_format($jurnal_total, 0, ',', '.') ?></td>
-                                            </tr>
-                                        </tfoot>
-                                    </table>
-
-                                    <span class="jurnal-label jurnal-label-interco" style="margin-top: 8px;"><i class="fa fa-building"></i> Sisi STM (Inter-Company)</span>
-                                    <table class="table table-bordered jurnal-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Tanggal</th>
-                                                <th>COA</th>
-                                                <th>Nama Account</th>
-                                                <th>Company</th>
-                                                <th class="text-right">Debit</th>
-                                                <th class="text-right">Kredit</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr>
-                                                <td><?= $jurnal_tanggal ?></td>
-                                                <td><?= $coa_piutang ?></td>
-                                                <td>Piutang <?= $jurnal_company ?></td>
-                                                <td>STM</td>
-                                                <td class="text-right"><?= number_format($jurnal_total, 0, ',', '.') ?></td>
-                                                <td class="text-right">-</td>
-                                            </tr>
-                                            <tr class="credit-row">
-                                                <td><?= $jurnal_tanggal ?></td>
-                                                <td>1101-01-02</td>
-                                                <td>Kas Kecil</td>
-                                                <td>STM</td>
-                                                <td class="text-right">-</td>
-                                                <td class="text-right"><?= number_format($jurnal_total, 0, ',', '.') ?></td>
-                                            </tr>
-                                        </tbody>
-                                        <tfoot>
-                                            <tr>
-                                                <td colspan="4" class="text-right">Balancing</td>
-                                                <td class="text-right"><?= number_format($jurnal_total, 0, ',', '.') ?></td>
-                                                <td class="text-right"><?= number_format($jurnal_total, 0, ',', '.') ?></td>
-                                            </tr>
-                                        </tfoot>
-                                    </table>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            <?php endforeach; ?>
-        <?php else : ?>
+    <div class="box-body">
+        <?php foreach (array_values($pencatatan_list) as $i => $item) : ?>
+            <?php
+            $detail_data = isset($pencatatan_details[$item->id]) ? $pencatatan_details[$item->id] : null;
+            pc_panel($i + 1, $item, ($detail_data && isset($detail_data->details)) ? $detail_data->details : [], $coa_names, [
+                'jurnal' => ['books' => isset($books_by_id[$item->id]) ? $books_by_id[$item->id] : false],
+            ]);
+            ?>
+        <?php endforeach; ?>
+        <?php if (empty($pencatatan_list)) : ?>
             <div class="callout callout-warning">
                 <h4><i class="fa fa-info-circle"></i> Tidak Ada Data</h4>
                 <p>Tidak ada pencatatan dalam pelaporan ini.</p>
             </div>
         <?php endif; ?>
     </div>
-    <!-- /.box-body -->
+</div>
 
-    <div class="box-footer" style="text-align: center; padding: 20px;">
-        <?php if ($header->status === 'draft' && ($has_add || $has_manage)) : ?>
-            <button type="button" class="btn btn-success btn-ajukan-lg" id="btn-ajukan">
-                <i class="fa fa-paper-plane"></i>&nbsp;Ajukan Pelaporan
-            </button>
-            &nbsp;&nbsp;
-        <?php endif; ?>
-        <a href="<?= site_url('expense_petty_cash/pelaporan') ?>" class="btn btn-default" style="padding: 10px 25px; font-size: 14px;">
-            <i class="fa fa-arrow-left"></i>&nbsp;Kembali
-        </a>
-    </div>
+<div class="text-center" style="margin:10px 0 20px">
+    <?php if ($bisa_ajukan) : ?>
+        <button type="button" class="btn btn-success btn-cf" id="btn-ajukan">
+            <i class="fa fa-paper-plane"></i>&nbsp;Ajukan
+        </button>
+        &nbsp;&nbsp;
+    <?php endif; ?>
+    <a href="<?= site_url('expense_petty_cash/pelaporan') ?>" class="btn btn-default btn-cf">
+        <i class="fa fa-arrow-left"></i>&nbsp;Kembali
+    </a>
 </div>
 
 <!-- SweetAlert -->
@@ -504,39 +78,71 @@ if (!empty($coa_list)) {
         var BASE_URL = '<?= site_url('expense_petty_cash/') ?>';
         var PELAPORAN_ID = <?= json_encode($header->id) ?>;
 
-        // Expand/Collapse All
-        var allExpanded = true;
-        $('#btn-expand-all').on('click', function() {
-            if (allExpanded) {
-                $('.pencatatan-panel .collapse').collapse('hide');
-                $(this).html('<i class="fa fa-expand"></i> Expand All');
-                allExpanded = false;
-            } else {
-                $('.pencatatan-panel .collapse').collapse('show');
-                $(this).html('<i class="fa fa-compress"></i> Collapse All');
-                allExpanded = true;
-            }
-        });
+        // Kontrol saldo: saldo seharusnya dari server (hanya untuk tampilan; server menghitung ulang saat Ajukan)
+        var SALDO_SEHARUSNYA = <?= json_encode($saldo_seharusnya) ?>;
+        var $saldoInput = $('#saldo_petty_cash');
 
-        // Toggle icon rotation
-        $('.pencatatan-panel .panel-header').on('click', function() {
-            var $icon = $(this).find('.toggle-icon');
-            var $target = $($(this).data('target'));
-            $target.on('shown.bs.collapse', function() {
-                $icon.css('transform', 'rotate(0deg)');
-            }).on('hidden.bs.collapse', function() {
-                $icon.css('transform', 'rotate(-90deg)');
-            });
+        function parseRupiah(str) {
+            var clean = String(str || '').replace(/[.,\s]/g, '');
+            return /^\d+$/.test(clean) ? parseInt(clean, 10) : null;
+        }
+
+        function formatRupiah(num) {
+            return String(num).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        }
+
+        function hitungSelisih() {
+            var saldo = parseRupiah($saldoInput.val());
+            var $teks = $('#selisih-saldo-text');
+            var $warn = $('#warning-selisih');
+            if (saldo === null || SALDO_SEHARUSNYA === null) {
+                $teks.text('-');
+                $warn.hide();
+                return null;
+            }
+            var selisih = saldo - SALDO_SEHARUSNYA;
+            var angka = (selisih < 0 ? '-' : '') + formatRupiah(Math.abs(selisih));
+            $teks.html(selisih === 0 ?
+                '<span class="sel-ok"><i class="fa fa-check"></i> 0 (sesuai)</span>' :
+                '<span class="sel-no"><i class="fa fa-exclamation-triangle"></i> ' + angka + '</span>');
+            $warn.html('<i class="fa fa-exclamation-triangle"></i> <b>Ada selisih saldo Rp ' + angka + '</b> (' +
+                (selisih < 0 ? 'uang fisik kurang' : 'uang fisik lebih') +
+                ' dari saldo seharusnya). Pelaporan tetap bisa diajukan, tetapi selisih ini akan ditandai untuk dicek Dept Head Finance saat approval.')
+                .toggle(selisih !== 0);
+            return selisih;
+        }
+
+        $saldoInput.on('input', hitungSelisih).on('blur', function() {
+            var saldo = parseRupiah($saldoInput.val());
+            if (saldo !== null) {
+                $saldoInput.val(formatRupiah(saldo));
+            }
         });
 
         // Ajukan button
         var btnAjukan = document.getElementById('btn-ajukan');
         if (btnAjukan) {
             btnAjukan.addEventListener('click', function() {
+                var saldoPetty = parseRupiah($saldoInput.val());
+                if (saldoPetty === null) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Saldo Petty Cash wajib diisi',
+                        text: 'Isi saldo hasil hitung fisik uang sebelum mengajukan pelaporan.'
+                    }).then(function() {
+                        $saldoInput.focus();
+                    });
+                    return;
+                }
+                var selisihAjukan = hitungSelisih();
+                var peringatanSelisih = (selisihAjukan !== null && selisihAjukan !== 0) ?
+                    '<div class="alert alert-warning" style="text-align:left; margin-top:10px;"><i class="fa fa-warning"></i> Ada selisih saldo <strong>' +
+                    (selisihAjukan < 0 ? '-' : '+') + 'Rp ' + formatRupiah(Math.abs(selisihAjukan)) +
+                    '</strong>. Pelaporan tetap dapat diajukan; Dept Head Finance akan mengecek selisih ini.</div>' : '';
                 Swal.fire({
                     icon: 'question',
                     title: 'Ajukan Pelaporan?',
-                    html: '<p>Status akan berubah menjadi <strong>"Waiting Approval"</strong> dan pencatatan terkait tidak dapat diedit.</p>',
+                    html: '<p>Status akan berubah menjadi <strong>"Waiting Approval"</strong> dan pencatatan terkait tidak dapat diedit.</p>' + peringatanSelisih,
                     showCancelButton: true,
                     confirmButtonColor: '#00a65a',
                     cancelButtonColor: '#aaa',
@@ -556,6 +162,9 @@ if (!empty($coa_list)) {
                         $.ajax({
                             url: BASE_URL + 'submit_pelaporan/' + PELAPORAN_ID,
                             type: 'POST',
+                            data: {
+                                saldo_petty_cash: saldoPetty
+                            },
                             dataType: 'json',
                             success: function(response) {
                                 if (response.status == true || response.status == '1') {

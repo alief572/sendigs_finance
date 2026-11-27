@@ -3,12 +3,14 @@ $ENABLE_ADD    = isset($addPermission) ? $addPermission : false;
 ?>
 <link rel="stylesheet" href="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.css') ?>">
 
+<div id="pcm-tour"></div>
+
 <div class="box">
     <div class="box-header">
         <h3 class="box-title">Master Petty Cash</h3>
         <div class="box-tools pull-right">
             <?php if ($ENABLE_ADD) : ?>
-                <a class="btn btn-success btn-sm" href="javascript:void(0)" title="Tambah" onclick="data_add()"><i class="fa fa-plus"></i>&nbsp;Tambah</a>
+                <a id="pcm-add" class="btn btn-success btn-sm" href="javascript:void(0)" title="Tambah" onclick="data_add()"><i class="fa fa-plus"></i>&nbsp;Tambah</a>
             <?php endif; ?>
         </div>
     </div>
@@ -21,6 +23,7 @@ $ENABLE_ADD    = isset($addPermission) ? $addPermission : false;
                         <th width="40">No</th>
                         <th>Nama</th>
                         <th>Keterangan</th>
+                        <th>COA Petty Cash</th>
                         <th width="120">Action</th>
                     </tr>
                 </thead>
@@ -52,12 +55,40 @@ $ENABLE_ADD    = isset($addPermission) ? $addPermission : false;
 <script src="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.min.js') ?>"></script>
 <!-- SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<!-- Tutorial (driver.js lokal, mesin yang sama dengan Piutang) -->
+<link rel="stylesheet" href="<?= base_url('assets/plugins/driver/driver.css') ?>">
+<script src="<?= base_url('assets/plugins/driver/driver.js.iife.js') ?>"></script>
+<script src="<?= base_url('assets/js/piutang-tutorial.js') ?>"></script>
 
 <!-- page script -->
 <script type="text/javascript">
     $(document).ready(function() {
         DataTables();
+        mountTutorial();
     });
+
+    // Tutorial halaman (mockup specs/docs/petty-cash, tourDef().ms). Tidak mengubah data.
+    function mountTutorial() {
+        if (!window.PiutangTour) {
+            return;
+        }
+        var steps = [{
+            el: '#mytabledata',
+            t: 'Master Petty Cash',
+            d: 'Kolom baru COA Petty Cash: akun kas petty cash-nya. Edit untuk memilihnya di bawah Keterangan.'
+        }];
+        <?php if ($ENABLE_ADD) : ?>
+        steps.push({
+            el: '#pcm-add',
+            t: 'Tambah',
+            d: 'Nama, Keterangan, COA Petty Cash (baru), Detail COA biaya + nominal &rarr; Total Budget.'
+        });
+        <?php endif; ?>
+        PiutangTour.mount(document.getElementById('pcm-tour'), {
+            title: 'Master Petty Cash',
+            page: steps
+        });
+    }
 
     /**
      * Initialize server-side DataTable
@@ -82,6 +113,9 @@ $ENABLE_ADD    = isset($addPermission) ? $addPermission : false;
                 },
                 {
                     data: 'keterangan'
+                },
+                {
+                    data: 'coa_petty_cash'
                 },
                 {
                     data: 'action',

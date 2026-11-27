@@ -2058,6 +2058,24 @@ class Pembayaran_material extends Admin_Controller
 
 			// Save Jurnal Hutang if it's all petty cash hutang
 			if ($is_all_petty_cash_hutang) {
+				// PC-R-05/PC-R-07: COA Hutang ke STM / Piutang menurut company, bank pembayar dan Bank STM penerima
+				// dipilih saat Payment. Akun jurnal dari form divalidasi terhadap turunan server (DomainException -> rollback).
+				$hutang_total = 0;
+				foreach ($payments as $_p) { $hutang_total += (float) $_p->jumlah; }
+				$hutang_guard = function ($query) { return $this->auditQuery($query); };
+				$hutang_accounts = $this->Pembayaran_material_model->petty_hutang_accounts(
+					$this->Pembayaran_material_model->petty_hutang_company($payments, $hutang_guard),
+					$post['bank'],
+					isset($post['bank_stm']) ? $post['bank_stm'] : '',
+					$hutang_guard
+				);
+				$this->Pembayaran_material_model->validate_petty_hutang_journal(
+					isset($post['jurnal_hutang_1']) ? $post['jurnal_hutang_1'] : null,
+					isset($post['jurnal_hutang_2']) ? $post['jurnal_hutang_2'] : null,
+					$hutang_accounts,
+					$hutang_total
+				);
+
 				if (isset($post['jurnal_hutang_1'])) {
 					foreach ($post['jurnal_hutang_1'] as $jr) {
 						$coa_nm = $jr['nama_account'];

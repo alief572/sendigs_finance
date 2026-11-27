@@ -15,7 +15,8 @@ const window = {
     driver: {js: {driver: (cfg) => {
         cfgSeen = cfg;
         drv = {idx: -1, steps: cfg.steps, destroyed: false,
-            setSteps(s) { this.steps = s; }, drive(i) { this.idx = i; }, moveTo(i) { this.idx = i; },
+            setSteps() { throw new Error('setSteps saat tur berjalan menumpuk popover'); },
+            drive(i) { this.idx = i; }, moveNext() { this.idx++; }, movePrevious() { this.idx--; },
             getActiveIndex() { return this.idx; }, destroy() { this.destroyed = true; cfg.onDestroyed(); }};
         return drv;
     }}}

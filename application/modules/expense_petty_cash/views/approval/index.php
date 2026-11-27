@@ -1,5 +1,11 @@
 <link rel="stylesheet" href="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.css') ?>">
 
+<?php
+$tour_title = 'Approval Pelaporan';
+$tour_steps = [['el' => '#table-approval', 't' => 'Approval', 'd' => 'Tombol Approval di kolom Action membuka halaman detail dengan kontrol saldo dan Preview Jurnal yang dibentuk saat Approve.']];
+include __DIR__ . '/../_tutorial.php';
+?>
+
 <div class="box">
     <div class="box-header with-border">
         <h3 class="box-title"><i class="fa fa-check-circle"></i>&nbsp;Approval Pelaporan Petty Cash</h3>
@@ -16,6 +22,7 @@
                         <th>Company</th>
                         <th class="text-center">Jumlah Pencatatan</th>
                         <th class="text-right">Grand Total</th>
+                        <th class="text-center">Kontrol Saldo</th>
                         <th width="80" class="text-center">Action</th>
                     </tr>
                 </thead>

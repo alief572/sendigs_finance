@@ -21,6 +21,21 @@ $header_id = (isset($data->id)) ? $data->id : '';
         <input type="text" class="form-control" id="keterangan" name="keterangan" value="<?= isset($data->keterangan) ? $data->keterangan : '' ?>" placeholder="Keterangan">
     </div>
 </div>
+<div class="form-group">
+    <label for="coa_petty_cash" class="col-sm-2 control-label">COA Petty Cash <b class="text-red">*</b></label>
+    <div class="col-sm-10">
+        <select id="coa_petty_cash" name="coa_petty_cash" class="form-control select2" style="width: 100%;">
+            <option value="">-- Pilih COA Petty Cash --</option>
+            <?php $selected_coa_petty = isset($data->coa_petty_cash) ? $data->coa_petty_cash : ''; ?>
+            <?php foreach ($coa_list as $code => $label) : ?>
+                <option value="<?= htmlspecialchars($code, ENT_QUOTES, 'UTF-8') ?>" <?= ($selected_coa_petty === (string) $code) ? 'selected' : '' ?>>
+                    <?= htmlspecialchars($label, ENT_QUOTES, 'UTF-8') ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+        <span class="help-block">Akun kas utama: Kredit di jurnal pencatatan, Debit di jurnal refill.</span>
+    </div>
+</div>
 
 <hr>
 
@@ -249,6 +264,9 @@ $header_id = (isset($data->id)) ? $data->id : '';
         }
         if (!keterangan) {
             return 'Field Keterangan harus diisi';
+        }
+        if (!$('#coa_petty_cash').val()) {
+            return 'Field COA Petty Cash harus dipilih';
         }
 
         var rowCount = $('#detail-table tbody tr').length;

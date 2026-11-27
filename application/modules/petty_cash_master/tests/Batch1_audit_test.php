@@ -80,6 +80,7 @@ class PcmModel {
     public function get_details($id) { return array(); }
     public function get_coa_list() { return array(); }
     public function get_active_users() { return array(); }
+    public function coa_exists($kode) { global $scenario; return empty($scenario['coa_missing']) && trim((string) $kode) !== ''; }
     public function get_server_side_data($p) {
         global $scenario;
         $rows = !empty($scenario['empty_result']) ? array() : array(array('id' => 5, 'nama' => 'A'), array('id' => 6, 'nama' => 'B'));
@@ -179,10 +180,11 @@ foreach (array(array('empty_result' => true), array()) as $i => $opt) {
 pcm_writers('get_data', array(), array(), function ($e, $out, $w) { check(json_decode($out, true)['draw'] === 1, "get_data: intact on $w"); });
 
 // save: validasi, create, update, gagal simpan
-$valid = array('nama' => 'Kas Kecil', 'keterangan' => 'Operasional', 'detail' => array(array('coa_code' => '1101-01-01', 'jenis_pengeluaran' => 'ATK', 'nominal' => '1.000.000')));
+$valid = array('nama' => 'Kas Kecil', 'keterangan' => 'Operasional', 'coa_petty_cash' => '1101-01-02', 'detail' => array(array('coa_code' => '1101-01-01', 'jenis_pengeluaran' => 'ATK', 'nominal' => '1.000.000')));
 $cases = array(
     'nama_required' => array_merge($valid, array('nama' => ' ')),
     'keterangan_required' => array_merge($valid, array('keterangan' => '')),
+    'coa_petty_cash_required' => array_merge($valid, array('coa_petty_cash' => '  ')),
     'detail_required' => array_merge($valid, array('detail' => array())),
     'nominal_invalid' => array_merge($valid, array('detail' => array(array('coa_code' => 'x', 'jenis_pengeluaran' => 'y', 'nominal' => 'abc')))),
 );
@@ -192,7 +194,13 @@ foreach ($cases as $reason => $post) {
     check(json_decode($out, true)['status'] === 0, "save: $reason response intact");
     check(!isset($GLOBALS['pcm_saved']) || $GLOBALS['pcm_saved'] === null, "save: $reason tidak menyentuh model");
 }
+// COA Petty Cash yang tidak ada di coa_master ditolak sebelum menyentuh model simpan.
+$GLOBALS['pcm_saved'] = null;
+list($e, $out) = pcm_run('save', array('coa_missing' => true), $valid);
+check($e['status'] === 0 && $e['context']['data']['outcome'] === 'validation_failed' && $e['context']['data']['reason'] === 'coa_petty_cash_invalid', 'save: coa_petty_cash_invalid');
+check(json_decode($out, true)['status'] === 0 && $GLOBALS['pcm_saved'] === null, 'save: coa_petty_cash_invalid tidak menyentuh model');
 list($e, $out) = pcm_run('save', array(), $valid);
+check($GLOBALS['pcm_saved'][0]['coa_petty_cash'] === '1101-01-02', 'save: coa_petty_cash ikut ke header yang disimpan');
 $d = $e['context']['data'];
 check($e['status'] === 1 && $d['outcome'] === 'saved' && $d['operation'] === 'create' && $d['detail_count'] === 1 && $d['id'] == 77, 'save: create saved');
 list($e, $out) = pcm_run('save', array(), array_merge($valid, array('id' => 12)));

@@ -544,9 +544,9 @@ class Expense_petty_cash_model extends BF_Model
                 $coa_names[$coa_code] = $this->_coa_name($coa_code, DBACC_STM);
             }
         }
-        // COA Kas Kecil name
-        $coa_kas_kecil = '1101-01-02';
-        $nm_kas_kecil = 'Kas Kecil';
+        // COA Petty Cash (kredit): dari master, fallback 1101-01-02 Kas Kecil
+        $coa_kas_kecil = !empty($header['coa_petty_cash']) ? $header['coa_petty_cash'] : self::COA_KAS_KECIL;
+        $nm_kas_kecil = $this->_coa_petty_cash_name($coa_kas_kecil);
 
         // Step 6: Insert debit entries into tr_jurnal (one per detail item)
         $created_by = $this->auth->user_id();
@@ -633,6 +633,158 @@ class Expense_petty_cash_model extends BF_Model
      * @param array $details Pencatatan detail items, each with: coa_code, pengeluaran, total
      * @return bool
      */
+    /**
+     * COA Petty Cash dari master (ms_petty_cash.coa_petty_cash).
+     * Fallback ke COA_KAS_KECIL bila kolom belum dimigrasi atau master belum terisi,
+     * sehingga perilaku jurnal lama tidak berubah.
+     *
+     * @param int $petty_cash_id
+     * @return string
+     */
+    public function get_coa_petty_cash($petty_cash_id)
+    {
+        if (!$petty_cash_id || !$this->db->field_exists('coa_petty_cash', 'ms_petty_cash')) {
+            return self::COA_KAS_KECIL;
+        }
+        $row = $this->db->select('coa_petty_cash')
+            ->where('id', (int) $petty_cash_id)
+            ->get('ms_petty_cash')
+            ->row();
+        $coa = $row ? trim((string) $row->coa_petty_cash) : '';
+        return $coa !== '' ? $coa : self::COA_KAS_KECIL;
+    }
+
+    /**
+     * COA Petty Cash master beserta namanya (untuk tampilan/preview).
+     *
+     * @param int $petty_cash_id
+     * @return array ['kode' => string, 'nama' => string]
+     */
+    public function get_coa_petty_cash_info($petty_cash_id)
+    {
+        $kode = $this->get_coa_petty_cash($petty_cash_id);
+        return ['kode' => $kode, 'nama' => $this->_coa_petty_cash_name($kode)];
+    }
+
+    /**
+     * Bentuk baris jurnal pencatatan untuk PREVIEW (Konfirmasi/Approval). Mengikuti persis
+     * jurnal yang dibuat create_journal_stm / create_journal_intercompany saat Approve; kesamaannya
+     * dijaga tes paritas (tests/Journal_approve_test.php).
+     *
+     * @param string $company  STM | VUCA | SUSTAIN
+     * @param string $tanggal  tanggal pencatatan (Y-m-d)
+     * @param array  $details  [['coa_code'=>, 'total'=>, 'coa_nama'=>(opsional)], ...]
+     * @param array  $kas      ['kode'=>, 'nama'=>] dari get_coa_petty_cash_info()
+     * @param string $keterangan keterangan header pencatatan
+     * @return array|false     daftar buku: [['label'=>, 'company'=>, 'rows'=>[[tanggal,coa,nm_coa,company,debit,kredit,keterangan]]]]; false bila company tidak valid
+     */
+    public static function build_journal_preview($company, $tanggal, array $details, array $kas, $keterangan = '')
+    {
+        $company = strtoupper((string) $company);
+        $total = 0;
+        foreach ($details as $d) {
+            $total += (int) $d['total'];
+        }
+        if ($total <= 0) {
+            return false;
+        }
+
+        $row = function ($company_name, $coa, $nama, $debit, $kredit, $ket) use ($tanggal) {
+            return ['tanggal' => $tanggal, 'coa' => $coa, 'nm_coa' => $nama, 'company' => $company_name, 'debit' => (int) $debit, 'kredit' => (int) $kredit, 'keterangan' => $ket];
+        };
+        $umum = $keterangan ?: 'Pengeluaran Kas Kecil';
+        $debit_rows = function ($company_name) use ($details, $row, $umum) {
+            $rows = [];
+            foreach ($details as $d) {
+                // STM: keterangan per item; VUCA/SUSTAIN: keterangan header (sama dengan create_journal_*)
+                $ket = ($company_name === 'STM' && !empty($d['pengeluaran'])) ? $d['pengeluaran'] : $umum;
+                $rows[] = $row($company_name, $d['coa_code'], isset($d['coa_nama']) ? $d['coa_nama'] : $d['coa_code'], (int) $d['total'], 0, $ket);
+            }
+            return $rows;
+        };
+
+        if ($company === 'STM') {
+            $rows = $debit_rows('STM');
+            $rows[] = $row('STM', $kas['kode'], $kas['nama'], 0, $total, $umum);
+            return [['label' => 'Jurnal STM', 'company' => 'STM', 'rows' => $rows]];
+        }
+
+        if ($company === 'VUCA' || $company === 'SUSTAIN') {
+            $hutang  = $company === 'VUCA' ? self::COA_HUTANG_STM_VUCA : self::COA_HUTANG_STM_SUSTAIN;
+            $piutang = $company === 'VUCA' ? self::COA_PIUTANG_VUCA : self::COA_PIUTANG_SUSTAIN;
+
+            $rows_company = $debit_rows($company);
+            $rows_company[] = $row($company, $hutang, 'Hutang ke STM', 0, $total, $umum);
+
+            $rows_stm = [
+                $row('STM', $piutang, 'Piutang ' . $company, $total, 0, $keterangan ?: 'Piutang ' . $company),
+                $row('STM', $kas['kode'], $kas['nama'], 0, $total, $keterangan ?: 'Pengeluaran Kas Kecil - ' . $company),
+            ];
+
+            return [
+                ['label' => 'Sisi ' . $company, 'company' => $company, 'rows' => $rows_company],
+                ['label' => 'Sisi STM (Inter-Company)', 'company' => 'STM', 'rows' => $rows_stm],
+            ];
+        }
+
+        return false;
+    }
+
+    /** Nama akun COA Petty Cash di buku STM; akun Kas Kecil bawaan tetap bernama "Kas Kecil" bila tidak ada di coa_master. */
+    private function _coa_petty_cash_name($coa)
+    {
+        $nama = $this->_coa_name($coa, DBACC_STM);
+        return ($nama === $coa && $coa === self::COA_KAS_KECIL) ? 'Kas Kecil' : $nama;
+    }
+
+    /**
+     * Jurnal pencatatan yang sudah ada di Jurnal All, dikelompokkan per nomor jurnal (untuk Detail Pelaporan).
+     *
+     * @param string $no_pencatatan
+     * @param string $company company pencatatan (STM | VUCA | SUSTAIN)
+     * @return array|null null bila belum ada jurnal; selain itu ['books'=>, 'actual'=>true, 'posted'=>bool, 'no_jurnal'=>string]
+     */
+    public function get_journal_books($no_pencatatan, $company)
+    {
+        $rows = $this->db->order_by('no_jurnal', 'asc')
+            ->order_by('id', 'asc')
+            ->get_where('tr_jurnal', ['no_transaksi' => $no_pencatatan, 'jenis_transaksi' => 'Petty Cash'])
+            ->result();
+        if (empty($rows)) {
+            return null;
+        }
+
+        $inter = strtoupper((string) $company) !== 'STM';
+        $books = [];
+        $posted = true;
+        foreach ($rows as $r) {
+            if (!isset($books[$r->no_jurnal])) {
+                $label = !$inter ? 'Jurnal ' . $r->nm_company : ($r->nm_company === 'STM' ? 'Sisi STM (Inter-Company)' : 'Sisi ' . $r->nm_company);
+                $books[$r->no_jurnal] = ['label' => $label, 'company' => $r->nm_company, 'rows' => []];
+            }
+            $books[$r->no_jurnal]['rows'][] = [
+                'tanggal'    => $r->tgl_jurnal,
+                'coa'        => $r->coa,
+                'nm_coa'     => $r->nm_coa,
+                'company'    => $r->nm_company,
+                'debit'      => (int) $r->debit,
+                'kredit'     => (int) $r->kredit,
+                'keterangan' => $r->keterangan,
+            ];
+            $posted = $posted && (string) $r->sts === '1';
+        }
+
+        return ['books' => array_values($books), 'actual' => true, 'posted' => $posted, 'no_jurnal' => implode(', ', array_keys($books))];
+    }
+
+    /** Nama COA untuk tampilan, dicari di DB yang sama dengan jurnal nyata company tersebut. */
+    public function get_coa_name($coa_code, $company)
+    {
+        $company = strtoupper((string) $company);
+        $db = $company === 'VUCA' ? DBACC_VUCA : ($company === 'SUSTAIN' ? DBACC_SUSTAIN : DBACC_STM);
+        return $this->_coa_name($coa_code, $db);
+    }
+
     /** Nama COA: DB company dulu, lalu DBACC (GL pusat), terakhir kode COA. */
     private function _coa_name($coa_code, $db_company)
     {
@@ -652,6 +804,9 @@ class Expense_petty_cash_model extends BF_Model
         $tanggal       = is_array($header) ? $header['tanggal'] : $header->tanggal;
         $company       = is_array($header) ? $header['company'] : $header->company;
         $keterangan    = is_array($header) ? (isset($header['keterangan']) ? $header['keterangan'] : '') : (isset($header->keterangan) ? $header->keterangan : '');
+        $coa_kas       = is_array($header) ? (isset($header['coa_petty_cash']) ? $header['coa_petty_cash'] : '') : (isset($header->coa_petty_cash) ? $header->coa_petty_cash : '');
+        $coa_kas       = $coa_kas !== '' ? $coa_kas : self::COA_KAS_KECIL;
+        $nm_kas        = $this->_coa_petty_cash_name($coa_kas);
 
         // Step 1: Calculate grand_total
         $grand_total = 0;
@@ -788,10 +943,10 @@ class Expense_petty_cash_model extends BF_Model
         $this->db->insert('tr_jurnal', [
             'no_jurnal'        => $no_jurnal_stm,
             'tgl_jurnal'       => $tanggal,
-            'coa'              => self::COA_KAS_KECIL,
+            'coa'              => $coa_kas,
             'id_company'       => '5',
             'nm_company'       => 'STM',
-            'nm_coa'           => 'Kas Kecil',
+            'nm_coa'           => $nm_kas,
             'debit'            => 0,
             'kredit'           => $grand_total,
             'keterangan'       => $keterangan ?: 'Pengeluaran Kas Kecil - ' . $nm_company,
@@ -865,6 +1020,83 @@ class Expense_petty_cash_model extends BF_Model
     }
 
     /**
+     * Apakah pencatatan sudah punya jurnal di staging (tr_jurnal)?
+     * Dipakai agar jurnal saat Approve tidak ganda untuk pencatatan lama yang
+     * jurnalnya dibuat saat simpan (spec PC-R-02: jurnal lama dibiarkan).
+     * `journal_status` tidak bisa dipakai: ENUM default 'pending' juga untuk pencatatan baru.
+     *
+     * @param string $no_pencatatan
+     * @return bool
+     */
+    public function has_journal($no_pencatatan)
+    {
+        $this->db->where('no_transaksi', $no_pencatatan);
+        $this->db->where('jenis_transaksi', 'Petty Cash');
+        return $this->db->count_all_results('tr_jurnal') > 0;
+    }
+
+    /**
+     * Pencatatan diedit: jurnal lama yang belum diposting dihapus, jurnal baru dibentuk
+     * dari data terbaru saat pelaporannya di-approve (PC-R-02). Jurnal yang sudah
+     * diposting tidak disentuh.
+     *
+     * @param int $pencatatan_id
+     * @return bool
+     */
+    public function reset_journal_for_edit($pencatatan_id)
+    {
+        $row = $this->db->select('no_pencatatan')->where('id', $pencatatan_id)->get($this->table_name)->row();
+        if (!$row) {
+            return false;
+        }
+
+        $this->db->where('no_transaksi', $row->no_pencatatan);
+        $this->db->where('jenis_transaksi', 'Petty Cash');
+        $this->db->where('sts', '0');
+        $this->db->delete('tr_jurnal');
+
+        // Tanpa jurnal tersisa -> belum ada jurnal (dibuat saat Approve)
+        if (!$this->has_journal($row->no_pencatatan)) {
+            $this->_update_journal_status($pencatatan_id, 'pending');
+        }
+        return true;
+    }
+
+    /**
+     * Buat jurnal semua pencatatan dalam satu pelaporan saat Approve (PC-R-02).
+     * Dipanggil di dalam transaksi approve: bila ada yang gagal, pemanggil membatalkan approve.
+     * Pencatatan yang sudah punya jurnal (data lama) dilewati agar tidak ganda.
+     *
+     * @param int[] $pencatatan_ids
+     * @return array [success => bool, created => int, skipped => int, failed_id => int|null]
+     */
+    public function create_journals_for_approval(array $pencatatan_ids)
+    {
+        $created = 0;
+        $skipped = 0;
+
+        foreach ($pencatatan_ids as $pencatatan_id) {
+            $row = $this->db->select('no_pencatatan')->where('id', $pencatatan_id)->get($this->table_name)->row();
+            if (!$row) {
+                return ['success' => false, 'created' => $created, 'skipped' => $skipped, 'failed_id' => (int) $pencatatan_id];
+            }
+
+            if ($this->has_journal($row->no_pencatatan)) {
+                $skipped++;
+                continue;
+            }
+
+            $result = $this->create_journal_for_pencatatan($pencatatan_id, false);
+            if (empty($result['success'])) {
+                return ['success' => false, 'created' => $created, 'skipped' => $skipped, 'failed_id' => (int) $pencatatan_id];
+            }
+            $created++;
+        }
+
+        return ['success' => true, 'created' => $created, 'skipped' => $skipped, 'failed_id' => null];
+    }
+
+    /**
      * Create journal for a pencatatan record (eventual consistency Phase 2)
      *
      * This method is called AFTER save_pencatatan() has committed successfully.
@@ -907,6 +1139,7 @@ class Expense_petty_cash_model extends BF_Model
             'tanggal'       => $header->tanggal,
             'company'       => $header->company,
             'keterangan'    => $header->keterangan ?: 'Pengeluaran Kas Kecil',
+            'coa_petty_cash' => $this->get_coa_petty_cash(isset($header->petty_cash_id) ? $header->petty_cash_id : 0),
         ];
 
         $details_data = [];
@@ -1002,6 +1235,7 @@ class Expense_petty_cash_model extends BF_Model
             'tanggal'       => $pencatatan->tanggal,
             'company'       => $pencatatan->company,
             'keterangan'    => $pencatatan->keterangan,
+            'coa_petty_cash' => $this->get_coa_petty_cash(isset($pencatatan->petty_cash_id) ? $pencatatan->petty_cash_id : 0),
         ];
 
         $details = [];
@@ -1117,6 +1351,19 @@ class Expense_petty_cash_model extends BF_Model
     }
 
     /**
+     * Saldo seharusnya kas kecil = Total Budget - pengeluaran yang belum di-refill
+     * (sama dengan Sisa Budget). Dihitung dari satu master untuk semua company.
+     *
+     * @param int $petty_cash_id
+     * @return int|false Rupiah bulat, false bila master tidak ditemukan
+     */
+    public function get_saldo_seharusnya($petty_cash_id)
+    {
+        $info = $this->get_budget_info($petty_cash_id);
+        return $info ? (int) round($info->sisa_budget) : false;
+    }
+
+    /**
      * Get complete budget info (total budget, terpakai, sisa) for a petty cash master
      *
      * @param int $petty_cash_id
@@ -1124,7 +1371,7 @@ class Expense_petty_cash_model extends BF_Model
      */
     public function get_budget_info($petty_cash_id)
     {
-        $this->db->select('total_budget');
+        $this->db->select('total_budget, nama');
         $this->db->from('ms_petty_cash');
         $this->db->where('id', $petty_cash_id);
         $master = $this->db->get()->row();
@@ -1138,6 +1385,7 @@ class Expense_petty_cash_model extends BF_Model
         $sisa_budget = $budget - $budget_terpakai;
 
         $info = new stdClass();
+        $info->nama = isset($master->nama) ? $master->nama : '';
         $info->budget = $budget;
         $info->budget_terpakai = $budget_terpakai;
         $info->sisa_budget = $sisa_budget;

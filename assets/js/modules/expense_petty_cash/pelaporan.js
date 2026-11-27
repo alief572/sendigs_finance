@@ -65,7 +65,7 @@ $(document).ready(function () {
       },
     },
     aaSorting: [[1, "desc"]],
-    columnDefs: [{ targets: [0, 7], orderable: false, searchable: false }],
+    columnDefs: [{ targets: [0, 6, 8], orderable: false, searchable: false }],
     iDisplayLength: 10,
     aLengthMenu: [
       [10, 20, 50, 100],
@@ -81,7 +81,7 @@ $(document).ready(function () {
       },
       error: function () {
         $("#table-pelaporan tbody").html(
-          '<tr><td colspan="8" class="text-center">Daftar pelaporan gagal dimuat. Klik Terapkan filter untuk mencoba kembali.</td></tr>',
+          '<tr><td colspan="9" class="text-center">Daftar pelaporan gagal dimuat. Klik Terapkan filter untuk mencoba kembali.</td></tr>',
         );
       },
     },
@@ -118,7 +118,27 @@ $(document).ready(function () {
         data: "grand_total",
       },
       {
-        // Column 6: Status (colored label)
+        // Column 6: Kontrol Saldo (selisih hitung fisik vs saldo seharusnya)
+        data: "selisih_saldo",
+        render: function (data, type) {
+          if (type !== "display") return data;
+          if (data === null || data === undefined) return "-";
+          var selisih = Number(data);
+          if (selisih === 0) {
+            return '<span class="label label-success">Sesuai</span>';
+          }
+          return (
+            '<span class="label label-warning">Selisih ' +
+            (selisih < 0 ? "-" : "+") +
+            Math.abs(selisih)
+              .toString()
+              .replace(/\B(?=(\d{3})+(?!\d))/g, ".") +
+            "</span>"
+          );
+        },
+      },
+      {
+        // Column 7: Status (colored label)
         data: "status",
         render: function (data, type, row) {
           if (type !== "display") return data;

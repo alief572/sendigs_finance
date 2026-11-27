@@ -85,8 +85,9 @@ class Expense_petty_cash_pelaporan_model extends BF_Model
         // 3: company
         // 4: jumlah_pencatatan
         // 5: grand_total
-        // 6: status
-        // 7: action (not sortable)
+        // 6: kontrol saldo (selisih, not sortable)
+        // 7: status
+        // 8: action (not sortable)
         $columns = [
             0 => null,
             1 => 'a.no_pelaporan',
@@ -94,8 +95,9 @@ class Expense_petty_cash_pelaporan_model extends BF_Model
             3 => 'a.company',
             4 => null,
             5 => 'a.grand_total',
-            6 => 'a.status',
-            7 => null,
+            6 => null,
+            7 => 'a.status',
+            8 => null,
         ];
 
         $order_by = isset($columns[$order_col]) && $columns[$order_col] !== null
@@ -136,7 +138,7 @@ class Expense_petty_cash_pelaporan_model extends BF_Model
         $records_filtered = $this->db->count_all_results();
 
         // Get paginated data with jumlah_pencatatan subquery
-        $this->db->select('a.id, a.no_pelaporan, a.periode_start, a.periode_end, a.company, a.grand_total, a.status, a.alasan_reject');
+        $this->db->select('a.id, a.no_pelaporan, a.periode_start, a.periode_end, a.company, a.grand_total, a.status, a.alasan_reject, a.saldo_seharusnya, a.saldo_petty_cash, a.selisih_saldo');
         $this->db->select('(SELECT COUNT(*) FROM tr_pelaporan_petty_cash_detail pd WHERE pd.pelaporan_id = a.id) as jumlah_pencatatan', false);
         $this->db->from($this->table_name . ' a');
         $apply_filters();
@@ -160,6 +162,7 @@ class Expense_petty_cash_pelaporan_model extends BF_Model
                 'grand_total'       => number_format($row->grand_total, 0, ',', '.'),
                 'status'            => $row->status,
                 'alasan_reject'     => $row->alasan_reject,
+                'selisih_saldo'     => isset($row->selisih_saldo) ? (int) $row->selisih_saldo : null,
             ];
         }
 
@@ -318,16 +321,24 @@ class Expense_petty_cash_pelaporan_model extends BF_Model
      * Submit pelaporan (change status from draft to waiting)
      *
      * @param int $id Pelaporan ID
+     * @param array|null $kontrol_saldo [saldo_seharusnya, saldo_petty_cash, selisih_saldo] disimpan
+     *                                  bersama perubahan status dalam satu transaksi
      * @return bool
      */
-    public function submit_pelaporan($id)
+    public function submit_pelaporan($id, $kontrol_saldo = null)
     {
         // Begin transaction
         $this->db->trans_start();
 
-        // Update pelaporan status to 'waiting'
+        // Update pelaporan status to 'waiting' (+ kontrol saldo bila diberikan)
+        $update = ['status' => 'waiting'];
+        if (is_array($kontrol_saldo)) {
+            $update['saldo_seharusnya'] = (int) $kontrol_saldo['saldo_seharusnya'];
+            $update['saldo_petty_cash'] = (int) $kontrol_saldo['saldo_petty_cash'];
+            $update['selisih_saldo']    = (int) $kontrol_saldo['selisih_saldo'];
+        }
         $this->db->where('id', $id);
-        $this->db->update($this->table_name, ['status' => 'waiting']);
+        $this->db->update($this->table_name, $update);
 
         // Get all linked pencatatan IDs
         $this->db->select('pencatatan_id');
@@ -357,6 +368,32 @@ class Expense_petty_cash_pelaporan_model extends BF_Model
     // =========================================================================
 
     /**
+     * Penyebab approve gagal: 'journal' (jurnal pencatatan gagal dibuat), 'transaction' (commit gagal),
+     * atau null. Dibaca controller untuk pesan yang tepat.
+     *
+     * @var string|null
+     */
+    public $approve_error = null;
+
+    /**
+     * Model pembentuk jurnal pencatatan. Null = diambil dari instance CI (Expense_petty_cash_model).
+     * Dapat di-inject, misalnya oleh tes.
+     *
+     * @var object|null
+     */
+    public $journal_model = null;
+
+    private function _journal_model()
+    {
+        if ($this->journal_model === null) {
+            $CI =& get_instance();
+            $CI->load->model('expense_petty_cash/Expense_petty_cash_model');
+            $this->journal_model = $CI->Expense_petty_cash_model;
+        }
+        return $this->journal_model;
+    }
+
+    /**
      * Approve pelaporan and trigger integration
      *
      * @param int $id Pelaporan ID
@@ -365,6 +402,8 @@ class Expense_petty_cash_pelaporan_model extends BF_Model
      */
     public function approve_pelaporan($id, $user_id)
     {
+        $this->approve_error = null;
+
         // Validate pelaporan exists and status = 'waiting'
         $this->db->select('*');
         $this->db->from($this->table_name);
@@ -407,12 +446,23 @@ class Expense_petty_cash_pelaporan_model extends BF_Model
 
             $this->db->where_in('id', $pencatatan_ids);
             $this->db->update('tr_expense_petty_cash', ['status' => 'approved']);
+
+            // Jurnal pencatatan dibentuk saat Approve (PC-R-02), dalam transaksi yang sama:
+            // gagal membuat jurnal membatalkan approve (tidak ada approved tanpa jurnal).
+            $journal = $this->_journal_model()->create_journals_for_approval($pencatatan_ids);
+            if (empty($journal['success'])) {
+                $this->db->trans_rollback();
+                $this->approve_error = 'journal';
+                log_message('error', 'Approve pelaporan #' . $id . ' dibatalkan: jurnal pencatatan #' . (isset($journal['failed_id']) ? $journal['failed_id'] : '?') . ' gagal dibuat.');
+                return false;
+            }
         }
 
         // Complete transaction (trans_complete mengembalikan false bila commit/rollback gagal)
         $completed = $this->db->trans_complete();
 
         if ($completed === false || $this->db->trans_status() === false) {
+            $this->approve_error = 'transaction';
             return false;
         }
 

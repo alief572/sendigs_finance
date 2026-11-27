@@ -216,3 +216,14 @@ Kriteria: request 1.000.028 + PPN 0, PPh 23 20.001, payment 980.027 sebelum admi
 Status: fase 1–3 selesai. PPh form/preview/simpan dan jurnal tersinkron; konfigurasi serta jurnal pembulatan bank dilepas. Tidak perlu pengisian COA pembulatan untuk memakai aturan PPh ini. Bukti tes dan keterbatasan: checkpoint bagian Pembulatan PPh per item.
 
 Publikasi atas permintaan user: siapkan commit terisolasi dari tip terbaru development dan main, sertakan hanya kode/tes/dokumen PPh dan fixture yang dibutuhkan; jangan ikutkan konfigurasi DB lokal atau perubahan task lain. Verifikasi paket masing-masing branch, lalu push fast-forward tanpa force dan cek hash remote.
+
+## Petty Cash PC-R-01..10: implementasi spec (27 November 2026)
+
+Rencana lengkap: `C:\Users\Febry\.claude\plans\nah-jadi-di-folder-squishy-flurry.md`. Cakupan A penuh + B terbatas. Status dan bukti: `docs/task-progress.md` bagian "Petty Cash PC-R".
+
+1. Fase 0-1: grounding, COA Petty Cash di master (`petty_cash_master`), jurnal memakai COA master (selesai).
+2. Fase 2: Saldo Petty Cash, selisih, peringatan di Pelaporan/Approval (selesai).
+3. Fase 3: jurnal pencatatan dibuat saat Approve, idempoten terhadap jurnal lama (selesai).
+4. Fase 4: Preview Jurnal di Approval dan Konfirmasi, paritas dengan jurnal nyata (selesai).
+5. Fase 5: Payment Hutang: COA Hutang ke STM/Piutang per company, bank pembayar dan Bank STM penerima dipilih saat Payment (selesai).
+6. Fase 6 (tampilan template Jurnal All) tidak dikerjakan; penyamaan Payment dengan RP-R-36..39 ditunda sesuai spec.

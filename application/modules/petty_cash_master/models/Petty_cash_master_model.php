@@ -73,7 +73,7 @@ class Petty_cash_master_model extends BF_Model
         $order_dir = isset($dt_params['order'][0]['dir']) ? $dt_params['order'][0]['dir'] : 'asc';
 
         // Define sortable columns
-        $columns = ['a.id', 'a.nama', 'a.keterangan', 'a.total_budget'];
+        $columns = ['a.id', 'a.nama', 'a.keterangan', 'a.coa_petty_cash'];
 
         $order_by = isset($columns[$order_col]) ? $columns[$order_col] : 'a.id';
         $order_dir = ($order_dir === 'desc') ? 'desc' : 'asc';
@@ -93,12 +93,14 @@ class Petty_cash_master_model extends BF_Model
         $records_filtered = $this->db->count_all_results();
 
         // Get paginated data
-        $this->db->select('a.id, a.nama, a.keterangan, a.total_budget');
+        $this->db->select('a.id, a.nama, a.keterangan, a.total_budget, a.coa_petty_cash, c.nama as nama_coa_petty_cash');
         $this->db->from($this->table_name . ' a');
+        $this->db->join(DBACC . '.coa_master c', 'c.no_perkiraan = a.coa_petty_cash', 'left');
         if (!empty($search)) {
             $this->db->group_start();
             $this->db->like('a.nama', $search);
             $this->db->or_like('a.keterangan', $search);
+            $this->db->or_like('a.coa_petty_cash', $search);
             $this->db->group_end();
         }
         $this->db->order_by($order_by, $order_dir);
@@ -115,6 +117,7 @@ class Petty_cash_master_model extends BF_Model
                 'nama'         => $row->nama,
                 'keterangan'   => $row->keterangan,
                 'total_budget' => number_format($row->total_budget, 0, ',', '.'),
+                'coa_petty_cash' => self::format_coa_label($row->coa_petty_cash, $row->nama_coa_petty_cash),
                 'id'           => $row->id
             ];
         }
@@ -125,6 +128,39 @@ class Petty_cash_master_model extends BF_Model
             'recordsFiltered' => $records_filtered,
             'data'            => $data
         ];
+    }
+
+    /**
+     * Label tampilan COA Petty Cash: "no_perkiraan - nama", atau "-" bila belum diisi.
+     *
+     * @param string|null $kode
+     * @param string|null $nama
+     * @return string
+     */
+    public static function format_coa_label($kode, $nama = null)
+    {
+        $kode = trim((string) $kode);
+        if ($kode === '') {
+            return '-';
+        }
+        $nama = trim((string) $nama);
+        return $nama === '' ? $kode : $kode . ' - ' . $nama;
+    }
+
+    /**
+     * Cek apakah kode COA ada di coa_master akuntansi.
+     *
+     * @param string $kode
+     * @return bool
+     */
+    public function coa_exists($kode)
+    {
+        $kode = trim((string) $kode);
+        if ($kode === '') {
+            return false;
+        }
+        $this->db->where('no_perkiraan', $kode);
+        return $this->db->count_all_results(DBACC . '.coa_master') > 0;
     }
 
     /**

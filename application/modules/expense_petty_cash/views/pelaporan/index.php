@@ -1,5 +1,11 @@
 <link rel="stylesheet" href="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.css') ?>">
 
+<?php
+$tour_title = 'Pelaporan Petty Cash';
+$tour_steps = [['el' => '#table-pelaporan', 't' => 'Pelaporan', 'd' => 'Kolom Kontrol Saldo membandingkan hitung fisik dengan saldo seharusnya. Tombol di kolom Aksi untuk mengajukan, melihat detail, atau mencetak laporan.']];
+include __DIR__ . '/../_tutorial.php';
+?>
+
 <link rel="stylesheet" href="<?= base_url('assets/css/petty-cash-pelaporan.css') ?>">
 
 <div class="box petty-cash-pelaporan">
@@ -55,6 +61,7 @@
                         <th>Company</th>
                         <th>Pencatatan</th>
                         <th>Total periode (Rp)</th>
+                        <th>Kontrol Saldo</th>
                         <th>Status</th>
                         <th width="150">Aksi</th>
                     </tr>

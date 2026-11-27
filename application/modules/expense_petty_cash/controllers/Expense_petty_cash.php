@@ -173,6 +173,7 @@ class Expense_petty_cash extends Admin_Controller
             'petty_cash_id' => $petty_cash_id,
             'budget_info'   => $budget_info,
             'coa_list'      => $coa_list,
+            'coa_kas'       => $this->_coa_kas($petty_cash_id),
         ];
 
         $this->template->set($data);
@@ -231,6 +232,7 @@ class Expense_petty_cash extends Admin_Controller
             'petty_cash_id' => $petty_cash_id,
             'budget_info'   => $budget_info,
             'coa_list'      => $coa_list,
+            'coa_kas'       => $this->_coa_kas($petty_cash_id),
         ];
 
         $this->template->set($data);
@@ -280,6 +282,7 @@ class Expense_petty_cash extends Admin_Controller
             'petty_cash_id' => $petty_cash_id,
             'budget_info'   => $budget_info,
             'coa_list'      => $coa_list,
+            'coa_kas'       => $this->_coa_kas($petty_cash_id ?: 0),
         ];
 
         $this->template->set($data);
@@ -559,14 +562,20 @@ class Expense_petty_cash extends Admin_Controller
             }
         }
 
-        // Get COA list for display
-        $coa_list = $petty_cash_id ? $this->_get_coa_list($petty_cash_id) : [];
+        $items_by_id = [];
+        foreach ($pencatatan_details as $pid => $det) {
+            $items_by_id[$pid] = isset($det->details) ? $det->details : [];
+        }
+        $coa_kas = $this->_coa_kas($petty_cash_id ?: 0);
 
         $data = [
             'pelaporan'          => $pelaporan,
             'budget_info'        => $budget_info,
             'pencatatan_details' => $pencatatan_details,
-            'coa_list'           => $coa_list,
+            'coa_names'          => $this->_coa_names($items_by_id, $pelaporan->header->company),
+            'coa_kas'            => $coa_kas,
+            'journal_preview'    => $this->_journal_preview_list($pelaporan, $items_by_id, $coa_kas),
+            'actual_journals'    => $this->_actual_journals($pelaporan),
             'has_add'            => has_permission($this->addPermission),
             'has_manage'         => has_permission($this->managePermission),
         ];
@@ -626,17 +635,20 @@ class Expense_petty_cash extends Admin_Controller
             }
         }
 
-        // Get COA list for display
-        $coa_list = [];
-        if (!empty($pelaporan->header->petty_cash_id)) {
-            $coa_list = $this->_get_coa_list($pelaporan->header->petty_cash_id);
+        $items_by_id = [];
+        foreach ($pencatatan_details as $pid => $det) {
+            $items_by_id[$pid] = isset($det->details) ? $det->details : [];
         }
+        $coa_kas = $this->_coa_kas(isset($pelaporan->header->petty_cash_id) ? $pelaporan->header->petty_cash_id : 0);
 
         $data = [
             'pelaporan'          => $pelaporan,
+            'coa_names'          => $this->_coa_names($items_by_id, $pelaporan->header->company),
             'budget_info'        => $budget_info,
+            'coa_kas'            => $coa_kas,
+            'journal_preview'    => $this->_journal_preview_list($pelaporan, $items_by_id, $coa_kas),
+            'saldo_seharusnya'   => ($budget_info && isset($budget_info->sisa_budget)) ? (int) round($budget_info->sisa_budget) : null,
             'pencatatan_details' => $pencatatan_details,
-            'coa_list'           => $coa_list,
             'has_add'            => has_permission($this->addPermission),
             'has_manage'         => has_permission($this->managePermission),
         ];
@@ -658,7 +670,7 @@ class Expense_petty_cash extends Admin_Controller
      */
     public function submit_pelaporan($id)
     {
-        $this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'current_status', 'reason', 'outcome'));
+        $this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'current_status', 'reason', 'outcome', 'ada_selisih'));
         // Check permission (add or manage)
         if (!has_permission($this->addPermission) && !has_permission($this->managePermission)) {
             echo json_encode([
@@ -680,7 +692,7 @@ class Expense_petty_cash extends Admin_Controller
         }
 
         // Check pelaporan exists and is in 'draft' status
-        $this->db->select('id, status');
+        $this->db->select('id, status, petty_cash_id');
         $this->db->from('tr_pelaporan_petty_cash');
         $this->db->where('id', $id);
         $pelaporan = $this->db->get()->row();
@@ -703,8 +715,36 @@ class Expense_petty_cash extends Admin_Controller
             return;
         }
 
-        // Submit pelaporan (draft → waiting)
-        $result = $this->Expense_petty_cash_pelaporan_model->submit_pelaporan($id);
+        // Kontrol saldo (PC-R-01): Saldo Petty Cash (hitung fisik) wajib diisi. Saldo seharusnya
+        // dan selisih dihitung ulang di server dari satu master; nilai dari klien tidak dipercaya.
+        $saldo_petty_cash = $this->_parse_rupiah($this->input->post('saldo_petty_cash'));
+        if ($saldo_petty_cash === null) {
+            $kosong = trim((string) $this->input->post('saldo_petty_cash')) === '';
+            echo json_encode([
+                'status'  => false,
+                'message' => $kosong ? 'Saldo Petty Cash wajib diisi (hasil hitung fisik uang)' : 'Saldo Petty Cash harus berupa angka tanpa tanda minus'
+            ]);
+            $this->completeAudit('Ajukan pelaporan petty cash gagal validasi saldo', 0, array('id' => $id, 'reason' => $kosong ? 'saldo_required' : 'saldo_invalid', 'outcome' => 'validation_failed'));
+            return;
+        }
+
+        $saldo_seharusnya = $this->Expense_petty_cash_model->get_saldo_seharusnya(isset($pelaporan->petty_cash_id) ? $pelaporan->petty_cash_id : 0);
+        if ($saldo_seharusnya === false) {
+            echo json_encode([
+                'status'  => false,
+                'message' => 'Master petty cash tidak ditemukan, saldo seharusnya tidak dapat dihitung'
+            ]);
+            $this->completeAudit('Ajukan pelaporan petty cash gagal: master tidak ditemukan', 0, array('id' => $id, 'reason' => 'master_not_found', 'outcome' => 'validation_failed'));
+            return;
+        }
+        $selisih_saldo = $saldo_petty_cash - $saldo_seharusnya; // negatif = uang kurang; hanya informasi
+
+        // Submit pelaporan (draft → waiting) + simpan kontrol saldo dalam satu transaksi
+        $result = $this->Expense_petty_cash_pelaporan_model->submit_pelaporan($id, [
+            'saldo_seharusnya' => $saldo_seharusnya,
+            'saldo_petty_cash' => $saldo_petty_cash,
+            'selisih_saldo'    => $selisih_saldo,
+        ]);
 
         if (!$result) {
             echo json_encode([
@@ -717,9 +757,10 @@ class Expense_petty_cash extends Admin_Controller
 
         echo json_encode([
             'status'  => true,
-            'message' => 'Pelaporan berhasil diajukan untuk approval'
+            'message' => 'Pelaporan berhasil diajukan untuk approval',
+            'selisih_saldo' => $selisih_saldo
         ]);
-        $this->completeAudit('Pelaporan petty cash berhasil diajukan', 1, array('id' => $id, 'outcome' => 'submitted'));
+        $this->completeAudit('Pelaporan petty cash berhasil diajukan', 1, array('id' => $id, 'outcome' => 'submitted', 'ada_selisih' => $selisih_saldo !== 0));
     }
 
     // =========================================================================
@@ -787,7 +828,7 @@ class Expense_petty_cash extends Admin_Controller
         $records_filtered = $this->db->count_all_results();
 
         // Get paginated data
-        $this->db->select('a.id, a.no_pelaporan, a.periode_start, a.periode_end, a.company, a.grand_total, a.status, a.created_on');
+        $this->db->select('a.id, a.no_pelaporan, a.periode_start, a.periode_end, a.company, a.grand_total, a.status, a.created_on, a.selisih_saldo');
         $this->db->select('(SELECT COUNT(*) FROM tr_pelaporan_petty_cash_detail pd WHERE pd.pelaporan_id = a.id) as jumlah_pencatatan', false);
         $this->db->from('tr_pelaporan_petty_cash a');
         $this->db->where('a.status', 'waiting');
@@ -817,6 +858,7 @@ class Expense_petty_cash extends Admin_Controller
                 'jumlah_pencatatan' => intval($row->jumlah_pencatatan),
                 'grand_total'       => number_format($row->grand_total, 0, ',', '.'),
                 'status'            => $row->status,
+                'selisih_saldo'     => isset($row->selisih_saldo) ? (int) $row->selisih_saldo : null,
             ];
         }
 
@@ -889,15 +931,19 @@ class Expense_petty_cash extends Admin_Controller
             }
         }
 
+        $coa_kas = $this->_coa_kas(isset($pelaporan->header->petty_cash_id) ? $pelaporan->header->petty_cash_id : 0);
+
         $data = [
             'pelaporan'          => $pelaporan,
             'pencatatan_details' => $pencatatan_details,
             'budget_info'        => (!empty($pelaporan->header->petty_cash_id))
                 ? $this->Expense_petty_cash_model->get_budget_info($pelaporan->header->petty_cash_id)
                 : false,
-            'coa_list'           => (!empty($pelaporan->header->petty_cash_id))
-                ? $this->_get_coa_list($pelaporan->header->petty_cash_id)
-                : [],
+            'coa_names'          => $this->_coa_names($pencatatan_details, $pelaporan->header->company),
+            'actual_journals'    => $this->_actual_journals($pelaporan),
+            'coa_kas'            => $coa_kas,
+            // Preview jurnal yang dibentuk saat Approve (PC-R-04): satu kotak gabungan
+            'journal_preview'    => $this->_journal_preview_list($pelaporan, $pencatatan_details, $coa_kas),
         ];
 
         $this->template->set($data);
@@ -945,11 +991,15 @@ class Expense_petty_cash extends Admin_Controller
         $result = $this->Expense_petty_cash_pelaporan_model->approve_pelaporan($id, $current_user_id);
 
         if (!$result) {
+            $journal_failed = isset($this->Expense_petty_cash_pelaporan_model->approve_error)
+                && $this->Expense_petty_cash_pelaporan_model->approve_error === 'journal';
             echo json_encode([
                 'status'  => false,
-                'message' => 'Gagal melakukan approval. Pastikan pelaporan berstatus waiting dan Anda adalah approver yang ditunjuk.'
+                'message' => $journal_failed
+                    ? 'Approval dibatalkan karena jurnal pencatatan gagal dibuat. Tidak ada data yang berubah; silakan coba lagi.'
+                    : 'Gagal melakukan approval. Pastikan pelaporan berstatus waiting dan Anda adalah approver yang ditunjuk.'
             ]);
-            $this->completeAudit('Gagal approve pelaporan petty cash', 0, array('id' => $id, 'outcome' => 'approve_failed'));
+            $this->completeAudit('Gagal approve pelaporan petty cash', 0, array('id' => $id, 'reason' => $journal_failed ? 'journal_failed' : 'approve_failed', 'outcome' => 'approve_failed'));
             return;
         }
 
@@ -1228,6 +1278,95 @@ class Expense_petty_cash extends Admin_Controller
      *
      * @return int|null
      */
+    /**
+     * COA Petty Cash master untuk tampilan jurnal (kode + nama); fallback 1101-01-02 Kas Kecil.
+     *
+     * @param int $petty_cash_id
+     * @return array ['kode' => string, 'nama' => string]
+     */
+    private function _coa_kas($petty_cash_id)
+    {
+        return $this->Expense_petty_cash_model->get_coa_petty_cash_info($petty_cash_id);
+    }
+
+    /**
+     * Preview jurnal semua pencatatan dalam pelaporan, dibentuk oleh pembentuk yang sama dengan
+     * pengujian paritas terhadap jurnal nyata saat Approve (tanggal jurnal = tanggal pencatatan).
+     *
+     * @param object $pelaporan     hasil get_pelaporan() (header + pencatatan_list)
+     * @param array  $items_by_id   pencatatan_id => daftar detail (coa_code, total, coa_nama)
+     * @param array  $kas           hasil _coa_kas()
+     * @return array [['pencatatan' => obj, 'books' => array|false], ...]
+     */
+    private function _journal_preview_list($pelaporan, array $items_by_id, array $kas)
+    {
+        $list = [];
+        foreach ((array) $pelaporan->pencatatan_list as $p) {
+            $details = [];
+            foreach ((isset($items_by_id[$p->id]) ? $items_by_id[$p->id] : []) as $d) {
+                $details[] = [
+                    'coa_code'    => $d->coa_code,
+                    'total'       => (int) $d->total,
+                    'coa_nama'    => $this->Expense_petty_cash_model->get_coa_name($d->coa_code, $pelaporan->header->company),
+                    'pengeluaran' => isset($d->pengeluaran) ? $d->pengeluaran : '',
+                ];
+            }
+            $list[] = [
+                'pencatatan' => $p,
+                'books'      => $this->Expense_petty_cash_model->build_journal_preview($pelaporan->header->company, $p->tanggal, $details, $kas, isset($p->keterangan) ? $p->keterangan : ''),
+            ];
+        }
+        return $list;
+    }
+
+    /**
+     * Nama COA per kode, sama dengan yang dipakai jurnal company ini.
+     *
+     * @param array  $items_by_id pencatatan_id => daftar detail
+     * @param string $company
+     * @return array coa_code => nama
+     */
+    private function _coa_names(array $items_by_id, $company)
+    {
+        $names = [];
+        foreach ($items_by_id as $rows) {
+            foreach ($rows as $d) {
+                if (!isset($names[$d->coa_code])) {
+                    $names[$d->coa_code] = $this->Expense_petty_cash_model->get_coa_name($d->coa_code, $company);
+                }
+            }
+        }
+        return $names;
+    }
+
+    /** Jurnal yang sudah terbentuk per pencatatan (pencatatan_id => hasil get_journal_books). */
+    private function _actual_journals($pelaporan)
+    {
+        $list = [];
+        foreach ((array) $pelaporan->pencatatan_list as $p) {
+            $jurnal = $this->Expense_petty_cash_model->get_journal_books($p->no_pencatatan, $pelaporan->header->company);
+            if ($jurnal) {
+                $list[$p->id] = $jurnal;
+            }
+        }
+        return $list;
+    }
+
+    /**
+     * Parse input rupiah ("2.650.000", "2650000", "2,650,000") menjadi integer >= 0.
+     *
+     * @param mixed $raw
+     * @return int|null null bila kosong, bukan angka, atau negatif
+     */
+    private function _parse_rupiah($raw)
+    {
+        $clean = str_replace(['.', ',', ' '], '', trim((string) $raw));
+        if ($clean === '' || !ctype_digit($clean)) {
+            return null;
+        }
+        return (int) $clean;
+    }
+
     private function _get_petty_cash_id()
     {
         $this->db->select('id');
@@ -1463,6 +1602,9 @@ class Expense_petty_cash extends Admin_Controller
                 $jumlah  = isset($item['jumlah']) ? (int) $item['jumlah'] : 0;
                 $nominal = isset($item['nominal']) ? (int) $item['nominal'] : 0;
 
+                if (trim((string) ($item['coa_code'] ?? '')) === '') {
+                    $errors['details_' . $idx . '_coa_code'] = "Baris {$row_num}: COA wajib dipilih";
+                }
                 if ($jumlah <= 0) {
                     $errors['details_' . $idx . '_jumlah'] = "Baris {$row_num}: Jumlah harus lebih besar dari 0";
                 }
@@ -1575,25 +1717,22 @@ class Expense_petty_cash extends Admin_Controller
         $is_edit = !empty($id);
 
         // =====================================================================
-        // Create journal (eventual consistency - Phase 2)
+        // Jurnal TIDAK dibuat saat simpan (PC-R-02): dibentuk saat Approve pelaporan,
+        // tanggal = tanggal pencatatan. Pada edit, jurnal lama yang belum diposting dihapus
+        // agar jurnal yang dibentuk saat Approve memakai data terbaru.
         // =====================================================================
-        $journal_result = $this->Expense_petty_cash_model->create_journal_for_pencatatan($pencatatan_id, $is_edit);
+        if ($is_edit) {
+            $this->Expense_petty_cash_model->reset_journal_for_edit($pencatatan_id);
+        }
 
         // =====================================================================
         // Return JSON response
         // =====================================================================
-        $response = [
+        echo json_encode([
             'status'  => true,
             'message' => 'Data berhasil disimpan',
-        ];
-
-        // Add warning if journal failed
-        if (!$journal_result['success']) {
-            $response['warning'] = 'Jurnal gagal disinkronisasi. Dapat di-retry melalui tombol Retry Jurnal.';
-        }
-
-        echo json_encode($response);
-        $this->completeAudit('Pencatatan petty cash berhasil disimpan', 1, array('id' => $pencatatan_id, 'operation' => $is_edit ? 'update' : 'create', 'detail_count' => count($details), 'journal' => $journal_result['success'] ? 'synced' : 'failed', 'outcome' => 'saved'));
+        ]);
+        $this->completeAudit('Pencatatan petty cash berhasil disimpan', 1, array('id' => $pencatatan_id, 'operation' => $is_edit ? 'update' : 'create', 'detail_count' => count($details), 'journal' => 'deferred_to_approval', 'outcome' => 'saved'));
     }
 
     /**

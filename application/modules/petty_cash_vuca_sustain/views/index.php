@@ -1,5 +1,11 @@
 <link rel="stylesheet" href="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.css') ?>">
 
+<?php
+$tour_title = 'Petty Cash VUCA / Sustain';
+$tour_steps = [['el' => '#table-vuca-sustain', 't' => 'Payment Hutang', 'd' => 'VUCA/SUSTAIN membayar hutang petty cash ke STM.']];
+include dirname(__DIR__, 2) . '/expense_petty_cash/views/_tutorial.php';
+?>
+
 <style>
     .filter-actions {
         margin-top: 25px;

@@ -540,6 +540,115 @@ class Pembayaran_material_model extends BF_Model
 		return (intdiv($base, $divisor) + ($base % $divisor ? 1 : 0)) * 100;
 	}
 
+	/**
+	 * COA Payment Hutang Petty Cash per company (PC-R-05): company Dr Hutang ke STM, STM Cr Piutang.
+	 * Sebelumnya semua company memakai 2203-01-01 / 1103-01-01 tertulis tetap.
+	 */
+	const PETTY_HUTANG_COA = [
+		'VUCA'    => ['hutang' => '2103-01-01', 'piutang' => '1103-01-01'],
+		'SUSTAIN' => ['hutang' => '2103-01-02', 'piutang' => '1103-01-02'],
+	];
+
+	/**
+	 * Company Payment Hutang dari dokumen PHP yang dipilih (tr_petty_cash_vuca_sustain).
+	 * Semua dokumen harus satu company.
+	 *
+	 * @param array $payments baris payment_approve
+	 * @param callable|null $guard pembungkus hasil query (mis. auditQuery controller) agar kegagalan DB tidak diam-diam diabaikan
+	 * @return string VUCA|SUSTAIN
+	 */
+	public function petty_hutang_company($payments, $guard = null)
+	{
+		$companies = [];
+		foreach ($payments as $payment) {
+			$query = $this->db->get_where('tr_petty_cash_vuca_sustain', ['no_payment_hutang' => $payment->no_doc]);
+			$row = ($guard ? $guard($query) : $query)->row();
+			if (!$row || !isset(self::PETTY_HUTANG_COA[strtoupper((string) $row->company)])) {
+				throw new DomainException('Company Payment Hutang tidak dapat ditentukan untuk dokumen ' . $payment->no_doc . '.');
+			}
+			$companies[strtoupper((string) $row->company)] = true;
+		}
+		if (count($companies) !== 1) {
+			throw new DomainException('Payment Hutang harus untuk satu company.');
+		}
+		return key($companies);
+	}
+
+	/**
+	 * Akun jurnal Payment Hutang: COA hutang/piutang menurut company, serta COA bank yang dipilih
+	 * saat Payment (bank company pembayar) dan Bank STM penerima. Keduanya wajib dan harus ada di ms_bank.
+	 *
+	 * @param string $company  VUCA|SUSTAIN
+	 * @param mixed  $bank_id  ms_bank.id bank company pembayar
+	 * @param mixed  $bank_stm_id ms_bank.id bank STM penerima
+	 * @return array [hutang, piutang, bank, bank_stm]
+	 */
+	public function petty_hutang_accounts($company, $bank_id, $bank_stm_id, $guard = null)
+	{
+		$company = strtoupper((string) $company);
+		if (!isset(self::PETTY_HUTANG_COA[$company])) {
+			throw new DomainException('Company Payment Hutang tidak valid.');
+		}
+		$coa_of = function ($id, $label) use ($guard) {
+			if (!is_scalar($id) || trim((string) $id) === '') {
+				throw new DomainException($label . ' wajib dipilih.');
+			}
+			$bank_q = $this->db->get_where('ms_bank', ['id' => $id, 'deleted' => '0']);
+			$bank = ($guard ? $guard($bank_q) : $bank_q)->row();
+			if (!$bank || trim((string) $bank->coa_bank) === '') {
+				throw new DomainException('COA ' . $label . ' tidak ditemukan.');
+			}
+			return $bank->coa_bank;
+		};
+		return [
+			'hutang'   => self::PETTY_HUTANG_COA[$company]['hutang'],
+			'piutang'  => self::PETTY_HUTANG_COA[$company]['piutang'],
+			'bank'     => $coa_of($bank_id, 'Bank pembayar'),
+			'bank_stm' => $coa_of($bank_stm_id, 'Bank STM penerima'),
+		];
+	}
+
+	/**
+	 * Validasi jurnal Payment Hutang yang dikirim form terhadap akun yang diizinkan server dan total dokumen.
+	 *   jurnal_hutang_1 (company): Dr hutang / Cr bank pembayar
+	 *   jurnal_hutang_2 (STM)    : Dr bank STM penerima / Cr piutang
+	 * Form hanya pratinjau; akun dan nominal harus sama dengan hasil turunan server.
+	 *
+	 * @param mixed $rows1 post jurnal_hutang_1
+	 * @param mixed $rows2 post jurnal_hutang_2
+	 * @param array $accounts hasil petty_hutang_accounts()
+	 * @param string $expected_total total dokumen (jumlah payment_approve), format angka bebas
+	 */
+	public function validate_petty_hutang_journal($rows1, $rows2, array $accounts, $expected_total)
+	{
+		$num = function ($v) { return round((float) str_replace(',', '', (string) $v), 2); };
+		$expected = $num($expected_total);
+		$check = function ($rows, $debit_coa, $credit_coa, $label) use ($num, $expected) {
+			if (!is_array($rows) || count($rows) !== 2) {
+				throw new DomainException('Jurnal ' . $label . ' tidak lengkap.');
+			}
+			$debit = $credit = null;
+			foreach ($rows as $row) {
+				if (!is_array($row) || !isset($row['coa'], $row['debit'], $row['kredit'])) {
+					throw new DomainException('Jurnal ' . $label . ' tidak valid.');
+				}
+				if ($num($row['debit']) > 0 && $num($row['kredit']) == 0) { $debit = $row; }
+				elseif ($num($row['kredit']) > 0 && $num($row['debit']) == 0) { $credit = $row; }
+			}
+			if ($debit === null || $credit === null) {
+				throw new DomainException('Jurnal ' . $label . ' harus berisi satu debit dan satu kredit.');
+			}
+			if ($debit['coa'] !== $debit_coa || $credit['coa'] !== $credit_coa) {
+				throw new DomainException('Akun jurnal ' . $label . ' tidak sesuai (seharusnya Dr ' . $debit_coa . ' / Cr ' . $credit_coa . '). Muat ulang form dan pilih bank.');
+			}
+			if ($num($debit['debit']) !== $expected || $num($credit['kredit']) !== $expected) {
+				throw new DomainException('Nominal jurnal ' . $label . ' tidak sama dengan total dokumen.');
+			}
+		};
+		$check($rows1, $accounts['hutang'], $accounts['bank'], 'Payment Hutang company');
+		$check($rows2, $accounts['bank_stm'], $accounts['piutang'], 'STM terima Payment Hutang');
+	}
+
 	public function payment_totals($payments, $details, $bankCharge, $bearer)
 	{
 		if (!is_array($payments) || !$payments || !is_array($details) || !in_array($bearer, ['company', 'recipient'], true)) {

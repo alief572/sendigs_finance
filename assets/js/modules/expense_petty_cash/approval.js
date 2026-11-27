@@ -64,7 +64,13 @@ $(document).ready(function () {
         },
       },
       aaSorting: [[1, "asc"]],
-      columnDefs: [{ targets: [0, 6], orderable: false, searchable: false }],
+      columnDefs: [{ targets: [0, 6, 7], orderable: false, searchable: false }],
+      createdRow: function (tr, row) {
+        // Selisih saldo: sorot baris agar Dept Head Finance mengecek (PC-R-05)
+        if (row.selisih_saldo !== null && Number(row.selisih_saldo) !== 0) {
+          $(tr).css("background-color", "#fff8e1");
+        }
+      },
       iDisplayLength: 10,
       aLengthMenu: [
         [10, 20, 50, 100],
@@ -76,7 +82,7 @@ $(document).ready(function () {
         cache: false,
         error: function () {
           $("#table-approval tbody").html(
-            '<tr><th colspan="7" class="text-center">No data found in the server</th></tr>',
+            '<tr><th colspan="8" class="text-center">No data found in the server</th></tr>',
           );
         },
       },
@@ -115,7 +121,28 @@ $(document).ready(function () {
           className: "text-right",
         },
         {
-          // Column 6: Action button
+          // Column 6: Kontrol Saldo (selisih hitung fisik vs saldo seharusnya)
+          data: "selisih_saldo",
+          className: "text-center",
+          render: function (data, type) {
+            if (type !== "display") return data;
+            if (data === null || data === undefined) return "-";
+            var selisih = Number(data);
+            if (selisih === 0) {
+              return '<span class="label label-success">Sesuai</span>';
+            }
+            return (
+              '<span class="label label-warning">Selisih ' +
+              (selisih < 0 ? "-" : "+") +
+              Math.abs(selisih)
+                .toString()
+                .replace(/\B(?=(\d{3})+(?!\d))/g, ".") +
+              "</span><br><small>Perlu dicek</small>"
+            );
+          },
+        },
+        {
+          // Column 7: Action button
           data: null,
           className: "text-center",
           render: function (data, type, row) {
@@ -141,10 +168,27 @@ $(document).ready(function () {
     var id =
       typeof PELAPORAN_ID !== "undefined" ? PELAPORAN_ID : $(this).data("id");
 
+    // Selisih saldo hanya informasi: tetap bisa approve, tetapi approver diingatkan (PC-R-05)
+    var adaSelisih =
+      typeof SELISIH_SALDO !== "undefined" &&
+      SELISIH_SALDO !== null &&
+      Number(SELISIH_SALDO) !== 0;
+    var peringatanSelisih = adaSelisih
+      ? '<div class="alert alert-warning" style="text-align:left; margin-top:10px;"><i class="fa fa-warning"></i> Ada selisih saldo <strong>' +
+        (Number(SELISIH_SALDO) < 0 ? "-" : "+") +
+        "Rp " +
+        Math.abs(Number(SELISIH_SALDO))
+          .toString()
+          .replace(/\B(?=(\d{3})+(?!\d))/g, ".") +
+        "</strong>. Pastikan Dept Head Finance sudah mengecek selisih ini.</div>"
+      : "";
+
     Swal.fire({
       icon: "question",
       title: "Approve Pelaporan?",
-      text: "Apakah Anda yakin ingin menyetujui pelaporan ini?",
+      html:
+        "<p>Apakah Anda yakin ingin menyetujui pelaporan ini?</p>" +
+        peringatanSelisih,
       showCancelButton: true,
       confirmButtonColor: "#28a745",
       confirmButtonText: "Ya, Approve",

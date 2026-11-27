@@ -9,6 +9,13 @@
   "use strict";
 
   var rowIndex = 0;
+  // COA Petty Cash master (kredit jurnal), fallback 1101-01-02 Kas Kecil
+  var coaKas = FORM_DATA.coa_kas || { kode: "1101-01-02", nama: "Kas Kecil" };
+
+  function escapeHtml(s) {
+    return $("<div>").text(s == null ? "" : String(s)).html();
+  }
+
   var budgetInfo = FORM_DATA.budget_info || {
     budget: 0,
     budget_terpakai: 0,
@@ -183,8 +190,12 @@
         "<td>" +
         tanggal +
         "</td>" +
-        "<td>1101-01-02</td>" +
-        "<td>Kas Kecil</td>" +
+        "<td>" +
+        escapeHtml(coaKas.kode) +
+        "</td>" +
+        "<td>" +
+        escapeHtml(coaKas.nama) +
+        "</td>" +
         "<td>STM</td>" +
         '<td class="text-right">-</td>' +
         '<td class="text-right">' +
@@ -284,8 +295,12 @@
         "<td>" +
         tanggal +
         "</td>" +
-        "<td>1101-01-02</td>" +
-        "<td>Kas Kecil</td>" +
+        "<td>" +
+        escapeHtml(coaKas.kode) +
+        "</td>" +
+        "<td>" +
+        escapeHtml(coaKas.nama) +
+        "</td>" +
         "<td>STM</td>" +
         '<td class="text-right">-</td>' +
         '<td class="text-right">' +
@@ -435,6 +450,7 @@
 
     var $newRow = $('#detail-table tbody tr[data-row="' + idx + '"]');
     initSelect2($newRow.find(".coa-select"));
+    initDropzone($newRow.find(".evidence-container"));
     renumberRows();
   }
 
@@ -477,14 +493,100 @@
   // EVIDENCE UPLOAD
   // =========================================================================
 
+  // Batas evidence (sama dengan validasi server)
+  var EVIDENCE_MAX = 5;
+  var EVIDENCE_EXT = ["png", "jpg", "jpeg", "pdf", "xlsx", "xls"];
+  var EVIDENCE_MAX_SIZE = 5 * 1024 * 1024; // 5 MB
+
+  function escapeAttr(value) {
+    return String(value).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function evidenceIcon(ext) {
+    if (ext === "pdf") return "fa-file-pdf-o";
+    if (ext === "xlsx" || ext === "xls") return "fa-file-excel-o";
+    return "fa-file-image-o";
+  }
+
+  // Tombol upload bawaan diubah menjadi area drag and drop (tetap <button> supaya bisa dipakai lewat keyboard)
+  function initDropzone($container) {
+    $container
+      .find(".btn-upload-evidence")
+      .attr("class", "btn-upload-evidence evidence-dropzone")
+      .attr("title", "Seret file ke sini atau klik untuk memilih (bisa lebih dari 1 file)");
+    $container.find(".evidence-item").each(function () {
+      var $name = $(this).find(".evidence-name");
+      var ext = String($name.attr("title") || "").split(".").pop().toLowerCase();
+      $(this).find("i.fa-file").attr("class", "fa " + evidenceIcon(ext));
+    });
+    refreshDropzone($container);
+  }
+
+  function refreshDropzone($container) {
+    var count = $container.find(".evidence-item").length;
+    var full = count >= EVIDENCE_MAX;
+    var busy = $container.data("busy");
+    var icon = full ? "fa-check-circle" : "fa-cloud-upload";
+    var title = full ? "Batas file tercapai" : "<b>Seret file</b> atau klik";
+    if (busy) {
+      icon = "fa-spinner fa-spin";
+      title = "Mengunggah " + busy.done + " / " + busy.total;
+    }
+    $container
+      .find(".btn-upload-evidence")
+      .prop("disabled", !!busy || full)
+      .html(
+        '<i class="fa ' + icon + ' evidence-dz-icon" aria-hidden="true"></i>' +
+          '<span class="evidence-dz-title">' + title + "</span>" +
+          '<span class="evidence-dz-hint">PNG, JPG, PDF, Excel &middot; maks 5 MB &middot; ' +
+          count + "/" + EVIDENCE_MAX + "</span>",
+      );
+  }
+
+  function evidenceItemHtml(rowIdx, i, evidence) {
+    var name = escapeAttr(evidence.original_name);
+    var encrypted = escapeAttr(evidence.encrypted_name);
+    var hidden = function (field) {
+      return (
+        '<input type="hidden" name="evidences[' + rowIdx + "][" + i + "][" + field + ']" value="' +
+        escapeAttr(evidence[field]) + '">'
+      );
+    };
+    return (
+      '<li class="evidence-item" data-encrypted="' + encrypted + '"><small>' +
+      '<i class="fa ' + evidenceIcon(String(evidence.file_type).toLowerCase()) + '"></i>' +
+      '<span class="evidence-name" title="' + name + '">' + name + "</span>" +
+      '<a href="javascript:void(0)" class="text-red btn-remove-evidence" data-encrypted="' + encrypted +
+      '" title="Hapus" aria-label="Hapus ' + name + '"><i class="fa fa-times"></i></a>' +
+      hidden("original_name") + hidden("encrypted_name") + hidden("file_type") + hidden("file_size") +
+      "</small></li>"
+    );
+  }
+
   function uploadEvidence($container, files) {
     var rowIdx = $container.data("row");
 
     if (!files || files.length === 0) return;
 
+    if ($container.data("busy")) {
+      Swal.fire({
+        icon: "info",
+        title: "Tunggu Sebentar",
+        text: "Upload sebelumnya di baris ini belum selesai.",
+        timer: 3000,
+      });
+      return;
+    }
+
+    // Salin dulu: FileList ikut kosong saat input di-reset
+    var uploadQueue = Array.prototype.slice.call(files);
+    $container.find(".evidence-input").val("");
+
     // Validate file count (max 5 per row)
     var existingCount = $container.find(".evidence-item").length;
-    if (existingCount + files.length > 5) {
+    if (existingCount + uploadQueue.length > EVIDENCE_MAX) {
       Swal.fire({
         icon: "error",
         title: "Error",
@@ -495,31 +597,28 @@
     }
 
     // Validate each file
-    var allowedExt = ["png", "jpg", "pdf", "xlsx", "xls"];
-    var maxSize = 5 * 1024 * 1024; // 5 MB
+    for (var i = 0; i < uploadQueue.length; i++) {
+      var candidate = uploadQueue[i];
+      var ext = candidate.name.split(".").pop().toLowerCase();
 
-    for (var i = 0; i < files.length; i++) {
-      var file = files[i];
-      var ext = file.name.split(".").pop().toLowerCase();
-
-      if (allowedExt.indexOf(ext) === -1) {
+      if (EVIDENCE_EXT.indexOf(ext) === -1) {
         Swal.fire({
           icon: "error",
           title: "Format File Tidak Valid",
           text:
             'File "' +
-            file.name +
+            candidate.name +
             '" tidak diizinkan. Format yang diterima: png, jpg, pdf, xlsx, xls.',
           timer: 3000,
         });
         return;
       }
 
-      if (file.size > maxSize) {
+      if (candidate.size > EVIDENCE_MAX_SIZE) {
         Swal.fire({
           icon: "error",
           title: "Ukuran File Terlalu Besar",
-          text: 'File "' + file.name + '" melebihi batas 5 MB.',
+          text: 'File "' + candidate.name + '" melebihi batas 5 MB.',
           timer: 3000,
         });
         return;
@@ -527,91 +626,25 @@
     }
 
     // Upload via AJAX — upload one file at a time
-    var $uploadBtn = $container.find(".btn-upload-evidence");
-    $uploadBtn
-      .prop("disabled", true)
-      .html('<i class="fa fa-spinner fa-spin"></i> Uploading...');
+    var busy = { done: 1, total: uploadQueue.length };
+    $container.data("busy", busy);
 
-    var uploadQueue = [];
-    for (var j = 0; j < files.length; j++) {
-      uploadQueue.push(files[j]);
-    }
-
-    var uploadedFiles = [];
     var uploadErrors = [];
+
+    function appendEvidence(evidence) {
+      var $list = $container.find(".evidence-list");
+      if ($list.length === 0) {
+        $container.prepend('<ul class="list-unstyled evidence-list"></ul>');
+        $list = $container.find(".evidence-list");
+      }
+      $list.append(evidenceItemHtml(rowIdx, $list.children().length, evidence));
+    }
 
     function processNextUpload() {
       if (uploadQueue.length === 0) {
         // All uploads done
-        $uploadBtn
-          .prop("disabled", false)
-          .html('<i class="fa fa-upload"></i> Upload');
-        $container.find(".evidence-input").val("");
-
-        if (uploadedFiles.length > 0) {
-          // Ensure evidence list exists
-          var $list = $container.find(".evidence-list");
-          if ($list.length === 0) {
-            $container.prepend('<ul class="list-unstyled evidence-list"></ul>');
-            $list = $container.find(".evidence-list");
-          }
-
-          // Append uploaded files to list
-          $.each(uploadedFiles, function (i, evidence) {
-            var displayName =
-              evidence.original_name.length > 15
-                ? evidence.original_name.substring(0, 15) + "..."
-                : evidence.original_name;
-
-            var itemHtml =
-              '<li class="evidence-item" data-encrypted="' +
-              evidence.encrypted_name +
-              '">' +
-              "<small>" +
-              '<i class="fa fa-file"></i> ' +
-              '<span class="evidence-name" title="' +
-              evidence.original_name +
-              '">' +
-              displayName +
-              "</span> " +
-              '<a href="javascript:void(0)" class="text-red btn-remove-evidence" data-encrypted="' +
-              evidence.encrypted_name +
-              '" title="Hapus">' +
-              '<i class="fa fa-times"></i>' +
-              "</a>" +
-              '<input type="hidden" name="evidences[' +
-              rowIdx +
-              "][" +
-              i +
-              '][original_name]" value="' +
-              evidence.original_name +
-              '">' +
-              '<input type="hidden" name="evidences[' +
-              rowIdx +
-              "][" +
-              i +
-              '][encrypted_name]" value="' +
-              evidence.encrypted_name +
-              '">' +
-              '<input type="hidden" name="evidences[' +
-              rowIdx +
-              "][" +
-              i +
-              '][file_type]" value="' +
-              evidence.file_type +
-              '">' +
-              '<input type="hidden" name="evidences[' +
-              rowIdx +
-              "][" +
-              i +
-              '][file_size]" value="' +
-              evidence.file_size +
-              '">' +
-              "</small>" +
-              "</li>";
-            $list.append(itemHtml);
-          });
-        }
+        $container.removeData("busy");
+        refreshDropzone($container);
 
         if (uploadErrors.length > 0) {
           Swal.fire({
@@ -623,6 +656,9 @@
         }
         return;
       }
+
+      busy.done = busy.total - uploadQueue.length + 1;
+      refreshDropzone($container);
 
       var file = uploadQueue.shift();
       var formData = new FormData();
@@ -637,7 +673,7 @@
         dataType: "json",
         success: function (response) {
           if (response.status === true && response.data) {
-            uploadedFiles.push(response.data);
+            appendEvidence(response.data);
           } else {
             uploadErrors.push(file.name + ": " + (response.message || "Gagal"));
           }
@@ -656,17 +692,22 @@
   function deleteEvidence($btn) {
     var evidenceId = $btn.data("id");
     var $item = $btn.closest(".evidence-item");
+    var $container = $btn.closest(".evidence-container");
 
     $btn.html('<i class="fa fa-spinner fa-spin"></i>');
 
     $.ajax({
-      url: FORM_DATA.base_url + "delete_evidence/" + evidenceId,
+      // File yang baru diupload belum punya id: server menghapusnya lewat encrypted_name
+      url: FORM_DATA.base_url + "delete_evidence/" + (evidenceId || ""),
       type: "POST",
+      data: { encrypted_name: $btn.data("encrypted") },
       dataType: "json",
       success: function (response) {
-        if (response.status === "success") {
+        // delete_evidence mengembalikan status boolean
+        if (response.status === true) {
           $item.fadeOut(200, function () {
             $(this).remove();
+            refreshDropzone($container);
           });
         } else {
           Swal.fire({
@@ -786,6 +827,19 @@
   // =========================================================================
 
   function saveForm() {
+    var uploading = $(".evidence-container").filter(function () {
+      return !!$(this).data("busy");
+    }).length;
+    if (uploading) {
+      Swal.fire({
+        icon: "info",
+        title: "Tunggu Sebentar",
+        text: "Upload evidence masih berjalan.",
+        timer: 3000,
+      });
+      return;
+    }
+
     if (!validateForm()) return;
 
     var $btn = $("#btn-save");
@@ -961,9 +1015,10 @@
       calculateGrandTotal();
     });
 
-    // COA change - auto-fill pengeluaran
+    // COA change - auto-fill pengeluaran + perbarui simulasi jurnal
     $("#detail-table").on("change", ".coa-select", function () {
       onCoaChange($(this));
+      renderJurnalSimulation();
     });
 
     // Evidence upload button
@@ -979,6 +1034,39 @@
       if (files.length > 0) {
         uploadEvidence($container, files);
       }
+    });
+
+    // Drag and drop evidence (area = seluruh isi sel Evidence)
+    $("#detail-table").on("dragenter dragover", ".evidence-container", function (e) {
+      e.preventDefault();
+      $(this).addClass("is-dragover");
+    });
+
+    $("#detail-table").on("dragleave", ".evidence-container", function (e) {
+      if (!this.contains(e.originalEvent.relatedTarget)) {
+        $(this).removeClass("is-dragover");
+      }
+    });
+
+    $("#detail-table").on("drop", ".evidence-container", function (e) {
+      e.preventDefault();
+      $(this).removeClass("is-dragover");
+      var transfer = e.originalEvent.dataTransfer;
+      if (transfer && transfer.files.length > 0) {
+        uploadEvidence($(this), transfer.files);
+      }
+    });
+
+    // File yang jatuh di luar area tidak boleh dibuka browser (isian form akan hilang)
+    $(document).on("dragover drop", function (e) {
+      var transfer = e.originalEvent.dataTransfer;
+      if (transfer && $.inArray("Files", Array.prototype.slice.call(transfer.types)) > -1) {
+        e.preventDefault();
+      }
+    });
+
+    $(".evidence-container").each(function () {
+      initDropzone($(this));
     });
 
     // Evidence delete (delegated)

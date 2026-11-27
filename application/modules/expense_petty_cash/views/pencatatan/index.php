@@ -1,9 +1,20 @@
 <link rel="stylesheet" href="<?= base_url('assets/plugins/datatables/dataTables.bootstrap.css') ?>">
 
+<?php
+$tour_title = 'Transaksi Petty Cash';
+$tour_steps = [];
+if ($has_add) {
+    $tour_steps[] = ['el' => '#pc-add', 't' => 'Tambah Pencatatan', 'd' => 'Pilih master petty cash, isi item dan upload evidence per item. Simpan tidak membuat jurnal.'];
+}
+$tour_steps[] = ['el' => '#table-pencatatan', 't' => 'Daftar pencatatan', 'd' => 'Centang pencatatan draft (1 company, minggu yang sama) lalu Buat Pelaporan. Jurnal dibentuk saat Pelaporan di-approve.'];
+$tour_steps[] = ['el' => '#btn-buat-pelaporan', 't' => 'Buat Pelaporan', 'd' => 'Membuat pelaporan draft dari pencatatan yang dicentang.'];
+include __DIR__ . '/../_tutorial.php';
+?>
+
 <div class="box">
     <div class="box-header">
         <?php if ($has_add) : ?>
-            <button class="btn btn-success btn-sm" type="button" onclick="showPilihPettyCash()">
+            <button id="pc-add" class="btn btn-success btn-sm" type="button" onclick="showPilihPettyCash()">
                 <i class="fa fa-plus"></i> Tambah Pencatatan
             </button>
         <?php endif; ?>

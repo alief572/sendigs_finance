@@ -114,6 +114,8 @@ class EpcLoad {
 }
 
 class EpcModel {
+    public function get_journal_books($no, $company) { return null; }
+    public function get_coa_name($coa, $company) { return $coa; }
     public function get_server_side_data($p, $f = null) {
         global $scenario;
         $rows = !empty($scenario['empty_result']) ? array() : array(array('id' => 1), array('id' => 2), array('id' => 3));
@@ -132,7 +134,8 @@ class EpcModel {
     }
     public function generate_no_pencatatan() { global $scenario; return !empty($scenario['no_exhausted']) ? false : 'PC-2026-0001'; }
     public function save_pencatatan($h, $d, $e, $id = null) { global $scenario; if (!empty($scenario['save_fail'])) { return false; } return $id === null ? 77 : true; }
-    public function create_journal_for_pencatatan($id, $is_edit = false) { global $scenario; return array('success' => empty($scenario['journal_fail']), 'message' => 'm'); }
+    public function create_journal_for_pencatatan($id, $is_edit = false) { global $scenario; $GLOBALS['epc_journal_calls'] = ($GLOBALS['epc_journal_calls'] ?? 0) + 1; return array('success' => empty($scenario['journal_fail']), 'message' => 'm'); }
+    public function reset_journal_for_edit($id) { $GLOBALS['epc_reset_calls'][] = $id; return true; }
     public function delete_pencatatan($id) { global $scenario; return isset($scenario['delete_result']) ? $scenario['delete_result'] : array('status' => 1, 'msg' => 'ok'); }
     public function retry_journal($id) { global $scenario; return empty($scenario['retry_fail']); }
     public $request_payment_ok = true;
@@ -205,16 +208,19 @@ $validPost = array(
 );
 
 // ---------------- save
+$GLOBALS['epc_journal_calls'] = 0; $GLOBALS['epc_reset_calls'] = array();
 list($e, $out) = epc_run('save', array(), $validPost);
 $d = epc_data($e);
-check($e['status'] === 1 && $d['outcome'] === 'saved' && $d['operation'] === 'create' && $d['detail_count'] === 1 && $d['journal'] === 'synced' && $d['id'] == 77, 'save: create saved, jurnal synced, got ' . json_encode($d));
+check($e['status'] === 1 && $d['outcome'] === 'saved' && $d['operation'] === 'create' && $d['detail_count'] === 1 && $d['journal'] === 'deferred_to_approval' && $d['id'] == 77, 'save: create saved, jurnal ditunda ke approve, got ' . json_encode($d));
 check(json_decode($out, true)['status'] === true, 'save: response intact');
+check($GLOBALS['epc_journal_calls'] === 0 && $GLOBALS['epc_reset_calls'] === array(), 'save: create tidak membuat jurnal dan tidak mereset jurnal (PC-R-02)');
 check(strpos(json_encode($e['context']), 'nota-rahasia') === false && strpos(json_encode($e['context']), 'ATK') === false, 'save: nama file dan isi detail tidak masuk audit');
+// Kegagalan jurnal tidak relevan lagi saat simpan: data tersimpan tanpa warning jurnal
 list($e, $out) = epc_run('save', array('journal_fail' => true), $validPost);
-check($e['status'] === 1 && epc_data($e)['outcome'] === 'saved' && epc_data($e)['journal'] === 'failed', 'save: data tersimpan, jurnal gagal dicatat');
-check(isset(json_decode($out, true)['warning']), 'save: warning jurnal tetap di respons');
+check($e['status'] === 1 && epc_data($e)['outcome'] === 'saved' && !isset(json_decode($out, true)['warning']) && $GLOBALS['epc_journal_calls'] === 0, 'save: tidak ada warning jurnal, jurnal tidak dicoba');
 list($e) = epc_run('save', array(), array_merge($validPost, array('id' => 12)));
 check($e['status'] === 1 && epc_data($e)['operation'] === 'update' && epc_data($e)['id'] == 12, 'save: update');
+check($GLOBALS['epc_reset_calls'] === array(12) && $GLOBALS['epc_journal_calls'] === 0, 'save: edit mereset jurnal lama (belum diposting) tanpa membuat jurnal baru');
 list($e, $out) = epc_run('save', array('deny_perm' => true), $validPost);
 check($e['status'] === 0 && epc_data($e)['outcome'] === 'denied' && json_decode($out, true)['status'] === false, 'save: denied');
 $bad = array(

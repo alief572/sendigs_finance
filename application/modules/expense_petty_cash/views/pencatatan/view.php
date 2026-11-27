@@ -24,8 +24,12 @@ function pencatatan_view_status_label($status)
 }
 
 // Helper: format journal status label
-function journal_status_label($status)
+function journal_status_label($status, $pencatatan_status = '')
 {
+    // Jurnal dibentuk saat pelaporan di-approve: sebelum itu belum ada jurnal (PC-R-02)
+    if ($status === 'pending' && in_array($pencatatan_status, ['draft', 'waiting approval'], true)) {
+        return '<span class="label label-default">Belum ada</span>';
+    }
     $map = [
         'pending' => '<span class="label label-info">Pending</span>',
         'success' => '<span class="label label-success">Success</span>',
@@ -141,7 +145,7 @@ if (!empty($coa_list)) {
             <div class="col-md-6">
                 <div class="form-group">
                     <label>Journal Status</label>
-                    <p class="form-control-static"><?= journal_status_label($header->journal_status) ?></p>
+                    <p class="form-control-static"><?= journal_status_label($header->journal_status, $header->status) ?></p>
                 </div>
             </div>
         </div>
@@ -263,8 +267,8 @@ if (!empty($coa_list)) {
                             <?php endforeach; ?>
                             <tr style="background: #fff3cd;">
                                 <td><?= $jurnal_tanggal ?></td>
-                                <td>1101-01-02</td>
-                                <td>Kas Kecil</td>
+                                <td><?= htmlspecialchars(isset($coa_kas) ? $coa_kas['kode'] : '1101-01-02') ?></td>
+                                <td><?= htmlspecialchars(isset($coa_kas) ? $coa_kas['nama'] : 'Kas Kecil') ?></td>
                                 <td>STM</td>
                                 <td class="text-right">-</td>
                                 <td class="text-right"><?= number_format($jurnal_grand_total, 0, ',', '.') ?></td>
@@ -364,8 +368,8 @@ if (!empty($coa_list)) {
                         </tr>
                         <tr style="background: #fff3cd;">
                             <td><?= $jurnal_tanggal ?></td>
-                            <td>1101-01-02</td>
-                            <td>Kas Kecil</td>
+                            <td><?= htmlspecialchars(isset($coa_kas) ? $coa_kas['kode'] : '1101-01-02') ?></td>
+                            <td><?= htmlspecialchars(isset($coa_kas) ? $coa_kas['nama'] : 'Kas Kecil') ?></td>
                             <td>STM</td>
                             <td class="text-right">-</td>
                             <td class="text-right"><?= number_format($jurnal_grand_total, 0, ',', '.') ?></td>

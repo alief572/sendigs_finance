@@ -58,12 +58,30 @@ foreach (array(false, true) as $petty) {
             array_merge($journal,array('coa'=>'2104-01-03','debit'=>0,'kredit'=>2,'id_payment_ref'=>'PAY-1')),
             array_merge($journal,array('debit'=>0,'kredit'=>108)));
         $specialJournal = array(array_merge($journal,array('coa'=>'6207-00-00','debit'=>108)),array_merge($journal,array('debit'=>0,'kredit'=>108)));
+        // Payment Hutang Petty Cash (PC-R-05/07): jurnal form harus cocok dengan akun turunan server
+        // (company dari dokumen PHP, bank dari ms_bank). Dokumen fixture bernilai 100.
+        $hutangRow = function ($coa, $debit, $kredit, $company) use ($journal) {
+            return array_merge($journal, array('coa' => $coa, 'debit' => $debit, 'kredit' => $kredit, 'company' => $company));
+        };
+        $pettyFixture = !$petty ? array() : array('table_overrides' => array('tr_petty_cash_vuca_sustain' => array('company' => 'VUCA'), 'ms_bank' => array('coa_bank' => '1101-01')));
         $post = array('admin_charge_bearer' => $bearer, 'jurnal_ls' => $balancedJournal, 'jurnal_refill_pettycash' => $specialJournal,
             'bank_charge' => 0, 'total_payment' => 108, 'payment_bank' => 108,
-            'jurnal_hutang_1' => $specialJournal, 'jurnal_hutang_2' => $specialJournal,
+            'bank_stm' => 'BANK-STM',
+            'jurnal_hutang_1' => array(1 => $hutangRow('2103-01-01', 100, 0, 'VUCA'), 2 => $hutangRow('1101-01', 0, 100, 'VUCA')),
+            'jurnal_hutang_2' => array(1 => $hutangRow('1101-01', 100, 0, 'STM'), 2 => $hutangRow('1103-01-01', 0, 100, 'STM')),
             'dt' => array(array('id_payment' => 'PAY-1', 'tipe_pph' => 1, 'nilai_ppn' => 10, 'nilai_pph' => 2, 'kurs_invoice' => 1)));
-        list($event, $output, $controller) = material_run('save_payment', array('all_petty' => $petty), $post);
+        list($event, $output, $controller) = material_run('save_payment', array('all_petty' => $petty) + $pettyFixture, $post);
         check($event['status'] === 1 && json_decode($output, true)['status'] === 1 && in_array('trans_commit', $event['calls_at_write'], true), 'Branch payment success: ' . $output . ' ' . ($GLOBALS['lastMaterialFixtureError'] ?? 'no PHP warning'));
+        if ($petty) {
+            // PC-N11: Payment Hutang tanpa Bank STM penerima ditolak dan di-rollback
+            $noStm = $post; unset($noStm['bank_stm']);
+            list($e1, $o1) = material_run('save_payment', array('all_petty' => true) + $pettyFixture, $noStm);
+            check($e1['status'] === 0 && json_decode($o1, true)['status'] === 0 && strpos(json_decode($o1, true)['pesan'], 'Bank STM penerima wajib') !== false, 'Payment Hutang tanpa Bank STM penerima ditolak: ' . $o1);
+            // COA hutang lama 2203-01-01 (atau akun apa pun di luar turunan server) ditolak
+            $oldCoa = $post; $oldCoa['jurnal_hutang_1'][1]['coa'] = '2203-01-01';
+            list($e2, $o2) = material_run('save_payment', array('all_petty' => true) + $pettyFixture, $oldCoa);
+            check($e2['status'] === 0 && strpos(json_decode($o2, true)['pesan'], 'tidak sesuai') !== false, 'Payment Hutang dengan COA 2203-01-01 ditolak: ' . $o2);
+        }
         $refillLines = 0;
         foreach ($controller->db->writes as $write) {
             if ($write[0] === 'insert_batch' && $write[1][0] === 'tr_jurnal') foreach ($write[1][1] as $line) {
@@ -73,11 +91,11 @@ foreach (array(false, true) as $petty) {
         check($refillLines === 2, 'Refill Pettycash staging rows are still written');
         $writes = $controller->db->writeNumber; $queries = $controller->db->queryNumber;
         for ($i = 1; $i <= $writes; $i++) {
-            list($event, $output) = material_run('save_payment', array('all_petty' => $petty, 'fail_write' => $i), $post);
+            list($event, $output) = material_run('save_payment', array('all_petty' => $petty, 'fail_write' => $i) + $pettyFixture, $post);
             check($event['status'] === 0 && json_decode($output, true)['status'] === 0, 'Payment write failure ' . $i);
         }
         for ($i = 1; $i <= $queries; $i++) {
-            list($event, $output) = material_run('save_payment', array('all_petty' => $petty, 'fail_query' => $i), $post);
+            list($event, $output) = material_run('save_payment', array('all_petty' => $petty, 'fail_query' => $i) + $pettyFixture, $post);
             check($event['status'] === 0 && json_decode($output, true)['status'] === 0, 'Payment query failure ' . $i);
         }
     }

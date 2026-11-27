@@ -9,6 +9,7 @@ $keterangan = ($edit_mode && isset($pencatatan->header->keterangan)) ? $pencatat
 ?>
 <!-- Select2 CSS -->
 <link rel="stylesheet" href="<?= base_url('assets/plugins/select2/select2.min.css') ?>">
+<link rel="stylesheet" href="<?= base_url('assets/css/petty-cash-evidence.css') ?>">
 
 <!-- Budget Info Row - 3 small-box AdminLTE -->
 <div class="row">
@@ -120,7 +121,7 @@ $keterangan = ($edit_mode && isset($pencatatan->header->keterangan)) ? $pencatat
                         <th width="80" class="text-center">Jumlah</th>
                         <th width="130" class="text-center">Nominal</th>
                         <th width="130" class="text-center">Total</th>
-                        <th width="180">Evidence <span class="text-red">*</span></th>
+                        <th width="220">Evidence <span class="text-red">*</span></th>
                         <th width="60" class="text-center">Aksi</th>
                     </tr>
                 </thead>
@@ -163,7 +164,7 @@ $keterangan = ($edit_mode && isset($pencatatan->header->keterangan)) ? $pencatat
                                                     <li class="evidence-item" data-id="<?= $evidence->id ?>" data-encrypted="<?= htmlspecialchars($evidence->encrypted_name) ?>">
                                                         <small>
                                                             <i class="fa fa-file"></i>
-                                                            <span class="evidence-name" title="<?= htmlspecialchars($evidence->original_name) ?>"><?= htmlspecialchars(strlen($evidence->original_name) > 15 ? substr($evidence->original_name, 0, 15) . '...' : $evidence->original_name) ?></span>
+                                                            <span class="evidence-name" title="<?= htmlspecialchars($evidence->original_name) ?>"><?= htmlspecialchars($evidence->original_name) ?></span>
                                                             <a href="javascript:void(0)" class="text-red btn-remove-evidence" data-id="<?= $evidence->id ?>" data-encrypted="<?= htmlspecialchars($evidence->encrypted_name) ?>" title="Hapus"><i class="fa fa-times"></i></a>
                                                             <input type="hidden" name="evidences[<?= $idx ?>][<?= $evKey ?>][original_name]" value="<?= htmlspecialchars($evidence->original_name) ?>">
                                                             <input type="hidden" name="evidences[<?= $idx ?>][<?= $evKey ?>][encrypted_name]" value="<?= htmlspecialchars($evidence->encrypted_name) ?>">
@@ -408,6 +409,7 @@ $keterangan = ($edit_mode && isset($pencatatan->header->keterangan)) ? $pencatat
         petty_cash_id: <?= json_encode($petty_cash_id) ?>,
         budget_info: <?= json_encode($budget_info) ?>,
         coa_list: <?= json_encode($coa_list) ?>,
+        coa_kas: <?= json_encode(isset($coa_kas) ? $coa_kas : null) ?>,
         pencatatan: <?= isset($pencatatan) ? json_encode($pencatatan) : 'null' ?>,
         base_url: '<?= site_url('expense_petty_cash/') ?>'
     };

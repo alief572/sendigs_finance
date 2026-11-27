@@ -354,8 +354,8 @@ $jumlah_item = count($pencatatan_list);
                                         </tr>
                                         <tr style="background:#fffbeb;">
                                             <td><?= $jurnal_tanggal ?></td>
-                                            <td>1101-01-02</td>
-                                            <td>Kas Kecil</td>
+                                            <td><?= htmlspecialchars(isset($record->header->coa_kas) ? $record->header->coa_kas['kode'] : '1101-01-02') ?></td>
+                                            <td><?= htmlspecialchars(isset($record->header->coa_kas) ? $record->header->coa_kas['nama'] : 'Kas Kecil') ?></td>
                                             <td>STM</td>
                                             <td class="text-right">-</td>
                                             <td class="text-right"><?= number_format($jurnal_total, 0, ',', '.') ?></td>

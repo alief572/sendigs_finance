@@ -3,8 +3,9 @@
  * Memakai driver.js lokal (assets/plugins/driver). Tutorial tidak menyimpan data: hanya pindah tab / membuka form.
  *
  * PiutangTour.mount(host, {page: [step], flows: [{title, desc, steps: [step]}], cleanup: fn})
+ *   Tutorial halaman ini: langkah yang elemennya tidak tampil dilewati.
  *   step = {el: selector, t: judul, d: deskripsi (HTML tepercaya dari kode), pg: nama halaman, go: fn sebelum langkah tampil, wait: ms}
- *   Langkah tanpa `go` memakai halaman langkah sebelumnya; elemen yang tidak ada / tersembunyi tampil sebagai popover di tengah.
+ *   Langkah tanpa `go` memakai halaman langkah sebelumnya; di alur proses, elemen yang tidak ada / tersembunyi tampil sebagai popover di tengah.
  */
 (function (window, document) {
     'use strict';
@@ -40,23 +41,22 @@
                 setTimeout(cb, s.wait != null ? s.wait : WAIT);
             } else { cb(); }
         };
-        // driver.js 1.3.1 hanya menerima selector/elemen: elemen dicari ulang setiap kali langkah ditampilkan (setelah `go`),
-        // elemen yang tidak ada / tersembunyi diganti popover di tengah layar.
-        var build = function () {
-            return steps.map(function (s) {
-                return {element: visible(s.el), popover: {title: s.t, description: '<div class="tour-fl">' + title + '</div>' + (s.pg ? '<span class="tour-pg">' + s.pg + '</span><br>' : '') + s.d}};
-            });
-        };
-        var goTo = function (i) { prepare(i, function () { drv.setSteps(build()); drv.moveTo(i); }); };
+        // Daftar langkah dipasang sekali (seperti mockup). Jangan panggil setSteps saat tur berjalan: driver.js 1.3.1 mereset
+        // state tanpa menghapus popover lama, sehingga popover menumpuk. Elemen dicari ulang setelah `go` dengan mengubah
+        // objek langkahnya; elemen yang tidak ada / tersembunyi tampil sebagai popover di tengah layar.
+        var list = steps.map(function (s) {
+            return {popover: {title: s.t, description: '<div class="tour-fl">' + title + '</div>' + (s.pg ? '<span class="tour-pg">' + s.pg + '</span><br>' : '') + s.d}};
+        });
+        var show = function (i, move) { prepare(i, function () { list[i].element = visible(steps[i].el); move(); }); };
         var drv = window.driver.js.driver({
             showProgress: true, progressText: '{{current}} dari {{total}}', nextBtnText: 'Lanjut &rarr;', prevBtnText: '&larr; Kembali', doneBtnText: 'Selesai',
-            overlayOpacity: 0.45, stagePadding: 6, popoverClass: 'piutang-tour', steps: build(),
-            onNextClick: function () { var i = drv.getActiveIndex(); if (i >= n - 1) { drv.destroy(); } else { goTo(i + 1); } },
-            onPrevClick: function () { var i = drv.getActiveIndex(); if (i) { goTo(i - 1); } },
+            allowKeyboardControl: false, overlayOpacity: 0.45, stagePadding: 6, popoverClass: 'piutang-tour', steps: list,
+            onNextClick: function () { var i = drv.getActiveIndex(); if (i >= n - 1) { drv.destroy(); } else { show(i + 1, function () { drv.moveNext(); }); } },
+            onPrevClick: function () { var i = drv.getActiveIndex(); if (i) { show(i - 1, function () { drv.movePrevious(); }); } },
             onDestroyed: function () { active = null; if (cleanup) { cleanup(); } }
         });
         active = drv;
-        prepare(0, function () { drv.setSteps(build()); drv.drive(0); });
+        show(0, function () { drv.drive(0); });
     }
 
     function style() {
@@ -71,8 +71,10 @@
             '.piutang-tour-bar .pt-h{padding:8px 14px;font-size:12px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:#5f5f5f;background:#f4f4f4;border-bottom:1px solid #e3e3e3}' +
             '.piutang-tour-bar [data-tour]{display:block;width:100%;text-align:left;white-space:normal;border:0;border-bottom:1px solid #eee;background:#fff;padding:9px 14px;color:#333}' +
             '.piutang-tour-bar [data-tour]:hover,.piutang-tour-bar [data-tour]:focus{background:#eef6fb}.piutang-tour-bar [data-tour] b{display:block}.piutang-tour-bar [data-tour] small{display:block;color:#6c6c6c;margin-top:2px;font-size:12px}' +
-            '.driver-popover.piutang-tour{max-width:380px}.piutang-tour .tour-fl{font-size:11.5px;text-transform:uppercase;letter-spacing:.3px;color:#5b6670;margin-bottom:4px}' +
-            '.piutang-tour .tour-pg{display:inline-block;font-size:12px;font-weight:600;color:#1d5f93;margin-bottom:2px}';
+            '.driver-popover.piutang-tour{font-family:inherit;max-width:400px;min-width:340px}.piutang-tour .driver-popover-title{font-size:15px}' +
+            '.piutang-tour .driver-popover-description{font-size:13px;line-height:1.5}.piutang-tour .driver-popover-navigation-btns button{white-space:nowrap}' +
+            '.piutang-tour .driver-popover-footer{gap:10px}.piutang-tour .driver-popover-progress-text{font-size:11.5px}.piutang-tour .tour-fl{font-size:11.5px;color:#888;margin-bottom:3px}' +
+            '.piutang-tour .tour-pg{display:inline-block;background:#3c8dbc;color:#fff;border-radius:3px;padding:1px 7px;font-size:11px;font-weight:600;margin-bottom:6px}';
         document.head.appendChild(st);
     }
 
@@ -93,7 +95,11 @@
             var b = e.target.closest('[data-tour]');
             if (!b) { return; }
             var k = b.getAttribute('data-tour');
-            if (k === 'page') { run(cfg.title || 'Halaman ini', cfg.page || [], cfg.cleanup); } else { run(flows[+k].title, flows[+k].steps, cfg.cleanup); }
+            if (k !== 'page') { run(flows[+k].title, flows[+k].steps, cfg.cleanup); return; }
+            // Tutorial halaman ini: bagian yang tidak tampil dilewati (seperti mockup).
+            var page = norm(cfg.page || []).filter(function (s) { return s.go || visible(s.el); });
+            if (!page.length) { window.alert('Belum ada tutorial untuk halaman ini.'); return; }
+            run('Halaman ini', page, cfg.cleanup);
         });
     }
 

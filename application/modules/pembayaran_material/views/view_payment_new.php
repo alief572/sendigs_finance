@@ -299,7 +299,7 @@ $tgl_bayar_formatted = !empty($header->tgl_bayar) ? date('d F Y', strtotime($hea
 
 								// Sembunyikan akun penyeimbang hubungan istimewa agar total jurnal mencerminkan transaksi riil dokumen vs bank
 								$is_intercompany = (
-									(!empty($jr->coa) && in_array($jr->coa, ['1103-01-01', '2203-01-01'])) ||
+									(!empty($jr->coa) && in_array($jr->coa, ['1103-01-01', '2203-01-01', '1103-01-02', '2103-01-01', '2103-01-02'])) ||
 									(!empty($jr->nm_coa) && stripos($jr->nm_coa, 'Hubungan Istimewa') !== false)
 								);
 								if ($is_intercompany) {

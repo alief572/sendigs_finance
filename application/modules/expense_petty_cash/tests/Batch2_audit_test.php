@@ -104,12 +104,16 @@ class EpcInput {
 class EpcLoad { public function library($l) {} public function view($v, $d = array()) { echo "<!-- view {$v} -->"; } }
 
 class EpcModel {
+    public function get_journal_books($no, $company) { return null; }
+    public function get_coa_name($coa, $company) { return $coa; }
     public function get_server_side_data($p, $f = null) {
         global $scenario;
         $rows = !empty($scenario['empty_result']) ? array() : array(array('id' => 1), array('id' => 2), array('id' => 3));
         return array('draw' => 1, 'recordsTotal' => count($rows), 'recordsFiltered' => count($rows), 'data' => $rows);
     }
     public function get_budget_info($id) { global $scenario; return !empty($scenario['no_budget']) ? false : (object) array('budget' => 100, 'budget_terpakai' => 10, 'sisa_budget' => 90); }
+    public function get_coa_petty_cash_info($id) { return array('kode' => '1101-01-05', 'nama' => 'Kas Kecil Pusat'); }
+    public function build_journal_preview($company, $tanggal, array $details, array $kas, $keterangan = '') { $GLOBALS['epc_preview_args'][] = array($company, $tanggal, $details, $kas); return array(array('label' => 'Jurnal ' . $company, 'company' => $company, 'rows' => array())); }
     public function get_pencatatan($id) {
         global $scenario;
         if (!empty($scenario['missing_record'])) { return false; }
@@ -118,11 +122,13 @@ class EpcModel {
     public function get_pelaporan($id) {
         global $scenario;
         if (!empty($scenario['missing_record'])) { return false; }
-        return (object) array('header' => (object) array('status' => isset($scenario['pl_status']) ? $scenario['pl_status'] : 'draft', 'petty_cash_id' => 4, 'approver_id' => isset($scenario['approver_id']) ? $scenario['approver_id'] : null, 'created_by' => 0), 'pencatatan_list' => array((object) array('id' => 1)));
+        return (object) array('header' => (object) array('status' => isset($scenario['pl_status']) ? $scenario['pl_status'] : 'draft', 'petty_cash_id' => 4, 'company' => 'STM', 'approver_id' => isset($scenario['approver_id']) ? $scenario['approver_id'] : null, 'created_by' => 0), 'pencatatan_list' => array((object) array('id' => 1, 'no_pencatatan' => 'PCP-1', 'tanggal' => '2026-11-17', 'grand_total' => 5000)));
     }
     public $request_payment_ok = true;
-    public function submit_pelaporan($id) { global $scenario; return empty($scenario['submit_fail']); }
-    public function approve_pelaporan($id, $uid) { global $scenario; $this->request_payment_ok = empty($scenario['rp_failed']); return empty($scenario['approve_fail']); }
+    public function get_saldo_seharusnya($id) { global $scenario; return !empty($scenario['no_master']) ? false : 2650000; }
+    public function submit_pelaporan($id, $kontrol = null) { global $scenario; $GLOBALS['epc_kontrol'] = $kontrol; return empty($scenario['submit_fail']); }
+    public $approve_error = null;
+    public function approve_pelaporan($id, $uid) { global $scenario; $this->request_payment_ok = empty($scenario['rp_failed']); $this->approve_error = isset($scenario['approve_error']) ? $scenario['approve_error'] : null; return empty($scenario['approve_fail']); }
     public function reject_pelaporan($id, $a, $uid) { global $scenario; return empty($scenario['reject_fail']); }
     public function validate_same_week($ids) { global $scenario; return empty($scenario['week_mismatch']); }
     public function create_pelaporan($data, $ids) { global $scenario; return !empty($scenario['create_fail']) ? false : 55; }
@@ -182,8 +188,25 @@ function epc_data($e) { return $e['context']['data']; }
 $row = function ($id, $status = 'draft') { return (object) array('id' => $id, 'status' => $status, 'nama' => 'N', 'keterangan' => 'K', 'total_budget' => 1000, 'no_pelaporan' => 'RPC-1', 'periode_start' => 'a', 'periode_end' => 'b', 'company' => 'C1', 'grand_total' => 5000, 'jumlah_pencatatan' => 2); };
 
 // ---------------- submit_pelaporan
-list($e, $out) = epc_run('submit_pelaporan', array('records' => array($row(7))), array(), array(7));
+$saldo_post = array('saldo_petty_cash' => '2.600.000');
+$GLOBALS['epc_kontrol'] = null;
+list($e, $out) = epc_run('submit_pelaporan', array('records' => array($row(7))), $saldo_post, array(7));
 check($e['status'] === 1 && epc_data($e)['outcome'] === 'submitted' && epc_data($e)['id'] == 7 && json_decode($out, true)['status'] === true, 'submit: submitted');
+check($GLOBALS['epc_kontrol'] === array('saldo_seharusnya' => 2650000, 'saldo_petty_cash' => 2600000, 'selisih_saldo' => -50000), 'submit: kontrol saldo dihitung server dan disimpan (selisih -50.000)');
+check(json_decode($out, true)['selisih_saldo'] === -50000 && epc_data($e)['ada_selisih'] === true, 'submit: respons dan audit memuat info selisih');
+// Saldo sesuai: selisih 0, tetap submitted (selisih hanya informasi)
+list($e, $out) = epc_run('submit_pelaporan', array('records' => array($row(7))), array('saldo_petty_cash' => '2650000'), array(7));
+check($e['status'] === 1 && $GLOBALS['epc_kontrol']['selisih_saldo'] === 0 && epc_data($e)['ada_selisih'] === false, 'submit: saldo sesuai, selisih 0');
+// Saldo lebih besar dari seharusnya: selisih positif tetap lolos
+list($e) = epc_run('submit_pelaporan', array('records' => array($row(7))), array('saldo_petty_cash' => '2700000'), array(7));
+check($e['status'] === 1 && $GLOBALS['epc_kontrol']['selisih_saldo'] === 50000, 'submit: selisih positif tetap bisa diajukan');
+// Validasi saldo: wajib, bukan angka, negatif, master hilang. Model submit tidak boleh tersentuh.
+foreach (array('saldo_required' => array(array(), array()), 'saldo_required ' => array(array('saldo_petty_cash' => '  '), array()), 'saldo_invalid' => array(array('saldo_petty_cash' => 'abc'), array()), 'saldo_invalid ' => array(array('saldo_petty_cash' => '-5000'), array()), 'master_not_found' => array($saldo_post, array('no_master' => true))) as $reason => $c) {
+    $GLOBALS['epc_kontrol'] = 'untouched';
+    list($e, $out) = epc_run('submit_pelaporan', array_merge(array('records' => array($row(7))), $c[1]), $c[0], array(7));
+    check($e['status'] === 0 && epc_data($e)['reason'] === trim($reason) && epc_data($e)['outcome'] === 'validation_failed', "submit: $reason, got " . json_encode(epc_data($e)));
+    check(json_decode($out, true)['status'] === false && $GLOBALS['epc_kontrol'] === 'untouched', "submit: $reason ditolak tanpa menyentuh model submit");
+}
 $cases = array(
     'permission_denied' => array(array('deny_perm' => true, 'records' => array($row(7))), array(7), 'denied'),
     'id_invalid' => array(array(), array(0), 'validation_failed'),
@@ -198,10 +221,10 @@ list($e) = epc_run('submit_pelaporan', array('records' => array($row(7, 'waiting
 check(epc_data($e)['current_status'] === 'waiting', 'submit: current_status dicatat');
 list($e) = epc_run('submit_pelaporan', array(), array(), array(99));
 check($e['status'] === 0 && epc_data($e)['outcome'] === 'not_found', 'submit: not_found');
-list($e, $out) = epc_run('submit_pelaporan', array('records' => array($row(7)), 'submit_fail' => true), array(), array(7));
+list($e, $out) = epc_run('submit_pelaporan', array('records' => array($row(7)), 'submit_fail' => true), $saldo_post, array(7));
 check($e['status'] === 0 && epc_data($e)['outcome'] === 'submit_failed' && json_decode($out, true)['status'] === false, 'submit: submit_failed');
 foreach (array('writer_failure', 'writer_exception') as $w) {
-    list($e, $out) = epc_run('submit_pelaporan', array($w => true, 'records' => array($row(7))), array(), array(7));
+    list($e, $out) = epc_run('submit_pelaporan', array($w => true, 'records' => array($row(7))), $saldo_post, array(7));
     check($e['status'] === 1 && json_decode($out, true)['status'] === true, "submit: intact on $w");
 }
 
@@ -224,8 +247,10 @@ check($stopped && epc_data($e)['outcome'] === 'denied', 'get_data_approval: deni
 epc_writers('get_data_approval', array(), array(), function ($e, $out, $w) { check(json_decode($out, true)['draw'] === 1, "get_data_approval: intact on $w"); });
 
 // ---------------- view_approval
+$GLOBALS['epc_preview_args'] = array();
 list($e, $out) = epc_run('view_approval', array(), array(), array(7));
 check($e['status'] === 1 && epc_data($e)['outcome'] === 'rendered' && strpos($out, 'approval/view') !== false, 'view_approval: rendered');
+check(count($GLOBALS['epc_preview_args']) === 1 && $GLOBALS['epc_preview_args'][0][0] === 'STM' && $GLOBALS['epc_preview_args'][0][1] === '2026-11-17' && $GLOBALS['epc_preview_args'][0][3] === array('kode' => '1101-01-05', 'nama' => 'Kas Kecil Pusat'), 'view_approval: preview jurnal memakai tanggal pencatatan dan COA Petty Cash master (PC-R-04)');
 list($e) = epc_run('view_approval', array('missing_record' => true), array(), array(99));
 check($e['status'] === 0 && epc_data($e)['outcome'] === 'not_found' && $GLOBALS['redirectTarget'] === 'expense_petty_cash/approval', 'view_approval: not_found');
 list($e) = epc_run('view_approval', array('approver_id' => 99), array(), array(7));
@@ -247,6 +272,9 @@ list($e) = epc_run('approve', array(), array(), array(0));
 check($e['status'] === 0 && epc_data($e)['reason'] === 'id_invalid', 'approve: id invalid');
 list($e, $out) = epc_run('approve', array('approve_fail' => true), array(), array(7));
 check($e['status'] === 0 && epc_data($e)['outcome'] === 'approve_failed' && json_decode($out, true)['status'] === false, 'approve: approve_failed');
+check(epc_data($e)['reason'] === 'approve_failed' && strpos(json_decode($out, true)['message'], 'jurnal') === false, 'approve: gagal biasa memakai pesan umum');
+list($e, $out) = epc_run('approve', array('approve_fail' => true, 'approve_error' => 'journal'), array(), array(7));
+check($e['status'] === 0 && epc_data($e)['reason'] === 'journal_failed' && strpos(json_decode($out, true)['message'], 'jurnal pencatatan gagal dibuat') !== false, 'approve: jurnal gagal -> pesan dan alasan audit khusus');
 foreach (array('writer_failure', 'writer_exception') as $w) {
     list($e, $out) = epc_run('approve', array($w => true), array(), array(7));
     check($e['status'] === 1 && json_decode($out, true)['status'] === true, "approve: intact on $w");
@@ -318,8 +346,17 @@ epc_writers('get_petty_cash_list', array(), array(), function ($e, $out, $w) { c
 
 // ---------------- Model: sukses tulis mengikuti hasil commit; integrasi request_payment dilaporkan
 require dirname(__DIR__) . '/models/Expense_petty_cash_pelaporan_model.php';
+class EpcJournalFake {
+    public $ok = true; public $calls = array();
+    public function create_journals_for_approval(array $ids) {
+        $this->calls[] = $ids;
+        return $this->ok ? array('success' => true, 'created' => count($ids), 'skipped' => 0, 'failed_id' => null)
+                         : array('success' => false, 'created' => 0, 'skipped' => 0, 'failed_id' => $ids[0]);
+    }
+}
 class EpcWriteDb {
-    public $complete = true; public $status = true;
+    public $complete = true; public $status = true; public $rollbacks = 0;
+    public function trans_rollback() { $this->rollbacks++; return true; }
     public function trans_start() {}
     public function trans_complete() { return $this->complete; }
     public function trans_status() { return $this->status; }
@@ -335,19 +372,29 @@ foreach (array(array(true, true, true), array(false, true, false), array(true, f
     foreach (array('submit_pelaporan' => array(7), 'approve_pelaporan' => array(7, 10), 'reject_pelaporan' => array(7, 'Alasan reject yang cukup panjang', 10)) as $m => $args) {
         $model = (new ReflectionClass('EpcWriteModel'))->newInstanceWithoutConstructor();
         $model->db = new EpcWriteDb(); $model->db->complete = $complete; $model->db->status = $status;
+        $model->journal_model = new EpcJournalFake();
         $GLOBALS['scenarioCount']++;
         $r = call_user_func_array(array($model, $m), $args);
         check((bool) $r === $expect, "model $m: hasil mengikuti commit/status " . json_encode($c));
     }
 }
 $model = (new ReflectionClass('EpcWriteModel'))->newInstanceWithoutConstructor();
-$model->db = new EpcWriteDb(); $model->rpThrow = true;
+$model->db = new EpcWriteDb(); $model->rpThrow = true; $model->journal_model = new EpcJournalFake();
 $GLOBALS['scenarioCount']++;
 check($model->approve_pelaporan(7, 10) === true && $model->request_payment_ok === false, 'model approve: integrasi request_payment gagal tidak membatalkan approve tetapi ditandai');
 $model = (new ReflectionClass('EpcWriteModel'))->newInstanceWithoutConstructor();
-$model->db = new EpcWriteDb();
+$model->db = new EpcWriteDb(); $model->journal_model = new EpcJournalFake();
 $GLOBALS['scenarioCount']++;
 check($model->approve_pelaporan(7, 10) === true && $model->request_payment_ok === true, 'model approve: integrasi ok');
+check($model->journal_model->calls === array(array(1)) && $model->approve_error === null, 'model approve: jurnal dibentuk untuk semua pencatatan pelaporan dalam transaksi approve (PC-R-02)');
+
+// Jurnal gagal dibuat: approve dibatalkan (rollback), tidak ada Request Payment, penyebab tercatat
+$model = (new ReflectionClass('EpcWriteModel'))->newInstanceWithoutConstructor();
+$model->db = new EpcWriteDb(); $model->journal_model = new EpcJournalFake(); $model->journal_model->ok = false;
+$model->request_payment_ok = null;
+$GLOBALS['scenarioCount']++;
+check($model->approve_pelaporan(7, 10) === false, 'model approve: jurnal gagal -> approve gagal');
+check($model->db->rollbacks === 1 && $model->approve_error === 'journal' && $model->request_payment_ok === null, 'model approve: jurnal gagal -> rollback, penyebab journal, Request Payment tidak dibuat');
 
 $cmd = escapeshellcmd(PHP_BINARY) . ' ' . escapeshellarg(__FILE__) . ' --subprocess-shutdown 2>&1';
 exec($cmd, $subOutput, $subExitCode);

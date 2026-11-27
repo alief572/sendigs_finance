@@ -207,6 +207,7 @@ class Petty_cash_master extends Admin_Controller
         $id         = $this->input->post('id');
         $nama       = trim($this->input->post('nama'));
         $keterangan = trim($this->input->post('keterangan'));
+        $coa_petty_cash = trim((string) $this->input->post('coa_petty_cash'));
         $detail     = $this->input->post('detail');
 
         // Validate required fields
@@ -218,6 +219,18 @@ class Petty_cash_master extends Admin_Controller
         if (empty($keterangan)) {
             echo json_encode(['status' => 0, 'msg' => 'Field keterangan harus diisi']);
             $this->completeAudit('Simpan master petty cash gagal validasi', 0, array('id' => $id, 'reason' => 'keterangan_required', 'outcome' => 'validation_failed'));
+            return;
+        }
+
+        // COA Petty Cash wajib dan harus akun yang ada (dipakai di jurnal pencatatan dan refill)
+        if ($coa_petty_cash === '') {
+            echo json_encode(['status' => 0, 'msg' => 'Field COA Petty Cash harus dipilih']);
+            $this->completeAudit('Simpan master petty cash gagal validasi', 0, array('id' => $id, 'reason' => 'coa_petty_cash_required', 'outcome' => 'validation_failed'));
+            return;
+        }
+        if (!$this->Petty_cash_master_model->coa_exists($coa_petty_cash)) {
+            echo json_encode(['status' => 0, 'msg' => 'COA Petty Cash tidak ditemukan di daftar COA']);
+            $this->completeAudit('Simpan master petty cash gagal validasi', 0, array('id' => $id, 'reason' => 'coa_petty_cash_invalid', 'outcome' => 'validation_failed'));
             return;
         }
 
@@ -256,7 +269,8 @@ class Petty_cash_master extends Admin_Controller
         // Build header array
         $header = [
             'nama'       => $nama,
-            'keterangan' => $keterangan
+            'keterangan' => $keterangan,
+            'coa_petty_cash' => $coa_petty_cash
         ];
 
         // Call model to save

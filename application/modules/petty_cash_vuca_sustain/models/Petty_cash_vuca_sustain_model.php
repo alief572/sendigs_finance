@@ -394,12 +394,43 @@ class Petty_cash_vuca_sustain_model extends BF_Model
         }
         unset($pencatatan);
 
+        // COA Petty Cash master (sisi STM pada jurnal), dipakai view untuk simulasi jurnal
+        $header->coa_kas = $this->_coa_kas_pelaporan($header->pelaporan_id);
+
         // 4. Compose result object
         $result = new stdClass();
         $result->header          = $header;
         $result->pencatatan_list = $pencatatan_list;
 
         return $result;
+    }
+
+    /**
+     * COA Petty Cash master dari pelaporan (kode + nama) untuk tampilan jurnal sisi STM.
+     * Fallback 1101-01-02 Kas Kecil bila kolom belum dimigrasi atau master belum terisi.
+     *
+     * @param int $pelaporan_id
+     * @return array ['kode' => string, 'nama' => string]
+     */
+    private function _coa_kas_pelaporan($pelaporan_id)
+    {
+        $default = ['kode' => '1101-01-02', 'nama' => 'Kas Kecil'];
+        if (!$this->db->field_exists('coa_petty_cash', 'ms_petty_cash')) {
+            return $default;
+        }
+
+        $row = $this->db->select('m.coa_petty_cash, c.nama as nama_coa')
+            ->from('tr_pelaporan_petty_cash p')
+            ->join('ms_petty_cash m', 'm.id = p.petty_cash_id', 'inner')
+            ->join(DBACC_STM . '.coa_master c', 'c.no_perkiraan = m.coa_petty_cash', 'left')
+            ->where('p.id', (int) $pelaporan_id)
+            ->get()
+            ->row();
+
+        if (!$row || trim((string) $row->coa_petty_cash) === '') {
+            return $default;
+        }
+        return ['kode' => $row->coa_petty_cash, 'nama' => trim((string) $row->nama_coa) !== '' ? $row->nama_coa : $row->coa_petty_cash];
     }
 
     // =========================================================================

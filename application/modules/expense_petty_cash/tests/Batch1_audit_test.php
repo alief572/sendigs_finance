@@ -102,12 +102,16 @@ class EpcInput {
 class EpcLoad { public function library($l) {} }
 
 class EpcModel {
+    public function get_journal_books($no, $company) { return null; }
+    public function get_coa_name($coa, $company) { return $coa; }
     public function get_server_side_data($p, $f = null) {
         global $scenario;
         $rows = !empty($scenario['empty_result']) ? array() : array(array('id' => 1), array('id' => 2), array('id' => 3));
         return array('draw' => 1, 'recordsTotal' => count($rows), 'recordsFiltered' => count($rows), 'data' => $rows);
     }
     public function get_budget_info($id) { global $scenario; return !empty($scenario['no_budget']) ? false : (object) array('budget' => 100); }
+    public function get_coa_petty_cash_info($id) { return array('kode' => '1101-01-05', 'nama' => 'Kas Kecil Pusat'); }
+    public function build_journal_preview($company, $tanggal, array $details, array $kas, $keterangan = '') { $GLOBALS['epc_preview_args'][] = array($company, $tanggal, $details, $kas); return array(array('label' => 'Jurnal ' . $company, 'company' => $company, 'rows' => array())); }
     public function get_pencatatan($id) {
         global $scenario;
         if (!empty($scenario['missing_record'])) { return false; }
@@ -116,7 +120,7 @@ class EpcModel {
     public function get_pelaporan($id) {
         global $scenario;
         if (!empty($scenario['missing_record'])) { return false; }
-        return (object) array('header' => (object) array('status' => isset($scenario['pl_status']) ? $scenario['pl_status'] : 'draft', 'petty_cash_id' => 4), 'pencatatan_list' => array((object) array('id' => 1)));
+        return (object) array('header' => (object) array('status' => isset($scenario['pl_status']) ? $scenario['pl_status'] : 'draft', 'petty_cash_id' => 4, 'company' => 'STM'), 'pencatatan_list' => array((object) array('id' => 1, 'no_pencatatan' => 'PCP-1', 'tanggal' => '2026-11-17', 'grand_total' => 5000)));
     }
     public function validate_same_week($ids) { global $scenario; return empty($scenario['week_mismatch']); }
     public function create_pelaporan($data, $ids) { global $scenario; return !empty($scenario['create_fail']) ? false : 55; }
