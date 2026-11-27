@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PPh Invoice</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<style>
+/* ===== Shell AdminLTE (skin-blue) seperti aplikasi SENDIGS SS ===== */
+:root{--header:#3c8dbc;--logo:#367fa9;--side:#222d32;--side-sub:#2c3b41;--side-text:#b8c7ce;--bg:#ecf0f5;--chg:#f39c12;}
+*{box-sizing:border-box;}
+html,body{margin:0;}
+body{font-family:"Source Sans Pro","Segoe UI","Helvetica Neue",Helvetica,Arial,sans-serif;font-size:14px;color:#333;background:var(--bg);}
+a{color:#3c8dbc;text-decoration:none;cursor:pointer;}
+.main-header{position:fixed;top:0;left:0;right:0;height:50px;z-index:100;background:var(--header);display:flex;}
+.logo{width:230px;background:var(--logo);color:#fff;font-size:20px;font-weight:700;text-align:center;line-height:50px;flex:none;}
+.navbar{flex:1;display:flex;align-items:center;justify-content:space-between;padding:0 15px;color:#fff;}
+.navbar .burger{background:none;border:0;color:#fff;font-size:18px;cursor:pointer;padding:0 10px 0 0;}
+.nav-right{display:flex;align-items:center;gap:22px;font-size:14px;}
+.nav-right a{color:#fff;}
+.nav-right .user{display:flex;align-items:center;gap:8px;}
+.avatar{width:22px;height:22px;border-radius:50%;background:#f5d6a8;border:2px solid #e6b97a;display:inline-block;}
+.chg-toggle{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;}
+.nav-right button{background:#fff;color:#3c8dbc;border:0;border-radius:3px;padding:4px 10px;font:inherit;font-size:12px;cursor:pointer;}
+.sidebar{position:fixed;top:50px;bottom:0;left:0;width:230px;background:var(--side);overflow-y:auto;z-index:90;}
+.sidebar .menu-search{padding:12px 10px 22px;}
+.sidebar .menu-search div{display:flex;align-items:center;gap:8px;border:1px solid #4b5a61;border-radius:4px;padding:10px;color:#b8c7ce;font-size:13px;}
+.sidebar ul{list-style:none;margin:0;padding:0;}
+.sidebar .item>a{display:flex;align-items:center;gap:10px;padding:12px 15px;color:var(--side-text);}
+.sidebar .item>a .fa{width:16px;text-align:center;}
+.sidebar .item>a .chev{margin-left:auto;font-size:11px;}
+.sidebar .item.open>a{background:#1e282c;color:#fff;border-left:3px solid var(--header);padding-left:12px;}
+.sidebar .sub{background:var(--side-sub);padding:5px 0;}
+.sidebar .sub a{display:flex;justify-content:space-between;align-items:center;padding:7px 10px 7px 22px;color:#8aa4af;font-size:14px;white-space:nowrap;}
+.sidebar .sub a span:first-child::before{content:"\203A  ";}
+.sidebar .sub a.active{color:#fff;font-weight:600;}
+.sidebar .cnt{background:#f39c12;color:#fff;border-radius:9px;font-size:10px;font-weight:700;padding:0 6px;}
+.sidebar .cnt:empty{display:none;}
+.content-wrapper{margin-left:230px;margin-top:50px;padding:15px;min-height:calc(100vh - 50px);}
+.content-header h1{font-size:24px;font-weight:400;margin:4px 0 14px;color:#333;}
+.content-header h1 .fa{margin-right:6px;}
+.hidden{display:none !important;}
+@media (max-width:900px){.sidebar{display:none;}.content-wrapper{margin-left:0;padding:12px 16px;}.logo{width:auto;padding:0 14px;font-size:17px;}.nav-right .hide-sm{display:none;}}
+
+/* ===== Bootstrap 3 / AdminLTE dasar ===== */
+.box{position:relative;background:#fff;border-top:3px solid #d2d6de;border-radius:3px;margin-bottom:20px;box-shadow:0 1px 1px rgba(0,0,0,.1);}
+.box.box-primary{border-top-color:#3c8dbc;}
+.box-header{padding:10px;position:relative;}
+.box-header.with-border{border-bottom:1px solid #f4f4f4;}
+.box-header .box-title{display:inline-block;margin:0;font-size:18px;line-height:1.1;}
+.box-body{padding:10px;}
+.box-header:after{content:'';display:block;clear:both;}
+/* tabel daftar: nomor dokumen, tanggal, nominal tidak terpotong ke baris baru (PO-R-12) */
+#riT td,#riIT td,#riDT td,#incT td,#apvT td,#salT td{white-space:nowrap;vertical-align:middle;}
+#riT{font-size:13px;}#riT>thead>tr>th,#riT>tbody>tr>td{padding:7px 6px;}
+#riT th,#riIT th,#riDT th,#incT th,#apvT th,#salT th{vertical-align:middle;}
+.pull-right{float:right;}
+.clearfix::after{content:"";display:table;clear:both;}
+.breadcrumb{list-style:none;display:flex;gap:6px;background:none;padding:0;margin:0 0 5px;font-size:12px;}
+.breadcrumb li+li::before{content:"/";color:#ccc;margin-right:6px;}
+.breadcrumb .active{color:#777;}
+.badge{display:inline-block;min-width:10px;padding:3px 7px;font-size:12px;font-weight:700;color:#fff;line-height:1;vertical-align:middle;white-space:nowrap;text-align:center;background:#777;border-radius:10px;}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:6px 12px;font-size:14px;line-height:1.42857;border:1px solid transparent;border-radius:3px;cursor:pointer;font-family:inherit;color:#fff;white-space:nowrap;}
+.btn-sm{padding:5px 10px;font-size:12px;line-height:1.5;}
+.btn-xs{padding:1px 5px;font-size:12px;}
+.btn-block{display:flex;width:100%;}
+.btn-default{background:#f4f4f4;color:#444;border-color:#ddd;}
+.btn-primary{background:#3c8dbc;border-color:#367fa9;}
+.btn-success{background:#00a65a;border-color:#008d4c;}
+.btn-warning{background:#f39c12;border-color:#e08e0b;}
+.btn-danger{background:#dd4b39;border-color:#d73925;}
+.btn-info{background:#00c0ef;border-color:#00acd6;}
+.btn-link{background:none;color:#3c8dbc;border:0;padding-left:0;}
+.btn:disabled{opacity:.65;cursor:not-allowed;}
+.form-control{display:block;width:100%;height:34px;padding:6px 12px;font-size:14px;color:#555;background:#fff;border:1px solid #d2d6de;border-radius:0;font-family:inherit;}
+.input-sm,.form-control.input-sm{height:30px;padding:5px 10px;font-size:12px;}
+textarea.form-control{height:auto;}
+.form-control:disabled,.form-control[readonly]{background:#eee;}
+.input-group{display:flex;}
+.input-group-addon{padding:5px 10px;font-size:12px;background:#fff;border:1px solid #d2d6de;border-left:0;border-right:0;}
+.row{display:flex;flex-wrap:wrap;margin:0 -8px;}
+.row>[class*=col-]{padding:0 8px;}
+.col-md-2{width:16.6667%}.col-md-3{width:25%}.col-md-4{width:33.3333%}.col-md-6{width:50%}.col-md-12{width:100%}
+.col-sm-4{width:33.3333%}
+@media (max-width:991px){.row>[class*=col-]{width:50%;}}
+@media (max-width:600px){.row>[class*=col-]{width:100%;}}
+.text-right{text-align:right !important;}.text-center{text-align:center !important;}.text-muted{color:#777;}.text-danger{color:#dd4b39;}
+.table{width:100%;max-width:100%;border-collapse:collapse;margin-bottom:20px;}
+.table>thead>tr>th,.table>tbody>tr>td,.table>tfoot>tr>td,.table>tfoot>tr>th{padding:8px;line-height:1.42857;vertical-align:top;border-top:1px solid #f4f4f4;}
+.table-bordered,.table-bordered>thead>tr>th,.table-bordered>tbody>tr>td{border:1px solid #f4f4f4;}
+.table-striped>tbody>tr:nth-of-type(odd){background:#f9f9f9;}
+.bg-blue>th,thead.bg-primary th,.bg-primary>th{background:#3c8dbc !important;color:#fff;}
+tfoot.bg-primary th,tfoot.bg-primary td{background:#3c8dbc;color:#fff;}
+.alert{padding:15px;margin-bottom:20px;border:1px solid transparent;border-radius:3px;color:#fff;}
+.alert-info{background:#00c0ef;border-color:#00acd6;}
+.alert-warning{background:#f39c12;border-color:#e08e0b;}
+.alert-danger{background:#dd4b39;border-color:#d73925;}
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin-top:12px;}
+.dash-card{background:#fff;border:1px solid #d9dee5;border-left:4px solid #f39c12;border-radius:4px;padding:12px 14px;cursor:pointer;}
+.dash-card:hover{box-shadow:0 2px 6px rgba(0,0,0,.12);}
+.dash-card.sel{outline:2px solid #3c8dbc;box-shadow:0 2px 8px rgba(60,141,188,.35);background:#f4f9fd;}
+.dash-card.done{border-left-color:#00a65a;}
+.dash-card .dc-t{font-size:12px;font-weight:700;text-transform:uppercase;color:#555;}
+.dash-card .dc-n{font-size:13px;color:#666;margin-top:4px;}
+.dash-card .dc-v{font-size:20px;font-weight:700;margin-top:2px;}
+.dash-card .dc-a{font-size:11.5px;color:#777;margin-top:6px;}
+.dash-card .dc-a span{display:inline-block;padding:1px 6px;border-radius:8px;background:#f1f1f1;margin-right:3px;}
+.dash-card .dc-a span.old{background:#f8d7da;color:#a94442;}
+.dash-filter{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;}
+.dash-filter label{display:block;font-size:12px;margin-bottom:3px;}
+.nav-tabs{display:flex;list-style:none;margin:0;padding:0;border-bottom:1px solid #ddd;}
+.nav-tabs>li>a{display:block;padding:10px 15px;margin-right:2px;color:#444;border:1px solid transparent;border-radius:0;}
+.nav-tabs>li.active>a{color:#555;background:#fff;border:1px solid #ddd;border-bottom-color:transparent;border-top:3px solid #3c8dbc;font-weight:600;margin-bottom:-1px;}
+.dt-info{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-top:10px;font-size:13px;}
+.pager{display:flex;}
+.pager button{border:1px solid #ddd;background:#fff;color:#555;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer;margin-left:-1px;}
+.pager button.on{background:#3c8dbc;border-color:#3c8dbc;color:#fff;}
+.pager button:disabled{color:#bbb;cursor:default;}
+.dt-empty{text-align:center;color:#777;padding:18px !important;}
+/* ===== Create PO dirapikan (PO-R-11) ===== */
+.po-list{font-size:12.5px;margin-bottom:0;width:100%;max-width:none;}
+.po-list th small{display:block;font-weight:400;font-size:10.5px;color:#777;}
+.ps{display:flex;align-items:flex-start;width:270px;}
+.ps-step{flex:1;position:relative;text-align:center;padding-top:15px;font-size:10px;line-height:1.2;}
+.ps-step:before{content:'';position:absolute;top:5px;left:-50%;width:100%;height:2px;background:#d2d6de;}
+.ps-step:first-child:before{display:none;}
+.ps-step i{position:absolute;top:0;left:50%;margin-left:-6px;width:12px;height:12px;border-radius:50%;background:#fff;border:2px solid #d2d6de;z-index:1;}
+.ps-step b{display:block;font-weight:600;color:#aaa;white-space:normal;font-size:9.5px;line-height:1.15;}
+.ps-step.done i{background:#00a65a;border-color:#00a65a;}.ps-step.done b{color:#00a65a;}.ps-step.done:before{background:#00a65a;}
+.ps-step.cur i{background:#f39c12;border-color:#f39c12;box-shadow:0 0 0 3px rgba(243,156,18,.25);}.ps-step.cur b{color:#e08e0b;}.ps-step.cur:before{background:#00a65a;}
+.ps-step.bad i{background:#dd4b39;border-color:#dd4b39;}.ps-step.bad b{color:#dd4b39;}.ps-step.bad:before{background:#00a65a;}
+.ps-step.skip i{border-style:dashed;background:#f4f4f4;}.ps-step.skip b{color:#c4c4c4;text-decoration:line-through;}.ps-step.skip:before{background:repeating-linear-gradient(90deg,#d2d6de 0 4px,transparent 4px 7px);}
+.ps-now{font-size:11px;margin-top:4px;white-space:normal;width:270px;}.ps-now b{color:#333;}
+.ps-made{font-size:10.5px;color:#999;}
+.ps-cl{display:inline-block;background:#dd4b39;color:#fff;font-size:10px;font-weight:700;border-radius:8px;padding:0 7px;}
+.po-list>thead>tr>th,.po-list>tbody>tr>td{padding:6px 7px;}
+.po-list th{white-space:normal;line-height:1.25;vertical-align:middle !important;text-align:center;background:#f7f9fb;}
+.po-list td{white-space:nowrap;vertical-align:middle !important;}
+.po-list td.wrap{white-space:normal;min-width:130px;max-width:170px;}
+.po-list td.wrap2{white-space:normal;max-width:110px;}
+.po-list td.act{width:60px;text-align:center;}
+.gear{position:relative;display:inline-block;}.gear .btn{padding:3px 8px;}
+.gear-m{display:none;position:absolute;right:0;top:100%;margin-top:3px;z-index:20;background:#fff;border:1px solid #d2d6de;border-radius:3px;box-shadow:0 4px 12px rgba(0,0,0,.15);min-width:140px;text-align:left;padding:4px 0;}
+.gear.on .gear-m{display:block;}
+.gear-m a{display:block;padding:6px 12px;color:#333;cursor:pointer;font-size:12.5px;white-space:nowrap;}.gear-m a:hover{background:#f4f6f8;}.gear-m a .fa{width:16px;}
+
+.po-list .badge,.po-list .label{font-size:10.5px;padding:3px 6px;}
+.pf-wrap{padding:14px 16px;}
+.pf-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
+.pf-no{text-align:right;font-size:11px;color:#777;text-transform:uppercase;letter-spacing:.3px;}
+.pf-no b{display:block;font-size:16px;color:#222;text-transform:none;letter-spacing:0;}
+.pf-no small{text-transform:none;}
+.pf-sec{border:1px solid #e3e7eb;border-radius:4px;padding:12px 14px;margin-bottom:14px;background:#fff;}
+.pf-h{display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:15px;}
+.pf-h small{color:#888;font-size:12px;}
+.pf-n{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#3c8dbc;color:#fff;font-size:12px;font-weight:700;}
+.pf-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px 14px;}
+.pf-f label{font-size:12.5px;margin-bottom:3px;display:block;}
+.pf-f.span2{grid-column:span 2;}.pf-f.span4{grid-column:1/-1;}
+@media (max-width:900px){.pf-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.pf-f.span2{grid-column:1/-1;}}
+@media (max-width:520px){.pf-grid{grid-template-columns:1fr;}}
+.pf-hint{font-size:11.5px;color:#777;margin-top:4px;}
+.pf-tw{overflow-x:auto;margin-top:8px;}
+.pf-mode{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0 4px;padding:8px 10px;background:#f7f9fb;border-radius:3px;}
+.pf-mode label{margin:0;font-size:12.5px;white-space:nowrap;}.pf-mode select{width:auto;min-width:300px;}.pf-mode small{color:#666;flex:1;min-width:240px;}
+.pf-items,.pf-top-t{font-size:12.5px;margin-bottom:0;table-layout:fixed;min-width:920px;}
+.pf-items th,.pf-top-t th{vertical-align:middle !important;white-space:nowrap;}
+.pf-items th small{display:block;font-weight:400;font-size:10.5px;opacity:.85;}
+.pf-items td,.pf-top-t td{vertical-align:middle !important;}
+.pf-items td b{display:block;white-space:normal;}
+.pf-items tfoot td{background:#f7f9fb;font-weight:600;}
+.pf-items tr.pf-off td{background:#fafafa;color:#aaa;}
+.pf-items .form-control,.pf-top-t .form-control{width:100%;}
+.pf-qty{width:100%;display:flex;}.pf-qty .form-control{flex:1;min-width:0;}.pf-qty .input-group-addon{display:flex;align-items:center;justify-content:center;min-width:48px;font-size:11.5px;padding:0 6px;border:1px solid #d2d6de;border-left:0;background:#f4f6f8;color:#555;}
+.pf-items th.text-right,.pf-top-t th.text-right{text-align:right !important;}.pf-items th.text-left,.pf-top-t th.text-left{text-align:left !important;}.pf-items th.text-center,.pf-top-t th.text-center{text-align:center !important;}
+.pf-prt .pf-it{display:flex;justify-content:space-between;gap:8px;}.pf-prt .pf-it span:last-child{white-space:nowrap;color:#777;}
+.pf-u{color:#888;font-size:11.5px;}
+.pf-chips{display:flex;flex-wrap:wrap;gap:4px;align-items:center;min-height:30px;}
+.pf-chips span{background:#eaf2f8;border:1px solid #c9dceb;color:#245;border-radius:3px;padding:3px 8px;font-size:12px;font-weight:600;}
+.pf-prbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.pf-prt{font-size:13px;table-layout:fixed;}.pf-prt th small{display:block;font-weight:400;font-size:10.5px;color:#777;}.pf-prt td{vertical-align:middle !important;}.pf-prt tr.pf-on td{background:#eef6fb;}
+.pf-sub{font-size:11.5px;color:#777;}
+.pf-quick{display:flex;align-items:center;gap:6px;margin:0 0 8px;font-size:12.5px;color:#555;flex-wrap:wrap;}
+.pf-top-t tfoot td{background:#f7f9fb;}
+.pf-ok{color:#00a65a;font-weight:600;}.pf-bad{color:#dd4b39;font-weight:600;}
+.pf-bar{position:sticky;bottom:0;z-index:5;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:#f7f9fb;border:1px solid #e3e7eb;border-radius:4px;padding:10px 14px;}
+.pf-tot{display:flex;gap:22px;flex-wrap:wrap;font-size:12px;color:#666;}
+.pf-tot b{display:block;font-size:14px;color:#222;}.pf-tot .big b{font-size:18px;color:#3c8dbc;}
+
+/* ===== penanda mockup ===== */
+body.show-chg .chg{outline:2px dashed var(--chg);outline-offset:2px;}
+.newtag{display:none;background:var(--chg);color:#fff;font-size:9px;font-weight:700;border-radius:2px;padding:1px 4px;margin-left:4px;vertical-align:middle;letter-spacing:.3px;}
+body.show-chg .newtag{display:inline-block;}
+.legend{background:#fffbe6;border:1px dashed #e0b84a;border-radius:4px;padding:8px 12px;margin:0 0 12px;font-size:12.5px;color:#6b5513;}
+details.cases{border:1px solid #e3e8ee;border-left:3px solid var(--chg);border-radius:3px;padding:8px 12px;margin-bottom:12px;background:#fff;font-size:13px;}
+details.cases summary{cursor:pointer;font-weight:600;}
+details.cases ol{margin:8px 0 2px;padding-left:20px;}
+details.cases li{margin:3px 0;}
+ul.chg-list{margin:6px 0 0 18px;padding:0;}ul.chg-list li{margin-bottom:6px;}
+
+/* ===== modal & swal ===== */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-start;justify-content:center;z-index:200;padding-top:60px;}
+.modal-bg.on{display:flex;}
+.modal{background:#fff;border-radius:4px;width:620px;max-width:95vw;box-shadow:0 5px 15px rgba(0,0,0,.5);max-height:85vh;display:flex;flex-direction:column;}
+.modal-header{padding:15px;border-bottom:1px solid #e5e5e5;display:flex;justify-content:space-between;align-items:center;}
+.modal-header h4{margin:0;font-size:18px;font-weight:500;}
+.modal-header .close{background:none;border:0;font-size:21px;font-weight:700;opacity:.4;cursor:pointer;}
+.modal-body{padding:15px;overflow:auto;}
+.modal-footer{padding:15px;border-top:1px solid #e5e5e5;text-align:right;display:flex;justify-content:flex-end;gap:6px;}
+.modal.swal{width:470px;text-align:center;}
+.modal.swal .modal-header{display:none;}
+.modal.swal .modal-body{padding:24px 20px 6px;}
+.modal.swal .modal-footer{justify-content:center;border:0;padding-bottom:22px;}
+.swal-ic{width:70px;height:70px;border-radius:50%;border:4px solid;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;font-size:32px;}
+.swal-ic.warning{border-color:#f8bb86;color:#f8bb86;}.swal-ic.success{border-color:#a5dc86;color:#a5dc86;}.swal-ic.error{border-color:#f27474;color:#f27474;}
+.swal-t{font-size:26px;font-weight:600;color:#575757;margin-bottom:8px;}
+.swal-x{color:#797979;font-size:15px;}
+.dlg-err{color:#dd4b39;font-size:13px;margin-top:8px;}
+/* ===== tambahan: Petty Cash (meniru expense_petty_cash, petty_cash_vuca_sustain, pembayaran_material) ===== */
+.bg-blue{background:#0073b7 !important;}.bg-green{background:#00a65a !important;}.bg-gray{background:#999 !important;}.bg-yellow{background:#f39c12 !important;}.bg-red{background:#dd4b39 !important;}.bg-purple{background:#605ca8 !important;}.bg-aqua{background:#00c0ef !important;}
+.money{text-align:right;white-space:nowrap;}
+.tamp-note{background:#f4f8fb;border:1px solid #d6e4ef;border-radius:3px;padding:8px 12px;font-size:12.5px;color:#31708f;margin-bottom:10px;}
+.asis-note{background:#fdf3f2;border:1px solid #f1c9c4;border-radius:3px;padding:8px 12px;font-size:12.5px;color:#a94442;margin:6px 0 10px;}
+.modal.lg{width:980px;}
+.du{background:#fff3cd;color:#8a6d3b;padding:0 4px;border-radius:2px;font-weight:600;white-space:nowrap;}
+.sum-card{background:linear-gradient(135deg,#3c8dbc,#00c0ef);color:#fff;border-radius:6px;padding:14px 16px;margin-bottom:14px;}
+.sum-card .card-row{display:flex;flex-wrap:wrap;gap:10px 26px;}
+.sum-card .label-text{font-size:11px;text-transform:uppercase;opacity:.85;letter-spacing:.3px;}
+.sum-card .value-text{font-size:18px;font-weight:700;}
+.sum-card .value-text.text-sm{font-size:14px;}
+.kontrol{border:2px dashed var(--chg);border-radius:6px;background:#fffdf5;padding:12px 14px;margin-bottom:14px;}
+.kontrol h4{margin:0 0 8px;font-size:15px;}
+.kontrol table{margin:0;max-width:640px;}
+.kontrol td{padding:5px 8px !important;font-size:13.5px;}
+.kontrol .tot td{font-weight:700;border-top:2px solid #ccc !important;}
+.sel-ok{color:#00a65a;font-weight:700;}.sel-no{color:#dd4b39;font-weight:700;}
+.sel-warn{background:#fcf8e3;border:2px solid #f39c12;border-left-width:6px;border-radius:4px;padding:10px 14px;margin:10px 0 0;font-size:13.5px;color:#8a6d3b;}
+.sel-warn .fa{color:#e08e0b;}
+tr.row-sel>td{background:#fff3cd !important;}
+.pc-panel{border:1px solid #e3e8ee;border-radius:4px;margin-bottom:10px;background:#fff;}
+.pc-panel .ph{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#f7f9fb;border-bottom:1px solid #e3e8ee;}
+.pc-panel .ph b{font-size:14px;}.pc-panel .pm{font-size:12px;color:#777;}
+.pc-panel .pb{padding:8px 12px;}
+.pc-panel table{font-size:12.5px;margin-bottom:8px;}
+.jv-h{font-size:12px;font-weight:700;color:#555;margin:6px 0 4px;}
+.jvT{font-size:12.5px;}
+.row-lock{opacity:.45;}
+.label{display:inline;padding:.2em .6em .3em;font-size:75%;font-weight:700;line-height:1;color:#fff;text-align:center;white-space:nowrap;vertical-align:baseline;border-radius:.25em;}
+.label-default{background:#d2d6de;color:#444;}.label-warning{background:#f39c12;}.label-success{background:#00a65a;}.label-danger{background:#dd4b39;}.label-info{background:#00c0ef;}.label-primary{background:#3c8dbc;}
+.small-box{border-radius:2px;position:relative;display:block;margin-bottom:20px;box-shadow:0 1px 1px rgba(0,0,0,.1);color:#fff;overflow:hidden;}
+.small-box .inner{padding:10px;}.small-box h3{font-size:30px;font-weight:700;margin:0 0 10px;white-space:nowrap;}.small-box p{font-size:15px;margin:0;}
+.small-box .icon{position:absolute;top:-5px;right:10px;font-size:70px;color:rgba(0,0,0,.15);}
+.callout{border-radius:3px;margin:0 0 20px;padding:15px 30px 15px 15px;border-left:5px solid #eee;}
+.callout h4{margin-top:0;font-weight:600;}.callout p:last-child{margin-bottom:0;}
+.callout-danger{background:#dd4b39;border-color:#c23321;color:#fff;}
+.form-group label{display:block;font-weight:700;font-size:13px;margin-bottom:5px;}
+.text-red{color:#dd4b39 !important;}
+.bg-primary{background:#3c8dbc !important;color:#fff;}
+.jlab{display:inline-block;font-size:12px;font-weight:700;color:#fff;padding:3px 8px;border-radius:3px;margin:4px 0 6px;}
+.jl-stm{background:#3c8dbc;}.jl-co{background:#f39c12;}.jl-ic{background:#00c0ef;}
+table.jtbl{font-size:12px;margin-bottom:8px;}table.jtbl thead{background:#f5f5f5;}table.jtbl tfoot{background:#f9f9f9;font-weight:700;}
+.jurnal-section h5{font-size:12px;font-weight:600;color:#555;margin:10px 0 6px;}
+.pc-panel .pt{font-size:14px;font-weight:600;}
+.pel-intro h2{font-size:20px;margin:0 0 2px;}.pel-intro p{color:#777;margin:0 0 10px;font-size:13px;}
+.pel-reason{font-size:11.5px;color:#a94442;margin-top:4px;}.pel-reason strong{display:block;}
+.dv label{font-size:12px;color:#777;font-weight:600;margin:0;}.dv div{font-size:14px;margin-bottom:10px;}
+.trf-blk{border:1px solid #d2d6de;border-left:4px solid #3c8dbc;border-radius:4px;padding:10px 12px;margin:10px 0;background:#fff;}
+.trf-h{font-size:14px;margin-bottom:6px;}.trf-h a{margin-left:8px;font-size:12px;cursor:pointer;}
+.detail-head{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:10px;}
+.sumx{display:flex;gap:18px;flex-wrap:wrap;}.sumx div{font-size:11px;color:#777;text-align:right;}.sumx b{display:block;font-size:18px;color:#333;}
+.detail-foot{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-top:12px;border-top:1px solid #eee;padding-top:10px;}
+tr.rej-row>td{background:#fdecea !important;}
+.form-tbl td{padding:4px 6px;vertical-align:top;font-size:13px;}
+.ro-box{background:#eee;border:1px solid #d2d6de;padding:5px 10px;font-size:12.5px;border-radius:3px;}
+.pc-card{display:block;padding:12px 14px;margin-bottom:8px;border:1px solid #e0e0e0;border-left:4px solid #00a65a;border-radius:4px;cursor:pointer;color:#333 !important;}
+.pc-card:hover{background:#f0faff;border-left-color:#00c0ef;}
+.pc-card small{display:block;color:#888;}
+.it-in{min-width:80px;}
+.binfo{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
+.binfo div{flex:1;min-width:150px;border:1px solid #d9dee5;border-left:4px solid #3c8dbc;border-radius:4px;padding:6px 10px;font-size:12px;background:#fff;}
+.binfo b{display:block;font-size:16px;}
+.binfo .warn{border-left-color:#dd4b39;}
+.flt{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;margin-bottom:10px;}
+.flt label{font-weight:600;color:#555;margin-right:6px;font-size:13px;}
+.flt .grp{display:flex;align-items:center;}
+.flt select{min-width:150px;width:auto;}
+.ev{font-size:11.5px;}
+.print-doc{font-size:12.5px;}
+.print-doc h3{text-align:center;margin:0 0 4px;}
+.print-doc .ttd{display:flex;justify-content:space-around;margin-top:24px;text-align:center;}
+.print-doc .ttd div{width:30%;}
+.print-doc .ttd span{display:block;height:50px;}
+.driver-popover{font-family:inherit;max-width:340px;}.driver-popover-title{font-size:15px;}.driver-popover-description{font-size:13px;line-height:1.5;}
+/* ===== Tutorial v2: tombol di baris atas konten (tidak menutupi Simpan), menu halaman ini + alur proses ===== */
+.tour-bar{float:right;position:relative;z-index:20;margin:0 0 8px 12px}
+.tour-btn{display:inline-flex;align-items:center;gap:7px;background:#00a65a;color:#fff;border:0;border-radius:18px;padding:7px 16px 7px 12px;font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.18)}
+.tour-btn:hover{background:#008d4c}.tour-btn .tb-ic{font-size:16px;line-height:1}
+.tour-menu{position:absolute;right:0;top:calc(100% + 6px);width:380px;max-width:calc(100vw - 32px);max-height:70vh;overflow:auto;background:#fff;color:#333;border:1px solid #ccc;border-radius:4px;box-shadow:0 8px 24px rgba(0,0,0,.22);font-size:13px;text-align:left}
+.tour-menu[hidden]{display:none}
+.tour-menu h4{margin:0;padding:8px 14px;font-size:12px;letter-spacing:.3px;text-transform:uppercase;color:#666;background:#f4f4f4;border-bottom:1px solid #e3e3e3}
+.tour-menu button{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid #eee;background:#fff;padding:9px 14px;cursor:pointer;font:inherit;color:#333}
+.tour-menu button:hover,.tour-menu button:focus{background:#eef6fb;outline:none}
+.tour-menu button small{display:block;color:#777;margin-top:2px;font-size:12px}
+.tour-pg{display:inline-block;background:#3c8dbc;color:#fff;border-radius:3px;padding:1px 7px;font-size:11px;font-weight:600;margin-bottom:6px}
+.driver-popover.tour-pop{max-width:400px;min-width:340px}
+.driver-popover.tour-pop .driver-popover-navigation-btns button{white-space:nowrap}
+.driver-popover.tour-pop .driver-popover-footer{gap:10px}
+.tour-fl{font-size:11.5px;color:#888;margin-bottom:3px}
+.driver-popover.tour-pop .driver-popover-progress-text{font-size:11.5px}
+.btn.disabled{opacity:.45;cursor:not-allowed;}
+</style>
+<style>
+.flt{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;background:#f8f9fa;border:1px solid #e9ecef;border-radius:6px;padding:12px 14px;margin-bottom:12px}
+.flt label{display:block;font-size:12.5px;font-weight:600;color:#555;margin-bottom:3px}
+.frm{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 20px}
+.frm label{font-size:12.5px;font-weight:600;color:#555;margin:0 0 3px;display:block}
+.frm .full{grid-column:1/-1}
+@media (max-width:700px){.frm{grid-template-columns:1fr}}
+.mode-b{display:inline-block;font-size:11px;font-weight:700;border-radius:8px;padding:1px 8px;color:#fff}
+.mode-POTONG{background:#3c8dbc}.mode-TIDAK{background:#605ca8}.mode-NONE{background:#999}
+.ja-lines{width:100%;font-size:12.5px;border-collapse:collapse;margin-bottom:4px}.ja-lines thead th,.ja-lines tfoot th{padding:7px 9px;background:#1a78b1;color:#fff;font-weight:600}.ja-lines td{padding:7px 9px;border:1px solid #d8e0eb;vertical-align:top}.ja-money{text-align:right;white-space:nowrap}
+.ja-lines td:nth-child(1),.ja-lines td:nth-child(2),.ja-lines td:nth-child(3){white-space:nowrap}
+.alert-success{background:#00a65a;border-color:#008d4c;}
+.alert{padding:10px 14px;margin-bottom:12px}.ja-lines td:nth-child(5){min-width:220px}
+.ja-lines tr.chg-row td{background:#fff7e6}
+.kpi{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px}.kpi>div{flex:1;min-width:200px;border:1px solid #d8e0eb;border-radius:4px;padding:10px 12px;background:#f8fafc}.kpi label{display:block;font-size:12px;color:#526176;margin:0 0 3px}.kpi b{font-size:17px}
+.age-old{color:#dd4b39;font-weight:600}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media (max-width:900px){.cmp{grid-template-columns:1fr}}
+.konsep h4{margin:16px 0 6px;font-size:15px}.konsep table{font-size:13px}
+.du{background:#fff3cd;border:1px dashed #e0a800;border-radius:3px;padding:0 4px;color:#8a6d00}
+#printArea{display:none}
+@media print{body.printing>*:not(#printArea){display:none!important}body.printing #printArea{display:block;padding:10px;font-size:12px}body.printing #printArea .table th,body.printing #printArea .table td{border:1px solid #999}}
+</style>
+</head>
+<body class="show-chg">
+<header class="main-header">
+  <div class="logo">SENDIGS SS</div>
+  <div class="navbar">
+    <button class="burger" type="button"><i class="fa fa-bars"></i></button>
+    <div class="nav-right">
+      <label class="chg-toggle"><input type="checkbox" id="chgToggle" checked> Tandai perubahan</label>
+      <a data-go="konsep"><i class="fa fa-list-ul"></i> Ringkasan perubahan</a>
+      <button type="button" id="btnReset"><i class="fa fa-refresh"></i> Reset data</button>
+      <a class="hide-sm">Helpdesk</a><a class="hide-sm">Manual Book</a>
+      <span class="user"><span class="avatar"></span>Admin</span>
+    </div>
+  </div>
+</header>
+<aside class="sidebar">
+  <div class="menu-search"><div><i class="fa fa-search"></i>Cari menu...</div></div>
+  <ul>
+    <li class="item"><a><i class="fa fa-dashboard"></i>Dashboard</a></li>
+    <li class="item"><a><i class="fa fa-table"></i>Master Data<i class="fa fa-angle-left chev"></i></a></li>
+    <li class="item open">
+      <a><i class="fa fa-money"></i>Penerimaan<i class="fa fa-angle-down chev"></i></a>
+      <ul class="sub">
+        <li><a data-go="pp"><span>Penerimaan Piutang</span><span class="cnt" id="c_pp"></span></a></li>
+        <li class="chg"><a data-go="pph"><span>PPh Invoice <span class="newtag">BARU</span></span><span class="cnt" id="c_pph"></span></a></li>
+      </ul>
+    </li>
+    <li class="item open">
+      <a><i class="fa fa-bank"></i>Pengeluaran Non Pembelian<i class="fa fa-angle-down chev"></i></a>
+      <ul class="sub">
+        <li><a href="request-payment.html#req" id="lnkRq"><span>Request Payment</span><span class="cnt"></span></a></li>
+        <li><a href="request-payment.html#apv"><span>Approval Request Payment</span><span class="cnt"></span></a></li>
+        <li><a href="request-payment.html#rec"><span>Record Request Payment</span><span class="cnt"></span></a></li>
+        <li><a href="request-payment.html#pay"><span>Payment List</span><span class="cnt"></span></a></li>
+        <li><a href="request-payment.html#recpay"><span>Record Payment</span><span class="cnt"></span></a></li>
+      </ul>
+    </li>
+    <li class="item open">
+      <a><i class="fa fa-book"></i>Accounting<i class="fa fa-angle-down chev"></i></a>
+      <ul class="sub"><li><a data-go="jur"><span>Jurnal <small>(cek mockup)</small></span><span class="cnt" id="c_jur"></span></a></li></ul>
+    </li>
+    <li class="item"><a><i class="fa fa-cog"></i>Settings<i class="fa fa-angle-left chev"></i></a></li>
+  </ul>
+</aside>
+<main class="content-wrapper">
+<p class="legend"><b>Mockup to-be PPh Invoice</b> (adopsi konsep SISCAL ke sendigs, PPH-R-03). PPh dari piutang (PPh 23 / PPh Final 0,5%) dilunasi saat <b>bukti potong</b> diterima. Garis putus oranye / <span class="newtag" style="display:inline-block">BARU</span> = yang berubah. Hari ini di mockup: 27-Nov-2026. Tanggal berlaku contoh <b>01-Nov-2026</b> <span class="du">menunggu konfirmasi Finance &amp; Accounting</span>. PPh 23 dan PPh Final 0,5% (UMKM) mengikuti pola yang sama.</p>
+
+<section class="page" id="pg-konsep"><div class="content-header"><h1>Ringkasan Perubahan · PPh Invoice</h1></div><div class="box"><div class="box-body konsep" id="konsepBody"></div></div></section>
+
+<section class="page hidden" id="pg-pp">
+  <div class="content-header"><h1>Penerimaan Piutang</h1></div>
+  <div id="ppMain">
+  <div class="box"><div class="box-body">
+    <ul class="nav-tabs" id="ppTabs"><li class="active"><a data-pptab="inv">Penerimaan Piutang Invoice <span class="badge bg-blue" id="cnt_inv">0</span></a></li><li><a data-pptab="rep">Report Penerimaan <span class="badge bg-blue" id="cnt_rep">0</span></a></li></ul>
+    <div style="padding-top:12px">
+      <div data-pppane="inv"><table class="table table-bordered" id="ppT"><thead><tr><th>No.</th><th>Tanggal Transaksi</th><th>Bank</th><th>Keterangan</th><th class="text-right">Nominal</th><th>Status</th><th class="text-center">Action</th></tr></thead><tbody></tbody></table></div>
+      <div data-pppane="rep" class="hidden"><table class="table table-bordered" id="ppRT"><thead><tr><th>No.</th><th>Tanggal Transaksi</th><th>Bank</th><th>Keterangan</th><th class="text-right">Nominal</th><th>No. Penerimaan</th><th class="chg">PPh <span class="newtag">BARU</span></th></tr></thead><tbody></tbody></table></div>
+    </div>
+  </div></div></div>
+  <div id="ppProc"></div>
+</section>
+
+<section class="page hidden" id="pg-pph">
+  <div class="content-header"><h1>PPh Invoice <span class="newtag">BARU</span></h1></div>
+  <div class="box chg"><div class="box-body">
+    <div class="kpi" id="pphKpi"></div>
+    <ul class="nav-tabs" id="pphTabs"><li class="active"><a data-ptab="POTONG">PPh Dipotong <span class="badge bg-blue" id="cnt_pot">0</span></a></li><li><a data-ptab="TIDAK">PPh Tidak Dipotong <span class="badge bg-blue" id="cnt_tid">0</span></a></li><li><a data-ptab="REC">Bukti Potong Diterima <span class="badge bg-blue" id="cnt_rec">0</span></a></li><li><a data-ptab="HIST">History (Penerimaan PPH 23 lama) <span class="badge bg-blue" id="cnt_hist">0</span></a></li></ul>
+    <div class="flt" style="margin-top:12px" id="pphFltWrap">
+      <div><label>Company</label><select class="form-control input-sm" id="pCo"><option value="">- Semua Company -</option><option>STM</option><option>SUSTAIN</option><option>VUCA</option></select></div>
+      <div id="pStWrap"><label>Status</label><select class="form-control input-sm" id="pSt"><option value="OPEN">Belum Selesai</option><option value="SELESAI">Selesai</option><option value="">Semua</option></select></div><div id="pQWrap">
+      <label>Search</label><input class="form-control input-sm" id="pQ" placeholder="invoice, customer, Request Payment, bukti potong"></div>
+    </div>
+    <p class="text-muted" id="pSub" style="font-size:12.5px"></p>
+    <div style="overflow-x:auto"><table class="table table-bordered table-striped" id="pphT"><thead id="pphH"></thead><tbody></tbody></table></div>
+    <p class="text-muted" style="font-size:12px">Tidak ada pilih customer: invoice yang diproses di Penerimaan Piutang dengan pilihan <b>Dipotong Client</b> atau <b>Tidak Dipotong Client</b> langsung masuk tab masing-masing (PPh 23 dan PPh Final 0,5% UMKM). Umur dihitung dari tanggal penerimaan. Label <b>Sebelum berlaku</b> = penerimaan sebelum tanggal berlaku yang PPh-nya sudah dijurnal saat penerimaan, jadi bukti potongnya dicatat tanpa jurnal.</p>
+  </div></div>
+</section>
+
+<section class="page hidden" id="pg-det"><div class="content-header"><h1>Detail PPh Invoice</h1></div><div class="box chg"><div class="box-body" id="detBody"></div></div></section>
+
+
+<section class="page hidden" id="pg-jur"><div class="content-header"><h1>Jurnal <small>(halaman bantu mockup)</small></h1></div><div class="box"><div class="box-body"><div style="overflow-x:auto"><table class="table table-bordered" id="jurT"><thead><tr><th>No Jurnal</th><th>Tanggal</th><th>Jenis</th><th>No. Transaksi</th><th>Company</th><th class="text-right">Debit</th><th></th></tr></thead><tbody></tbody></table></div></div></div></section>
+</main>
+
+<div id="printArea"></div>
+<div class="modal-bg" id="dlg"><div class="modal" id="dlgBox"><div class="modal-header"><h4 id="dlgT"></h4><button class="close" type="button" id="dlgX">&times;</button></div><div class="modal-body"><div id="dlgB"></div><div class="dlg-err" id="dlgErr"></div></div><div class="modal-footer"><button type="button" class="btn btn-success" id="dlgOk">OK</button><button type="button" class="btn btn-danger" id="dlgNo">Batal</button></div></div></div>
+<script>
+'use strict';
+/* Mockup to-be PPh Invoice (PPH-R-03): konsep SISCAL diadopsi ke sendigs. */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const nf2=n=>(n<0?'-':'')+Math.abs(Math.round((n||0)*100)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const num=v=>{const d=String(v==null?'':v).replace(/,/g,'').trim();return d===''?NaN:Number(d);};
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONF=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+const ROM=['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
+const tgl=s=>{if(!s)return '-';const [y,m,d]=s.slice(0,10).split('-');return d+'-'+MON[+m-1]+'-'+y;};
+const tglF=s=>{if(!s)return '-';const [y,m,d]=s.slice(0,10).split('-');return (+d)+' '+MONF[+m-1]+' '+y;};
+const masaTxt=m=>{if(!m)return '-';const [y,mm]=m.split('-');return MONF[+mm-1]+' '+y;};
+const pad=(n,l)=>String(n).padStart(l,'0');
+const TODAY='2026-11-27', GO_LIVE='2026-11-01', KEY='sendigs_mock_pph23_v3';
+const days=(a,b)=>Math.round((new Date(b)-new Date(a))/864e5);
+
+/* ---------- master ---------- */
+const BANKS=[
+ {id:'b1',txt:'BCA - 436.300.5287 - Bank STM',coa:'1101-02-09',nm:'Bank BCA STM',co:'STM'},
+ {id:'b2',txt:'BCA - 436.400.0300 - Bank Sustain',coa:'1101-02-05',nm:'Bank BCA Sustain',co:'SUSTAIN'},
+ {id:'b3',txt:'OCBC NISP - 7788.0000.0417 - Bank Vuca',coa:'1101-02-07',nm:'Bank OCBC Vuca',co:'VUCA'}];
+const bank=id=>BANKS.find(b=>b.id===id)||{coa:'',nm:'',txt:'-',co:''};
+const COA_PIUT='1102-01-01', COA_PPH='1106-01-02', COA_PPHF='1106-01-05', COA_ADM='7201-01-04', TBD='(COA menyusul)';
+const NMCOA={'1102-01-01':'Piutang Dagang Usaha','1106-01-02':'PPh 23 Disetor','1106-01-05':'PPh Final Disetor','7201-01-04':'Biaya Administrasi Bank'};
+// Akun yang COA-nya menyusul: kode ditulis TBD, nama dibawa sendiri.
+const AC={BEBANF:'Beban PPh Final',HUTF:'Hutang PPh Final',UNL:'Penerimaan Belum Teridentifikasi'};
+const isF=no=>{const a=arOf(no);return !!a&&a.tax==='UMKM';};
+const pphNm=no=>isF(no)?'PPh Final 0,5%':'PPh 23';
+// Akun PPh hanya dua: PPh 23 Disetor dan PPh Final Disetor (0,5%) (PPH-R-06).
+const pphCoa=no=>isF(no)?COA_PPHF:COA_PPH;
+const TAXL={PKP:'PKP',WAPU:'WAPU',KB:'Kawasan Berikat',UMKM:'UMKM Non-PKP'};
+const MODE={POTONG:'Dipotong Client',TIDAK:'Tidak Dipotong Client',NONE:'Tidak Ada PPh'};
+const modeB=m=>`<span class="mode-b mode-${m}">${MODE[m]}</span>`;
+const coOf=no=>/\/SSC\//.test(no)?'SUSTAIN':/\/VSB\//.test(no)?'VUCA':'STM';
+const taxOf=a=>{const dpp=Math.round(a.penjualan*11/12),ppn=a.tax==='PKP'?Math.round(dpp*12/100):0;return {dpp,ppn,tagihan:a.penjualan+ppn,pph:Math.round(a.penjualan*(a.tax==='UMKM'?0.5:2)/100)};};
+
+/* ---------- data ---------- */
+function seed(){return {
+ seq:{pu:61,kpph:1,bpt:2},
+ cust:[
+  {id:'C1',nm:'PT MADA WIKRI TUNGGAL',npwp:'0021.4567.8901.4150'},
+  {id:'C2',nm:'PT ARWANA CITRAMULIA TBK',npwp:'0013.3456.7890.0510'},
+  {id:'C3',nm:'PT KERETA API INDONESIA',npwp:'0010.0029.1234.0930'},
+  {id:'C4',nm:'PT INDO KORDSA TBK',npwp:'0010.6987.4321.0540'},
+  {id:'C5',nm:'PT HEINZ ABC INDONESIA',npwp:'0010.7755.3311.0920'},
+  {id:'C6',nm:'PT ASAHI DENSO INDONESIA',npwp:'0010.8844.2200.0440'}],
+ ar:[
+  {no:'INV 281/STM/2026',c:'C1',tgl:'2026-11-05',tax:'PKP',penjualan:15000000,saldo:16650000,ket:'Termin 2 Pemantauan Lingkungan'},
+  {no:'INV 284/STM/2026',c:'C2',tgl:'2026-11-10',tax:'WAPU',penjualan:40000000,saldo:40000000,ket:'Pelunasan Dokumen UKL-UPL'},
+  {no:'INV 292/STM/2026',c:'C2',tgl:'2026-11-12',tax:'PKP',penjualan:10000000,saldo:11100000,ket:'DP Kajian Andalalin'},
+  {no:'INV 290/VSB/2026',c:'C3',tgl:'2026-11-11',tax:'PKP',penjualan:5000000,saldo:5550000,ket:'Termin 3 Kajian Strategi Bisnis'},
+  {no:'INV 297/VSB/2026',c:'C3',tgl:'2026-11-13',tax:'UMKM',penjualan:8000000,saldo:8000000,ket:'Termin 4 Kajian Strategi Bisnis'},
+  {no:'INV 299/SSC/2026',c:'C4',tgl:'2026-11-09',tax:'PKP',penjualan:12000000,saldo:13320000,ket:'Termin 2 Sustainability Report'},
+  {no:'INV 245/SSC/2026',c:'C4',tgl:'2026-10-28',tax:'PKP',penjualan:20000000,saldo:400000,ket:'Termin 1 Sustainability Report'},
+  {no:'INV 233/STM/2026',c:'C5',tgl:'2026-10-30',tax:'WAPU',penjualan:30000000,saldo:600000,ket:'DP Audit Lingkungan'},
+  {no:'INV 198/STM/2026',c:'C6',tgl:'2026-09-22',tax:'PKP',penjualan:11000000,saldo:0,ket:'Pelunasan Limbah B3'},
+  {no:'INV 150/STM/2026',c:'C1',tgl:'2026-08-14',tax:'PKP',penjualan:10000000,saldo:0,ket:'Termin 1 Pemantauan Lingkungan'}],
+ mut:[
+  {id:'M1',tgl:'2026-11-20',b:'b1',ket:'TRSF E-BANKING CR 2011/FTSCY/WS95051 16350000.00 MADA WIKRI TUNGGAL',nom:16350000,st:'open'},
+  {id:'M2',tgl:'2026-11-21',b:'b1',ket:'TRSF E-BANKING CR 2111/FTSCY/WS95271 40000000.00 ARWANA CITRAMULIA',nom:40000000,st:'open'},
+  {id:'M3',tgl:'2026-11-24',b:'b3',ket:'TRF IN KAI 5550000 PEMBAYARAN INV 290',nom:5550000,st:'open'},
+  {id:'M4',tgl:'2026-11-25',b:'b1',ket:'TRSF E-BANKING CR 2511/FTSCY/WS95510 11100000.00 ARWANA CITRAMULIA',nom:11100000,st:'open'},
+  {id:'M5',tgl:'2026-11-26',b:'b3',ket:'TRF IN KAI 7960000 PEMBAYARAN INV 297',nom:7960000,st:'open'},
+  {id:'M6',tgl:'2026-11-18',b:'b2',src:'UNL',unl:'UNL-2611-0004',ket:'TRSF E-BANKING CR 1811/FTSCY/WS94410 13080000.00 INDO KORDSA',nom:13080000,st:'open'}],
+ rcp:[
+  {no:'00055/PU/XI/26',tgl:'2026-11-12',b:'b2',c:'C4',mode:'POTONG',nom:22000000,lines:[{inv:'INV 245/SSC/2026',saldo:22400000,pph:400000,admin:0,sisa:0}]},
+  {no:'00057/PU/XI/26',tgl:'2026-11-14',b:'b1',c:'C5',mode:'TIDAK',nom:30000000,lines:[{inv:'INV 233/STM/2026',saldo:30000000,pph:600000,admin:0,sisa:0}]},
+  {no:'00049/PU/X/26',tgl:'2026-10-15',b:'b1',c:'C6',mode:'POTONG',nom:12000000,legacy:true,lines:[{inv:'INV 198/STM/2026',saldo:12210000,pph:220000,admin:0,sisa:0}]},
+  {no:'00031/PU/IX/26',tgl:'2026-09-02',b:'b1',c:'C1',mode:'POTONG',nom:10900000,legacy:true,lines:[{inv:'INV 150/STM/2026',saldo:11100000,pph:200000,admin:0,sisa:0}]}],
+ pph:[
+  {inv:'INV 245/SSC/2026',c:'C4',mode:'POTONG',rcp:'00055/PU/XI/26',rtgl:'2026-11-12',amt:400000,st:'MENUNGGU_BP'},
+  {inv:'INV 233/STM/2026',c:'C5',mode:'TIDAK',rcp:'00057/PU/XI/26',rtgl:'2026-11-14',amt:600000,st:'BELUM_RP'},
+  {inv:'INV 198/STM/2026',c:'C6',mode:'POTONG',rcp:'00049/PU/X/26',rtgl:'2026-10-15',amt:220000,st:'MENUNGGU_BP',legacy:true},
+  {inv:'INV 150/STM/2026',c:'C1',mode:'POTONG',rcp:'00031/PU/IX/26',rtgl:'2026-09-02',amt:200000,st:'SELESAI',legacy:true,bp:'BPT/2026/10/0001'}],
+ kmb:[],
+ bukti:[{no:'BPT/2026/10/0001',bp_no:'2600187654',tgl:'2026-10-05',npwp:'0021.4567.8901.4150',c:'C1',inv:'INV 150/STM/2026',amt:200000,file:'bupot-mada-0926.pdf',legacy:true}],
+ hist:[
+  {inv:'INV 020/SSC/2026',c:'C4',proj:'Laporan Keberlanjutan 2025',ket:'Termin 1 Sustainability Report',pph:400000,setor:400000,tgl:'2026-08-21',file:'bukti-setor-kordsa.pdf'},
+  {inv:'INV 176/STM/2026',c:'C1',proj:'Pemantauan Lingkungan Semester 1',ket:'Pelunasan Pemantauan Lingkungan',pph:300000,setor:300000,tgl:'2026-07-09',file:'bukti-setor-mada.pdf'},
+  {inv:'INV 198/STM/2025',c:'C6',proj:'Pengelolaan Limbah B3',ket:'Pelunasan Limbah B3',pph:220000,setor:220000,tgl:'2025-12-15',file:'bpu-asahi-1225.pdf'}],
+ jur:[]};}
+let S;
+// Sambungan dengan Request Payment (request-payment.html di folder ini, salinan mockup specs/docs/request-payment) lewat localStorage (PPH-R-11).
+const KEY_RP='sendigs-pph-rp-v1';
+const lsGet=k=>{try{return JSON.parse(localStorage.getItem(k)||'null');}catch(e){return null;}};
+// Tahap dokumen pengembalian di Request Payment (dibaca dari data Request Payment)
+function rpStage(k){if(k.paid)return 'Dibayar '+(k.payNo||'')+' · '+tgl(k.paid);const R=lsGet(KEY_RP);const d=R&&R.docs&&R.docs.find(x=>x.no===k.no);
+ if(!d||d.status==='wait')return 'Di Request Payment';const g=(R.pgjs||[]).find(x=>x.transfers.some(t=>t.items.includes(k.no)));
+ return !g?'Di Request Payment':g.status==='pending'?'Approval '+g.no:'Menunggu Payment ('+g.no+')';}
+function load(){try{const r=localStorage.getItem(KEY);if(r){S=JSON.parse(r);return;}}catch(e){}S=seed();}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+const cust=id=>S.cust.find(c=>c.id===id)||{nm:'',npwp:''};
+const arOf=no=>S.ar.find(a=>a.no===no);
+const pphOf=no=>S.pph.find(p=>p.inv===no);
+const rcpOf=no=>S.rcp.find(r=>r.no===no);
+const bpOf=no=>S.bukti.find(b=>b.no===no);
+const pending=no=>{const p=pphOf(no);return p&&!p.legacy&&p.st!=='SELESAI'?p.amt:0;};
+const payable=a=>a.saldo-pending(a.no);
+
+/* ---------- jurnal (format tabel jurnal penerimaan sendigs) ---------- */
+const L=(coa,co,d,k,ket,chg,nm)=>({coa,co,nm:nm||NMCOA[coa]||coa,d,k,ket,chg:!!chg});
+const T=(key,co,d,k,ket,chg)=>L(TBD,co,d,k,ket,chg,AC[key]);
+function jtable(lines,date,o){o=o||{};let D=0,K=0;
+ const body=lines.length?lines.map(x=>{D+=x.d;K+=x.k;return `<tr class="${x.chg?'chg-row':''}"><td>${date?tglF(date):(o.dateTxt||'-')}</td><td>${x.coa===TBD?'<span class="du">COA menyusul</span>':x.coa===BANK_TBD?'<span class="text-muted"><i>'+esc(x.coa)+'</i></span>':esc(x.coa)}</td><td>${esc(x.co)}</td><td>${esc(x.nm)}</td><td>${esc(x.ket)}</td><td class="ja-money">${nf2(x.d)}</td><td class="ja-money">${nf2(x.k)}</td></tr>`;}).join('')
+  :`<tr><td colspan="7" class="text-center text-muted">${o.empty||'Tidak ada jurnal'}</td></tr>`;
+ return `<div style="overflow-x:auto"><table class="ja-lines" ${o.id?`id="${o.id}"`:''}><thead><tr><th>Tanggal Jurnal</th><th>COA</th><th>Nama Company</th><th>Nama Account</th><th>Deskripsi</th><th class="ja-money">Debit</th><th class="ja-money">Credit</th></tr></thead><tbody>${body}</tbody>${lines.length?`<tfoot><tr><th colspan="5" class="text-right">Total${D===K?'':' (selisih '+nf2(D-K)+')'}</th><th class="ja-money">${nf2(D)}</th><th class="ja-money">${nf2(K)}</th></tr></tfoot>`:''}</table></div>`;}
+const NOTE_CHG='<p class="text-muted" style="font-size:12px;margin:4px 0 0">Baris berlatar kuning = baris baru / berubah dibanding sekarang. Akun bertanda <span class="du">COA menyusul</span> belum punya kode di sendigs.</p>';
+// Baris kas: Bank, atau Penerimaan Belum Teridentifikasi bila penerimaan berasal dari Unlocated (pola Alokasi AP-R-42).
+function cashLine(r,amt,cn,docs){const b=bank(r.b);
+ return r.src==='UNL'?T('UNL',b.co,amt,0,`Penerimaan piutang ${cn} - ${docs} (dari ${r.unl})`):L(b.coa,b.co,amt,0,`Penerimaan piutang ${cn} - ${docs}`,false,b.nm);}
+// UMKM + Tidak Ada PPh: PPh Final 0,5% disetor sendiri seperti sekarang (Beban PPh Final / Hutang PPh Final).
+function selfFinal(r,j,cn){if(r.mode!=='NONE')return;r.lines.forEach(l=>{const a=arOf(l.inv);if(a&&a.tax==='UMKM'){const p=taxOf(a).pph,co=coOf(l.inv);j.push(T('BEBANF',co,p,0,`PPh Final setor sendiri ${l.inv} - ${cn}`));j.push(T('HUTF',co,0,p,`PPh Final setor sendiri ${l.inv} - ${cn}`));}});}
+function receiptJournal(r){const b=bank(r.b),cn=cust(r.c).nm,docs=r.lines.map(l=>l.inv).join(', '),j=[];
+ const bankAmt=r.lines.reduce((t,l)=>t+l.saldo-l.sisa-l.admin-(r.mode==='POTONG'?l.pph:0),0);
+ j.push(cashLine(r,bankAmt,cn,docs));
+ r.lines.forEach(l=>{if(l.admin)j.push(L(COA_ADM,b.co,l.admin,0,`Biaya admin bank ${l.inv} - ${cn}`));});
+ r.lines.forEach(l=>{const co=coOf(l.inv),p=r.mode==='NONE'?0:l.pph;
+  j.push(L(COA_PIUT,co,0,l.saldo-l.sisa-p,`Pelunasan ${l.inv} - ${cn}`+(p?` (${pphNm(l.inv)} ${nf2(p)} tetap di piutang, menunggu bukti potong)`:''),!!p));
+  if(r.mode==='TIDAK'&&p)j.push(L(pphCoa(l.inv),co,0,p,`${pphNm(l.inv)} ${l.inv} tidak dipotong ${cn}, dikembalikan ke client via Request Payment`,true));});
+ selfFinal(r,j,cn);return j;}
+function asIsJournal(r){const b=bank(r.b),cn=cust(r.c).nm,docs=r.lines.map(l=>l.inv).join(', '),j=[],pot=r.mode==='POTONG';
+ const bankAmt=r.lines.reduce((t,l)=>t+l.saldo-l.sisa-l.admin-(pot?l.pph:0),0);
+ j.push(cashLine(r,bankAmt,cn,docs));
+ r.lines.forEach(l=>{if(l.admin)j.push(L(COA_ADM,b.co,l.admin,0,`Biaya admin bank ${l.inv} - ${cn}`));});
+ r.lines.forEach(l=>{if(pot&&l.pph)j.push(isF(l.inv)?T('BEBANF',coOf(l.inv),l.pph,0,`PPh Final dipotong ${l.inv} - ${cn}`):L(COA_PPH,coOf(l.inv),l.pph,0,`PPh 23 dipotong ${l.inv} - ${cn}`));});
+ r.lines.forEach(l=>j.push(L(COA_PIUT,coOf(l.inv),0,l.saldo-l.sisa,`Pelunasan ${l.inv} - ${cn}`)));
+ selfFinal(r,j,cn);return j;}
+function bpJournal(b){if(b.legacy)return [];const cn=cust(b.c).nm,co=coOf(b.inv),nm=pphNm(b.inv);
+ return [L(pphCoa(b.inv),co,b.amt,0,`${nm} ${b.inv} - bukti potong ${b.bp_no||'-'} dari ${cn}`,true),L(COA_PIUT,co,0,b.amt,`Pelunasan sisa piutang (${nm}) ${b.inv} dengan bukti potong ${b.bp_no||'-'}`,true)];}
+
+/* ---------- dialog ---------- */
+let dlgCb=null;
+function dlg(title,html,opt){opt=opt||{};$('dlgT').innerHTML=title;$('dlgB').innerHTML=html;$('dlgErr').textContent='';$('dlgErr').style.display='none';
+ $('dlgBox').classList.toggle('lg',!!opt.lg);$('dlgOk').textContent=opt.ok||'OK';$('dlgNo').style.display=opt.cancel===false?'none':'';$('dlgOk').disabled=false;
+ dlgCb=opt.onOk||null;$('dlg').classList.add('on');}
+function dlgClose(){$('dlg').classList.remove('on');dlgCb=null;}
+function dlgErr(m){$('dlgErr').textContent=m||'';$('dlgErr').style.display=m?'block':'none';}
+const info=(t,m)=>dlg(t,`<p>${m}</p>`,{cancel:false});
+$('dlgOk').onclick=()=>{if(dlgCb){if(dlgCb()===false)return;}dlgClose();};
+$('dlgNo').onclick=dlgClose;$('dlgX').onclick=dlgClose;
+
+/* ---------- navigasi ---------- */
+const U={page:'konsep',pptab:'inv',ptab:'POTONG',det:null,proc:null};
+const NAV={det:'pph'};
+function go(p){U.page=p;document.querySelectorAll('.page').forEach(s=>s.classList.toggle('hidden',s.id!=='pg-'+p));
+ document.querySelectorAll('.sidebar [data-go]').forEach(a=>a.classList.toggle('active',a.dataset.go===(NAV[p]||p)));render();window.scrollTo&&window.scrollTo(0,0);}
+document.querySelectorAll('[data-go]').forEach(a=>a.onclick=()=>go(a.dataset.go));
+$('chgToggle').onchange=e=>document.body.classList.toggle('show-chg',e.target.checked);
+$('btnReset').onclick=()=>dlg('Reset data mockup?','<p>Semua hasil uji coba dihapus.</p>',{ok:'Ya, reset',onOk:()=>{S=seed();save();try{localStorage.removeItem(KEY_RP);}catch(e){}U.proc=null;setTimeout(()=>go('konsep'),0);}});
+function render(){save();
+ $('c_pp').textContent=S.mut.filter(m=>m.st==='open').length||'';
+ $('c_pph').textContent=S.pph.filter(p=>p.st!=='SELESAI').length||'';
+ $('c_jur').textContent=S.jur.length||'';
+ ({konsep:rKonsep,pp:rPP,pph:rPph,det:rDet,jur:rJur}[U.page]||(()=>{}))();}
+
+/* ---------- Ringkasan ---------- */
+function rKonsep(){
+ const ln=[{inv:'INV 000/STM/2026',saldo:11100000,pph:200000,admin:0,sisa:0}],
+  j1=receiptJournal({b:'b1',c:'C1',mode:'POTONG',lines:ln}),j2=receiptJournal({b:'b1',c:'C1',mode:'TIDAK',lines:ln}),
+  j3=receiptJournal({b:'b1',c:'C1',mode:'POTONG',src:'UNL',unl:'UNL-2611-0001',lines:ln});
+ $('konsepBody').innerHTML=`
+<p><b>Intinya.</b> Piutang tetap Penjualan + PPN; jurnal invoice tidak berubah. Bagian <b>PPh dari piutang baru dianggap lunas saat bukti potong diterima</b>. Baris jurnal PPh yang sekarang dibuat di Penerimaan Piutang dipindah ke saat input bukti potong. <b>Kewajiban setor PPh ada di client</b>: kalau client tidak memotong (bayar penuh), PPh <b>dikembalikan ke client</b> lewat Request Payment, lalu client mengirim bukti potong. Berlaku untuk <b>PPh 23</b> dan <b>PPh Final 0,5% (UMKM)</b>. Sumber konsep awal: <code>specs/input/PPh Invoice/PPh Invoice.html</code> (SISCAL).</p>
+<h4>Yang berubah di sendigs</h4>
+<table class="table table-bordered"><thead><tr><th>Bagian</th><th>Sekarang</th><th>Usulan</th></tr></thead><tbody>
+<tr><td>Penerimaan Piutang: pilihan PPh</td><td>PPh 23/PPh Final Disetor: <b>Dipotong PPh / Tidak Dipotong PPh</b></td><td class="chg"><b>Dipotong Client / Tidak Dipotong Client / Tidak Ada PPh</b></td></tr>
+<tr><td>Jurnal penerimaan (Dipotong)</td><td>Dr Bank + <b>Dr PPh 23 Disetor ${COA_PPH}</b> (UMKM: Dr Beban PPh Final) / Cr Piutang penuh</td><td class="chg">Dr Bank / Cr Piutang (tagihan − PPh). <b>PPh tetap di piutang</b></td></tr>
+<tr><td>Jurnal penerimaan (Tidak Dipotong Client)</td><td>Dr Bank / Cr Piutang penuh; PPh tidak dilacak</td><td class="chg">Dr Bank / Cr Piutang (tagihan − PPh) / <b>Cr PPh 23 Disetor</b> (UMKM: PPh Final Disetor) sampai uangnya dikembalikan</td></tr>
+<tr><td>Pengembalian PPh ke client</td><td>tidak ada</td><td class="chg"><b>Process to Request Payment</b> + lampiran surat permintaan client. Jurnal Dr PPh 23 Disetor / Cr Bank terbentuk <b>saat Payment</b>; di proses ini hanya preview</td></tr>
+<tr><td>Penerimaan dari Unlocated</td><td>Dr Penerimaan Belum Teridentifikasi / Cr Piutang (Alokasi AP-R-42)</td><td class="chg">pola PPh sama; hanya baris kas yang Dr Penerimaan Belum Teridentifikasi</td></tr>
+<tr><td>UMKM + Tidak Ada PPh</td><td>PPh Final setor sendiri: Dr Beban PPh Final / Cr Hutang PPh Final</td><td>tetap seperti sekarang</td></tr>
+<tr><td>Biaya Admin</td><td>kolom Biaya Admin, maks Rp 10.000, Dr ${COA_ADM}</td><td>tetap seperti sekarang (tidak terkait PPh)</td></tr>
+<tr><td>Daftar invoice di Penerimaan Piutang</td><td>semua invoice dengan saldo</td><td class="chg">invoice yang sisanya tinggal PPh menunggu bukti potong <b>tidak muncul</b></td></tr>
+<tr><td>Menu</td><td><b>Penerimaan PPH 23</b>: upload bukti setor, jurnal Dr PPh 23 / Cr Piutang tanggal simpan</td><td class="chg">diganti <b>PPh Invoice</b>: tab <b>PPh Dipotong</b> (input bukti potong), <b>PPh Tidak Dipotong</b> (pengembalian via Request Payment), <b>Bukti Potong Diterima</b> (record perusahaan, view + print), <b>History</b> (data menu lama)</td></tr>
+</tbody></table>
+<h4>Alur</h4>
+<table class="table table-bordered"><thead><tr><th>Pilihan di Penerimaan Piutang</th><th>Uang masuk</th><th>Langkah berikutnya</th></tr></thead><tbody>
+<tr><td>${modeB('POTONG')}</td><td>Tagihan − PPh</td><td>tab PPh Dipotong → Input Bukti Potong → Selesai (masuk Bukti Potong Diterima)</td></tr>
+<tr><td>${modeB('TIDAK')}</td><td>Tagihan penuh</td><td>tab PPh Tidak Dipotong → <b>Process to Request Payment</b> (surat client) → <a href="request-payment.html#req">Request Payment</a> (kategori Pengembalian PPh): Atur Pembayaran → Approval → Payment (bank pembayar dipilih di sini, jurnal terbentuk) → pindah ke tab PPh Dipotong → Input Bukti Potong → Selesai</td></tr>
+<tr><td>${modeB('NONE')}</td><td>Tagihan penuh</td><td>client bukan pemotong; tidak dilacak (seperti "Tidak Dipotong" sekarang)</td></tr></tbody></table>
+<h4>Contoh jurnal (Penjualan 10.000.000 · PPN 1.100.000 · tagihan 11.100.000 · PPh 23 2% = 200.000)</h4>
+<div class="cmp"><div><b>Penerimaan · Dipotong Client</b>${jtable(j1,TODAY)}</div><div><b>Penerimaan · Tidak Dipotong Client</b>${jtable(j2,TODAY)}</div>
+<div><b>Payment pengembalian ke client (modul Request Payment)</b>${jtable(refundJournal({c:'C1',inv:'INV 000/STM/2026',amt:200000,no:'KPPH/…',bank:'BCA',rek:'1234567890',nmrek:'PT MADA WIKRI TUNGGAL'}),null,{dateTxt:'(tanggal Payment)'})}</div><div><b>Bukti Potong diterima (dua pilihan)</b>${jtable(bpJournal({c:'C1',inv:'INV 000/STM/2026',amt:200000,bp_no:'No BP'}),TODAY)}</div>
+<div><b>Penerimaan dari Unlocated · Dipotong Client</b>${jtable(j3,TODAY)}</div><div><b>PPh Final 0,5% (UMKM)</b><p style="font-size:13px">Pola sama dengan akun <b>PPh Final Disetor ${COA_PPHF}</b> menggantikan PPh 23 Disetor (penerimaan tidak dipotong, pengembalian, dan bukti potong).</p></div></div>
+${NOTE_CHG}
+<h4>Aturan di mockup</h4><ul class="chg-list">
+<li>Tidak ada pilih customer di PPh Invoice: invoice yang diproses dengan Dipotong Client / Tidak Dipotong Client langsung masuk tab masing-masing.</li>
+<li>Process to Request Payment: wajib Bank Tujuan, No. Rekening, Nama Rekening client, dan <b>surat permintaan dari client</b>. Nominal = PPh invoice. Nomor dokumen usulan <code>KPPH/yyyy/mm/nnnn</code>.</li>
+<li>Bukti potong untuk PPh yang tidak dipotong baru bisa diinput <b>setelah uangnya dikembalikan</b> (Payment).</li>
+<li>Input bukti potong per invoice; satu nomor bukti potong boleh untuk beberapa invoice <b>asal customernya sama</b>. Nilai harus sama dengan PPh di sistem.</li>
+<li>Tanggal jurnal bukti potong = tanggal bukti potong. Nomor record usulan <code>BPT/yyyy/mm/nnnn</code>.</li>
+<li>Penerimaan sebelum tanggal berlaku (contoh ${tgl(GO_LIVE)}, <span class="du">menunggu konfirmasi Finance &amp; Accounting</span>) sudah menjurnal PPh saat penerimaan: input bukti potongnya <b>tanpa jurnal</b>.</li></ul>
+<h4>Masih menunggu</h4><ul class="chg-list">
+<li>Akun PPh hanya <b>PPh 23 Disetor ${COA_PPH}</b> dan <b>PPh Final Disetor ${COA_PPHF}</b> (0,5%). Kode PPh Final Disetor diambil dari menu lama Penerimaan PPH 23 (invoice tarif 0,5%) <span class="du">perlu dikonfirmasi</span>. COA Penerimaan Belum Teridentifikasi menyusul.</li>
+<li>Tanggal berlaku (dikonfirmasi ke Finance &amp; Accounting).</li>
+<li>Kategori dokumen pengembalian di Request Payment dan format nomornya <span class="du">(diisi user)</span>.</li>
+<li>Dibahas nanti: bukti potong tidak pernah terbit, selisih kecil nilai bukti potong, bukti potong datang sebelum uang diterima, pembatalan.</li></ul>
+<p><a class="btn btn-primary btn-sm" data-go2="pp">Coba Penerimaan Piutang</a> <a class="btn btn-default btn-sm" data-go2="pph">Lihat PPh Invoice</a></p>`;
+ document.querySelectorAll('[data-go2]').forEach(a=>a.onclick=()=>go(a.dataset.go2));}
+
+/* ---------- Penerimaan Piutang ---------- */
+document.querySelectorAll('[data-pptab]').forEach(a=>a.onclick=()=>{U.pptab=a.dataset.pptab;rPP();});
+function rPP(){
+ document.querySelectorAll('#ppTabs li').forEach(li=>li.classList.toggle('active',li.firstChild.dataset.pptab===U.pptab));
+ document.querySelectorAll('[data-pppane]').forEach(d=>d.classList.toggle('hidden',d.dataset.pppane!==U.pptab));
+ const open=S.mut.filter(m=>m.st==='open');$('cnt_inv').textContent=open.length;$('cnt_rep').textContent=S.rcp.length;
+ $('ppMain').classList.toggle('hidden',!!U.proc);
+ if(U.proc)return rProc();$('ppProc').innerHTML='';
+ document.querySelector('#ppT tbody').innerHTML=open.map((m,i)=>`<tr><td>${i+1}</td><td>${tgl(m.tgl)}</td><td>${m.src==='UNL'?`<span class="label label-info">Unlocated</span> ${esc(m.unl)}<br><small class="text-muted">${esc(bank(m.b).txt)}</small>`:esc(bank(m.b).txt)}</td><td>${esc(m.ket)}</td><td class="text-right">${nf2(m.nom)}</td><td><span class="label label-warning">Open</span></td><td class="text-center"><button class="btn btn-xs btn-success" data-proc="${m.id}"><i class="fa fa-cog"></i> Process</button></td></tr>`).join('')||'<tr><td colspan="7" class="text-center text-muted">Tidak ada data.</td></tr>';
+ document.querySelector('#ppRT tbody').innerHTML=S.rcp.map((r,i)=>`<tr><td>${i+1}</td><td>${tgl(r.tgl)}</td><td>${r.src==='UNL'?'Unlocated '+esc(r.unl):esc(bank(r.b).txt)}</td><td>${esc(cust(r.c).nm)} - ${esc(r.lines.map(l=>l.inv).join(', '))}</td><td class="text-right">${nf2(r.nom)}</td><td>${esc(r.no)}</td><td class="chg">${modeB(r.mode)}${r.legacy?' <small class="text-muted">sebelum berlaku</small>':''}</td></tr>`).join('');
+ document.querySelectorAll('[data-proc]').forEach(b=>b.onclick=()=>{U.proc={mut:b.dataset.proc,c:'',mode:'',sel:{},step:1,admin:{},sisa:{}};rPP();});}
+const HELP={POTONG:'Client memotong PPh (PPh 23 / PPh Final 0,5%) dan menyetorkannya sendiri. Uang masuk = tagihan − PPh. Bagian PPh tetap di piutang dengan status <b>Menunggu Bukti Potong</b> sampai bukti potongnya diinput di menu PPh Invoice.',
+ TIDAK:'Client pemotong PPh tapi tidak memotong (bayar penuh). Kewajiban setor ada di client: PPh <b>dikembalikan ke client</b> lewat Request Payment setelah ada surat permintaan client, lalu client mengirim bukti potong. Uang masuk = tagihan penuh; bagian PPh dicatat di <b>Cr PPh 23 Disetor</b> (UMKM: PPh Final Disetor) sampai dikembalikan, dan piutangnya tetap terbuka sampai bukti potong diterima. Status awal <b>Belum Diproses</b>.',
+ NONE:'Client bukan pemotong PPh 23. Uang masuk = tagihan penuh. Sama seperti pilihan "Tidak Dipotong PPh" sekarang, tidak dilacak di PPh Invoice.'};
+const linePph=(a,mode)=>mode==='NONE'||!mode?0:taxOf(a).pph;
+function rProc(){const P=U.proc,m=S.mut.find(x=>x.id===P.mut);
+ if(P.step===2)return rProc2();
+ const custOpts=S.cust.map(c=>`<option value="${c.id}" ${P.c===c.id?'selected':''}>${esc(c.nm)}</option>`).join('');
+ const list=P.c?S.ar.filter(a=>a.c===P.c&&payable(a)>0):[],hidden=P.c?S.ar.filter(a=>a.c===P.c&&a.saldo>0&&payable(a)<=0):[];
+ $('ppProc').innerHTML=`<div class="box"><div class="box-body">
+ <div class="frm">
+  <div><label>Nama Customer <span class="text-red">*</span></label><select class="form-control" id="rCust"><option value="">- Pilih Customer -</option>${custOpts}</select></div>
+  <div><label>Deposit <span class="text-red">*</span></label><select class="form-control" disabled><option>Tidak Pakai Deposit</option></select></div>
+  <div class="chg"><label>PPh <span class="text-red">*</span> <span class="newtag">BERUBAH</span></label><select class="form-control" id="rPph"><option value="">- Pilih -</option>${Object.keys(MODE).map(k=>`<option value="${k}" ${P.mode===k?'selected':''}>${MODE[k]}</option>`).join('')}</select>
+   <small class="text-muted" id="rPphHelp">${P.mode?HELP[P.mode]:'Sekarang label "PPh 23/PPh Final Disetor" dengan pilihan Dipotong PPh / Tidak Dipotong PPh. Pilih salah satu untuk melihat penjelasannya.'}</small></div>
+  <div><label>Nominal Penerimaan Bank <span class="text-red">*</span></label><input class="form-control text-right" readonly value="${nf2(m.nom)}"><small class="text-muted">${m.src==='UNL'?'Dari Unlocated '+esc(m.unl)+' · ':''}${esc(bank(m.b).txt)} · ${tgl(m.tgl)}</small></div>
+ </div>
+ <div style="overflow-x:auto;margin-top:12px"><table class="table table-bordered" id="rDocs"><thead><tr><th>Tgl Invoice</th><th>Nomor Invoice</th><th>TAX Code</th><th class="text-right">Penjualan</th><th class="text-right">DPP</th><th class="text-right">PPN</th><th class="text-right">PPH 23 / PPh Final</th><th class="text-right">Total Tagihan</th><th class="text-right">Saldo Piutang</th><th class="text-center">Pilih</th></tr></thead><tbody>
+ ${list.map(a=>{const t=taxOf(a);return `<tr><td>${tgl(a.tgl)}</td><td>${esc(a.no)}</td><td>${TAXL[a.tax]||a.tax}</td><td class="text-right">${nf2(a.penjualan)}</td><td class="text-right">${nf2(t.dpp)}</td><td class="text-right">${nf2(t.ppn)}</td><td class="text-right">${nf2(linePph(a,P.mode||'POTONG'))}</td><td class="text-right">${nf2(t.tagihan)}</td><td class="text-right">${nf2(payable(a))}</td><td class="text-center"><input type="checkbox" data-pick="${esc(a.no)}" ${P.sel[a.no]?'checked':''}></td></tr>`;}).join('')||`<tr><td colspan="10" class="text-center text-muted">${P.c?'Tidak ada invoice outstanding.':'Pilih customer untuk melihat invoice outstanding.'}</td></tr>`}
+ </tbody></table></div>
+ ${hidden.length?`<p class="chg text-muted" id="rHidden" style="font-size:12.5px"><span class="newtag">BARU</span> ${hidden.length} invoice sisa piutangnya tinggal PPh menunggu bukti potong (${hidden.map(a=>esc(a.no)).join(', ')}), jadi tidak ditampilkan. Pelunasannya lewat <b>PPh Invoice</b>.</p>`:''}
+ <div class="alert alert-danger hidden" id="rMsg"></div>
+ <button class="btn btn-danger btn-sm" id="rBack"><i class="fa fa-reply"></i> Back</button> <button class="btn btn-primary btn-sm" id="rNext">Process</button>
+ </div></div>`;
+ $('rCust').onchange=e=>{P.c=e.target.value;P.sel={};rProc();};
+ $('rPph').onchange=e=>{P.mode=e.target.value;rProc();};
+ document.querySelectorAll('[data-pick]').forEach(c=>c.onchange=()=>{if(c.checked)P.sel[c.dataset.pick]=1;else delete P.sel[c.dataset.pick];});
+ $('rBack').onclick=()=>{U.proc=null;rPP();};
+ $('rNext').onclick=()=>{const msg=!P.c?'Pilih customer.':!P.mode?'Pilih PPh: Dipotong Client, Tidak Dipotong Client, atau Tidak Ada PPh.':!Object.keys(P.sel).length?'Pilih minimal 1 invoice.':'';
+  if(msg){$('rMsg').textContent=msg;$('rMsg').classList.remove('hidden');return;}P.step=2;rProc();};}
+function draftRcp(){const P=U.proc,m=S.mut.find(x=>x.id===P.mut);
+ return {b:m.b,src:m.src,unl:m.unl,c:P.c,mode:P.mode,nom:m.nom,tgl:m.tgl,lines:Object.keys(P.sel).map(no=>{const a=arOf(no);return {inv:no,saldo:payable(a),pph:linePph(a,P.mode),admin:P.admin[no]||0,sisa:P.sisa[no]||0};})};}
+const bankPart=(mode,l)=>l.saldo-l.sisa-l.admin-(mode==='POTONG'?l.pph:0);
+function rProc2(){const P=U.proc,r=draftRcp();
+ $('ppProc').innerHTML=`<div class="box"><div class="box-body">
+ <h4 style="margin-top:0">Penerimaan Piutang · ${esc(cust(r.c).nm)} · ${modeB(r.mode)}</h4>
+ <div style="overflow-x:auto"><table class="table table-bordered" id="rLines"><thead><tr><th>Nomor Invoice</th><th class="text-right">Total Tagihan</th><th class="text-right">Piutang Dagang</th><th class="text-right chg">PPh 23 / PPh Final <small>(${r.mode==='POTONG'?'menunggu bukti potong':r.mode==='TIDAK'?'dikembalikan ke client':'-'})</small></th><th class="text-right">Biaya Admin</th><th class="text-right">Sisa Piutang</th><th class="text-right">Alokasi Penerimaan</th></tr></thead><tbody>
+ ${r.lines.map(l=>`<tr data-no="${esc(l.inv)}"><td>${esc(l.inv)}</td><td class="text-right">${nf2(taxOf(arOf(l.inv)).tagihan)}</td><td class="text-right">${nf2(l.saldo)}</td><td class="text-right chg">${nf2(r.mode==='NONE'?0:l.pph)}</td><td><input class="form-control input-sm text-right" data-f="admin" value="${l.admin?nf2(l.admin):''}" placeholder="0.00"></td><td><input class="form-control input-sm text-right" data-f="sisa" value="${l.sisa?nf2(l.sisa):''}" placeholder="0.00"></td><td class="text-right" data-alloc>${nf2(bankPart(r.mode,l))}</td></tr>`).join('')}
+ </tbody></table></div>
+ <div class="kpi"><div><label>Total harus masuk bank</label><b id="rTot">0.00</b></div><div><label>Nominal Penerimaan Bank</label><b>${nf2(r.nom)}</b></div><div><label>Kontrol</label><b id="rCtl">0.00</b></div></div>
+ <div class="alert hidden" id="rBan"></div>
+ <h4>Preview Jurnal</h4><div id="rJv"></div>${NOTE_CHG}
+ <p style="margin-top:8px"><a href="javascript:void(0)" id="rCmp">Bandingkan dengan jurnal sekarang</a></p><div id="rCmpBox" class="hidden"></div>
+ <button class="btn btn-danger btn-sm" id="rBack2"><i class="fa fa-reply"></i> Back</button> <button class="btn btn-primary btn-sm" id="rSave"><i class="fa fa-save"></i> Save</button>
+ </div></div>`;
+ document.querySelectorAll('#rLines input').forEach(inp=>inp.oninput=()=>{const no=inp.closest('tr').dataset.no,v=num(inp.value);P[inp.dataset.f][no]=isFinite(v)?v:0;calc();});
+ $('rBack2').onclick=()=>{P.step=1;rProc();};
+ $('rCmp').onclick=()=>{$('rCmpBox').classList.toggle('hidden');calc();};
+ $('rSave').onclick=saveRcp;calc();}
+function rcpErr(r){const tot=r.lines.reduce((t,l)=>t+bankPart(r.mode,l),0),ctl=r.nom-tot,adm=r.lines.reduce((t,l)=>t+l.admin,0);
+ if(r.lines.some(l=>l.sisa<0||l.admin<0))return {tot,ctl,err:'Nilai tidak boleh negatif.'};
+ if(adm>10000)return {tot,ctl,err:'Total biaya admin melebihi Rp 10.000.'};
+ if(ctl>0)return {tot,ctl,err:`Uang masuk lebih Rp ${nf2(ctl)} dari yang harus masuk bank.`};
+ if(ctl<0)return {tot,ctl,err:`Uang masuk kurang Rp ${nf2(-ctl)}. Alokasikan ke Biaya Admin atau Sisa Piutang.`};
+ return {tot,ctl,err:''};}
+function calc(){const r=draftRcp(),e=rcpErr(r);
+ document.querySelectorAll('#rLines tbody tr').forEach(tr=>{const l=r.lines.find(x=>x.inv===tr.dataset.no);tr.querySelector('[data-alloc]').textContent=nf2(bankPart(r.mode,l));});
+ $('rTot').textContent=nf2(e.tot);$('rCtl').textContent=nf2(e.ctl);
+ $('rBan').className='alert '+(e.err?'alert-warning':'alert-success');$('rBan').textContent=e.err||'Balance. Siap disimpan.';
+ $('rJv').innerHTML=jtable(receiptJournal(r),r.tgl,{id:'rJvT'});
+ $('rCmpBox').innerHTML=`<div class="cmp"><div><b>Sekarang</b>${jtable(r.mode==='TIDAK'?asIsJournal({...r,mode:'NONE'}):asIsJournal(r),r.tgl)}</div><div><b>Usulan</b>${jtable(receiptJournal(r),r.tgl)}</div></div>`;}
+function saveRcp(){const r=draftRcp(),e=rcpErr(r);if(e.err)return info('Belum bisa disimpan',esc(e.err));
+ dlg('Simpan penerimaan?','<p>Penerimaan piutang dan jurnalnya akan disimpan.</p>',{ok:'Ya, simpan',onOk:()=>{
+  const d=new Date(r.tgl);r.no=pad(S.seq.pu++,5)+'/PU/'+ROM[d.getMonth()]+'/'+String(d.getFullYear()).slice(2);
+  S.rcp.push(r);S.mut.find(x=>x.id===U.proc.mut).st='done';
+  r.lines.forEach(l=>{arOf(l.inv).saldo-=l.saldo-l.sisa-(r.mode==='NONE'?0:l.pph);});
+  S.jur.push({jenis:'Penerimaan Piutang',trx:r.no,tgl:r.tgl,lines:receiptJournal(r)});
+  const tracked=r.mode==='NONE'?[]:r.lines.filter(l=>l.pph>0);
+  tracked.forEach(l=>S.pph.push({inv:l.inv,c:r.c,mode:r.mode,rcp:r.no,rtgl:r.tgl,amt:l.pph,st:r.mode==='TIDAK'?'BELUM_RP':'MENUNGGU_BP'}));
+  U.proc=null;
+  setTimeout(()=>{if(tracked.length){U.ptab=r.mode==='TIDAK'?'TIDAK':'POTONG';go('pph');}else go('pp');
+   info('Data has been saved',`Penerimaan <b>${esc(r.no)}</b> tersimpan.`+(tracked.length?` PPh ${tracked.map(l=>esc(l.inv)).join(', ')} masuk <b>PPh Invoice</b> dengan status <b>${r.mode==='TIDAK'?'Belum Diproses (pengembalian ke client)':'Menunggu Bukti Potong'}</b>.`:''));},0);}});}
+
+/* ---------- PPh Invoice ---------- */
+// Status: BELUM_RP (tidak dipotong, belum diproses) -> RP (dokumen pengembalian di Request Payment) -> MENUNGGU_BP (sudah dibayar balik / dipotong client) -> SELESAI (bukti potong diterima)
+const tabOf=p=>p.st==='BELUM_RP'||p.st==='RP'?'TIDAK':'POTONG';
+const ST={BELUM_RP:['danger','Belum Diproses'],RP:['warning','Proses Request Payment'],MENUNGGU_BP:['warning','Menunggu Bukti Potong'],SELESAI:['success','Selesai']};
+const stB=p=>`<span class="label label-${ST[p.st][0]}">${ST[p.st][1]}</span>`;
+const sum=a=>a.reduce((t,p)=>t+p.amt,0);
+const kmbOf=no=>S.kmb.find(k=>k.no===no);
+document.querySelectorAll('[data-ptab]').forEach(a=>a.onclick=()=>{U.ptab=a.dataset.ptab;rPph();});
+['pCo','pSt'].forEach(id=>$(id).onchange=()=>rPph());$('pQ').oninput=()=>rPph();
+function gearHtml(act){return `<div class="gear"><button class="btn btn-default btn-xs" type="button"><i class="fa fa-cog"></i></button><div class="gear-m">${act.join('')}</div></div>`;}
+function bindGear(){document.querySelectorAll('#pphT .gear>button').forEach(b=>b.onclick=e=>{e.stopPropagation();const g=b.parentNode,on=g.classList.contains('on');document.querySelectorAll('.gear.on').forEach(x=>x.classList.remove('on'));if(!on)g.classList.add('on');});}
+function rPph(){const T2=U.ptab,tid=T2==='TIDAK';
+ $('pStWrap').classList.toggle('hidden',T2==='REC'||T2==='HIST');$('pQWrap').classList.toggle('hidden',T2==='HIST');$('pSub').classList.toggle('hidden',T2==='HIST');
+ document.querySelectorAll('#pphTabs li').forEach(li=>li.classList.toggle('active',li.firstChild.dataset.ptab===T2));
+ const op=S.pph.filter(p=>p.st!=='SELESAI');
+ $('cnt_pot').textContent=op.filter(p=>tabOf(p)==='POTONG').length;$('cnt_tid').textContent=op.filter(p=>tabOf(p)==='TIDAK').length;
+ $('cnt_rec').textContent=S.bukti.length;$('cnt_hist').textContent=S.hist.length;
+ $('pphKpi').innerHTML=`<div><label>Tidak dipotong, belum diproses</label><b>${nf2(sum(op.filter(p=>p.st==='BELUM_RP')))}</b></div><div><label>Proses Request Payment (pengembalian)</label><b>${nf2(sum(op.filter(p=>p.st==='RP')))}</b></div><div><label>Menunggu bukti potong</label><b>${nf2(sum(op.filter(p=>p.st==='MENUNGGU_BP')))}</b></div><div><label>Lebih dari 30 hari sejak penerimaan</label><b class="age-old">${op.filter(p=>days(p.rtgl,TODAY)>30).length} invoice</b></div>`;
+ if(T2==='HIST')return rHist();
+ if(T2==='REC')return rRec();
+ const co=$('pCo').value,st=$('pSt').value,q=$('pQ').value.toLowerCase();
+ const all=S.pph.filter(p=>tabOf(p)===T2),o=all.filter(p=>p.st!=='SELESAI');
+ $('pSub').innerHTML=tid?`Client tidak memotong PPh (bayar penuh). Kewajiban setor ada di client, jadi PPh <b>dikembalikan ke client</b> lewat Request Payment berdasarkan surat permintaan client. Setelah dibayar balik, baris pindah ke tab PPh Dipotong untuk menunggu bukti potong. Belum diproses: <b>${nf2(sum(o.filter(p=>p.st==='BELUM_RP')))}</b> · proses Request Payment: <b>${nf2(sum(o.filter(p=>p.st==='RP')))}</b>`
+  :`Client memotong dan menyetor sendiri (termasuk yang sudah dikembalikan). Tagih bukti potong ke client. Menunggu bukti potong: <b>${nf2(sum(o))}</b> (${o.length} invoice)`;
+ $('pphH').innerHTML=`<tr><th>No</th><th>No. Invoice</th><th>Customer</th><th>Company</th><th>Penerimaan</th><th class="text-right">Nominal PPh</th><th>Status</th>${tid?'<th>Request Payment</th>':'<th>Bukti Potong</th>'}<th class="text-center">Action</th></tr>`;
+ const rows=all.filter(p=>{if(co&&coOf(p.inv)!==co)return false;
+  if(st==='OPEN'&&p.st==='SELESAI')return false;if(st==='SELESAI'&&p.st!=='SELESAI')return false;
+  if(q){const k=kmbOf(p.kmb),b=bpOf(p.bp);if([p.inv,p.rcp,cust(p.c).nm,k&&k.no,b&&b.bp_no].join(' ').toLowerCase().indexOf(q)<0)return false;}return true;});
+ document.querySelector('#pphT tbody').innerHTML=rows.map((p,i)=>{const k=kmbOf(p.kmb),b=bpOf(p.bp),age=days(p.rtgl,TODAY);
+  const act=[`<a data-det="${esc(p.inv)}"><i class="fa fa-eye"></i> Detail</a>`];
+  if(p.st==='BELUM_RP')act.push(`<a data-rp="${esc(p.inv)}"><i class="fa fa-share"></i> Process to Request Payment</a>`);
+  if(p.st==='RP')act.push(`<a href="request-payment.html#req" data-rplink="${esc(p.inv)}"><i class="fa fa-external-link"></i> Buka Request Payment</a>`);
+  if(p.st==='MENUNGGU_BP')act.push(`<a data-bp="${esc(p.inv)}"><i class="fa fa-file-text-o"></i> Input Bukti Potong</a>`);
+  const rpCell=k?`${esc(k.no)}<br><small class="text-muted" data-stage>${esc(rpStage(k))}</small>`:'<span class="text-muted">Belum</span>';
+  return `<tr data-inv="${esc(p.inv)}"><td>${i+1}</td><td>${esc(p.inv)}<br><small class="text-muted">${tgl(arOf(p.inv).tgl)}</small>${isF(p.inv)?' <span class="label label-default" style="background:#777">PPh Final 0,5%</span>':''}${p.legacy?' <span class="label label-info">Sebelum berlaku</span>':''}</td><td>${esc(cust(p.c).nm)}</td><td>${coOf(p.inv)}</td><td>${esc(p.rcp)}<br><small class="text-muted">${tgl(p.rtgl)}</small>${k&&k.paid&&!tid?`<br><span class="label label-info">Dikembalikan ${esc(k.no)}</span>`:''}</td><td class="text-right">${nf2(p.amt)}</td><td>${stB(p)}${p.st==='SELESAI'?'':`<br><small class="${age>30?'age-old':'text-muted'}">${age} hari sejak penerimaan</small>`}</td><td>${tid?rpCell:(b?esc(b.bp_no)+'<br><small class="text-muted">'+tgl(b.tgl)+'</small>':'<span class="text-muted">Belum</span>')}</td><td class="text-center">${gearHtml(act)}</td></tr>`;}).join('')||'<tr><td colspan="9" class="text-center text-muted">Tidak ada data.</td></tr>';
+ bindGear();
+ document.querySelectorAll('#pphT [data-det]').forEach(a=>a.onclick=()=>{U.det=a.dataset.det;go('det');});
+ document.querySelectorAll('#pphT [data-rp]').forEach(a=>a.onclick=()=>openRp(a.dataset.rp));
+ document.querySelectorAll('#pphT [data-bp]').forEach(a=>a.onclick=()=>openBp(a.dataset.bp));}
+document.addEventListener('click',()=>document.querySelectorAll('.gear.on').forEach(x=>x.classList.remove('on')));
+function invInfo(no){const p=pphOf(no),a=arOf(no),k=kmbOf(p.kmb);
+ return `<table class="table table-bordered" style="font-size:12.5px"><tbody><tr><th style="width:170px">No. Invoice</th><td>${esc(no)} · ${tgl(a.tgl)} · ${esc(a.ket)}</td></tr><tr><th>Customer</th><td>${esc(cust(p.c).nm)} (${coOf(no)})</td></tr><tr><th>Penerimaan</th><td>${esc(p.rcp)} · ${tgl(p.rtgl)} · ${modeB(p.mode)}</td></tr>${k?`<tr><th>Pengembalian</th><td>${esc(k.no)} · ${k.paid?'dibayar '+tgl(k.paid):'menunggu payment'}</td></tr>`:''}<tr><th>${pphNm(no)}</th><td><b>${nf2(p.amt)}</b></td></tr></tbody></table>`;}
+
+/* History: data menu lama Penerimaan PPH 23 (tr_penerimaan_pph_23), read-only */
+function rHist(){const co=$('pCo').value;
+ $('pphH').innerHTML='<tr><th>No.</th><th>No. Invoice</th><th>Customer</th><th>Company</th><th>Project</th><th>Keterangan Invoice</th><th class="text-right">Nilai PPh</th><th class="text-right">Nilai Setor</th><th>Tanggal Setor</th><th>Bukti Setor</th></tr>';
+ const rows=S.hist.filter(h=>!co||coOf(h.inv)===co);
+ document.querySelector('#pphT tbody').innerHTML=rows.map((h,i)=>`<tr data-inv="${esc(h.inv)}"><td>${i+1}</td><td>${esc(h.inv)}</td><td>${esc(cust(h.c).nm)}</td><td>${coOf(h.inv)}</td><td>${esc(h.proj)}</td><td>${esc(h.ket)}</td><td class="text-right">${nf2(h.pph)}</td><td class="text-right">${nf2(h.setor)}</td><td>${tgl(h.tgl)}</td><td><a data-hf="${esc(h.inv)}"><i class="fa fa-file-o"></i> ${esc(h.file)}</a></td></tr>`).join('')||'<tr><td colspan="10" class="text-center text-muted">Tidak ada data.</td></tr>';
+ document.querySelectorAll('[data-hf]').forEach(a=>a.onclick=()=>info('Bukti Setor',`File <b>${esc(S.hist.find(h=>h.inv===a.dataset.hf).file)}</b> (tidak dimockup).`));}
+
+/* Record: bukti potong PPh yang sudah diterima perusahaan (view + print) */
+function rRec(){const co=$('pCo').value,q=$('pQ').value.toLowerCase();
+ $('pSub').innerHTML='Record perusahaan: semua bukti potong PPh 23 / PPh Final yang sudah diterima dari client. Bisa dilihat dan dicetak per bukti potong.';
+ $('pphH').innerHTML='<tr><th>No</th><th>No. Bukti Potong</th><th>Tanggal</th><th>Pemotong</th><th>NPWP / NITKU</th><th>No. Invoice</th><th>Company</th><th>Jenis</th><th class="text-right">Nilai PPh</th><th class="text-center">Action</th></tr>';
+ const rows=S.bukti.filter(b=>{if(co&&coOf(b.inv)!==co)return false;if(q&&[b.bp_no,b.no,b.inv,cust(b.c).nm,b.npwp].join(' ').toLowerCase().indexOf(q)<0)return false;return true;});
+ const tot=rows.reduce((t,b)=>t+b.amt,0);
+ document.querySelector('#pphT tbody').innerHTML=rows.map((b,i)=>`<tr data-rec="${esc(b.no)}"><td>${i+1}</td><td>${esc(b.bp_no)}<br><small class="text-muted">${esc(b.no)}</small></td><td>${tgl(b.tgl)}</td><td>${esc(cust(b.c).nm)}</td><td>${esc(b.npwp)}</td><td>${esc(b.inv)}</td><td>${coOf(b.inv)}</td><td>${pphNm(b.inv)}</td><td class="text-right">${nf2(b.amt)}</td><td class="text-center">${gearHtml([`<a data-rv="${esc(b.no)}"><i class="fa fa-eye"></i> View</a>`,`<a data-rpr="${esc(b.no)}"><i class="fa fa-print"></i> Print</a>`])}</td></tr>`).join('')
+  +(rows.length?`<tr><th colspan="8" class="text-right">Total</th><th class="text-right" id="recTot">${nf2(tot)}</th><th></th></tr>`:'<tr><td colspan="10" class="text-center text-muted">Tidak ada data.</td></tr>');
+ bindGear();
+ document.querySelectorAll('[data-rv]').forEach(a=>a.onclick=()=>{const b=bpOf(a.dataset.rv);dlg('Bukti Potong '+esc(b.bp_no),recHtml(b),{lg:true,cancel:false});});
+ document.querySelectorAll('[data-rpr]').forEach(a=>a.onclick=()=>printRec(bpOf(a.dataset.rpr)));}
+function recHtml(b){const a=arOf(b.inv),p=pphOf(b.inv),r=p&&rcpOf(p.rcp),k=p&&kmbOf(p.kmb),j=bpJournal(b);
+ const row=(l,v)=>`<tr><th style="width:200px">${l}</th><td>${v}</td></tr>`;
+ return `<div class="rec"><h3 style="margin:0 0 4px">Record Bukti Potong ${pphNm(b.inv)}</h3><p class="text-muted" style="margin:0 0 10px">${coOf(b.inv)} · ${esc(b.no)}</p>
+ <table class="table table-bordered" style="font-size:12.5px"><tbody>
+ ${row('No. Bukti Potong',esc(b.bp_no))}${row('Tanggal Bukti Potong',tglF(b.tgl))}
+ ${row('Pemotong',esc(cust(b.c).nm))}${row('NPWP / NITKU Pemotong',esc(b.npwp))}${row('Dipotong atas',coOf(b.inv))}
+ ${row('No. Invoice',`${esc(b.inv)} · ${tgl(a.tgl)} · ${esc(a.ket)}`)}${row('Penjualan (dasar PPh)',nf2(a.penjualan))}${row('Tarif',isF(b.inv)?'0,5%':'2%')}${row('Nilai PPh',`<b>${nf2(b.amt)}</b>`)}
+ ${r?row('Penerimaan',`${esc(r.no)} · ${tgl(r.tgl)} · ${MODE[r.mode]}`):''}${k?row('Pengembalian ke client',`${esc(k.no)} · ${nf2(k.amt)} · ${esc(rpStage(k))}`):''}
+ ${row('File',esc(b.file)+' <small class="text-muted">(ikut tercetak saat Print)</small>')}${row('Jurnal',j.length?'Bukti Potong '+tgl(b.tgl):'Tanpa jurnal (penerimaan sebelum tanggal berlaku)')}
+ </tbody></table>${j.length?jtable(j,b.tgl):''}</div>`;}
+// Print = halaman record + file bukti potong yang diupload ikut tercetak di halaman berikutnya (PPH-R-10). Mockup tidak bisa menempelkan PDF: diganti penanda.
+function printRec(b){$('printArea').innerHTML=recHtml(b)+`<p style="font-size:11px;color:#777;margin-top:16px">Dicetak ${tglF(TODAY)} · Admin</p>`
+ +`<div class="print-att" id="printAtt" style="page-break-before:always;border:2px dashed #e0a800;padding:24px;margin-top:16px;text-align:center"><b>Lampiran: File Bukti Potong</b><br>${esc(b.file)}<br><small>Di sistem, isi file ini (PDF/gambar) ikut tercetak di sini, setelah halaman record. Mockup tidak bisa menampilkan file.</small></div>`;
+ document.body.classList.add('printing');try{if(typeof window.print==='function')window.print();}catch(e){}
+ setTimeout(()=>document.body.classList.remove('printing'),500);}
+
+/* Process to Request Payment: pengembalian PPh ke client (client bayar penuh, kewajiban setor ada di client) */
+let RM=null;
+// Bank perusahaan yang mentransfer balik baru diketahui di menu Payment (PPH-R-08).
+const BANK_TBD='(dipilih saat Payment)';
+function refundJournal(k){if(k.payJ)return k.payJ;const cn=cust(k.c).nm,co=coOf(k.inv),nm=pphNm(k.inv),b=k.payBank?bank(k.payBank):{coa:BANK_TBD,co:co,nm:'Bank pembayar'};
+ return [L(pphCoa(k.inv),co,k.amt,0,`Pengembalian ${nm} tidak dipotong ${k.inv} ke ${cn}${k.no?' - '+k.no:''}`,true),L(b.coa,b.co,0,k.amt,`Transfer pengembalian ${nm} ke ${cn} (${k.bank||'-'} ${k.rek||''} a.n. ${k.nmrek||'-'})`,true,b.nm)];}
+function openRp(no){const p=pphOf(no);RM={inv:no,c:p.c,amt:p.amt};
+ dlg('Process to Request Payment · Pengembalian '+pphNm(no),invInfo(no)+`<div class="frm">
+ <div><label>Tanggal Request <span class="text-red">*</span></label><input type="date" class="form-control" id="kTgl" value="${TODAY}"></div>
+ <div><label>Nominal Pengembalian</label><input class="form-control text-right" id="kAmt" readonly value="${nf2(p.amt)}"></div>
+ <div><label>Bank Tujuan (client) <span class="text-red">*</span></label><input class="form-control" id="kBank" placeholder="mis. BCA"></div>
+ <div><label>No. Rekening <span class="text-red">*</span></label><input class="form-control" id="kRek" placeholder="angka saja"></div>
+ <div><label>Nama Rekening <span class="text-red">*</span></label><input class="form-control" id="kNm" value="${esc(cust(p.c).nm)}"></div>
+ <div><label>Surat Permintaan dari Client <span class="text-red">*</span></label><input type="file" class="form-control" id="kFile" accept=".pdf,.jpg,.jpeg,.png"><small class="text-muted">Surat request client agar PPh ditransfer balik.</small></div>
+ <div class="full"><label>Keterangan</label><input class="form-control" id="kKet" value="Pengembalian ${pphNm(no)} tidak dipotong ${esc(no)} - ${esc(cust(p.c).nm)}"></div></div>
+ <div class="alert" id="kBan" style="margin-top:10px"></div>
+ <h4>Preview Jurnal <small>(terbentuk saat Payment di modul Request Payment)</small></h4><div id="kJv"></div>
+ <p class="text-muted" style="font-size:12px;margin:4px 0 0">Tanggal jurnal = tanggal Payment. Biaya transfer / admin mengikuti Request Payment dan Payment (RP-R-36..39). Bank perusahaan yang mentransfer dipilih di menu Payment.</p>${NOTE_CHG}`,{lg:true,ok:'Process to Request Payment',onOk:saveRp});
+ ['kTgl','kBank','kRek','kNm','kFile','kKet'].forEach(id=>{$(id).oninput=calcRp;$(id).onchange=calcRp;});calcRp();}
+function draftRp(){const f=$('kFile').files;return {tgl:$('kTgl').value,bank:$('kBank').value.trim(),rek:$('kRek').value.trim(),nmrek:$('kNm').value.trim(),file:f&&f.length?f[0].name:'',ket:$('kKet').value.trim(),c:RM.c,inv:RM.inv,amt:RM.amt};}
+function rpErr(k){if(!k.tgl)return 'Isi tanggal request.';if(!k.bank)return 'Isi bank tujuan client.';if(!/^\d{5,20}$/.test(k.rek))return 'No. rekening harus angka.';if(!k.nmrek)return 'Isi nama rekening.';if(!k.file)return 'Upload surat permintaan dari client.';return '';}
+function calcRp(){const k=draftRp(),e=rpErr(k);
+ $('kBan').className='alert '+(e?'alert-warning':'alert-success');$('kBan').textContent=e||'Siap diproses. Dokumen pengembalian masuk Request Payment; status menjadi Proses Request Payment.';
+ $('kJv').innerHTML=jtable(refundJournal(k),null,{id:'kJvT',dateTxt:'(tanggal Payment)'});}
+function saveRp(){const k=draftRp(),e=rpErr(k);if(e){dlgErr(e);return false;}
+ k.no=`KPPH/${k.tgl.slice(0,4)}/${k.tgl.slice(5,7)}/${pad(S.seq.kpph++,4)}`;S.kmb.push(k);
+ const p=pphOf(k.inv);p.st='RP';p.kmb=k.no;
+ setTimeout(()=>{render();info('Data has been saved',`Dokumen pengembalian <b>${esc(k.no)}</b> (${nf2(k.amt)}) masuk <b><a href="request-payment.html#req">Request Payment</a></b> (kategori Pengembalian PPh). Lanjut Atur Pembayaran → Approval → Payment di sana; jurnal terbentuk saat Payment.`);},0);}
+/* Bukti Potong */
+let BM=null;
+function openBp(no){const p=pphOf(no);BM={inv:no,c:p.c,amt:p.amt,legacy:!!p.legacy};
+ dlg('Input Bukti Potong '+pphNm(no),invInfo(no)+(p.legacy?`<div class="alert alert-info">Penerimaan sebelum tanggal berlaku: PPh 23 sudah dijurnal saat penerimaan. Bukti potong dicatat <b>tanpa jurnal</b>.</div>`:'')+`<div class="frm">
+ <div><label>No Bukti Potong <span class="text-red">*</span></label><input class="form-control" id="bNo"></div>
+ <div><label>Tanggal Bukti Potong <span class="text-red">*</span></label><input type="date" class="form-control" id="bTgl" value="${TODAY}"><small class="text-muted">Dipakai sebagai tanggal jurnal.</small></div>
+ <div><label>NPWP / NITKU Pemotong <span class="text-red">*</span></label><input class="form-control" id="bNpwp" value="${esc(cust(p.c).npwp)}"><small class="text-muted">Terisi dari master customer, bisa diubah.</small></div>
+ <div><label>${pphNm(no)} di Bukti Potong untuk invoice ini <span class="text-red">*</span></label><input class="form-control text-right" id="bVal" placeholder="0.00"></div>
+ <div><label>File Bukti Potong (PDF) <span class="text-red">*</span></label><input type="file" class="form-control" id="bFile" accept=".pdf"></div></div>
+ <div class="alert" id="bBan" style="margin-top:10px"></div><h4>Preview Jurnal</h4><div id="bJv"></div>${NOTE_CHG}`,{lg:true,ok:'Proses',onOk:saveBp});
+ ['bNo','bTgl','bNpwp','bVal','bFile'].forEach(id=>{$(id).oninput=calcBp;$(id).onchange=calcBp;});calcBp();}
+function draftBp(){const f=$('bFile').files;return {bp_no:$('bNo').value.trim(),tgl:$('bTgl').value,npwp:$('bNpwp').value.trim(),val:num($('bVal').value),file:f&&f.length?f[0].name:'',c:BM.c,inv:BM.inv,amt:BM.amt,legacy:BM.legacy};}
+function bpErr(b){const same=S.bukti.filter(x=>x.bp_no===b.bp_no);
+ if(!b.bp_no)return {err:'Isi nomor bukti potong.'};if(same.some(x=>x.c!==b.c))return {err:'Nomor bukti potong ini sudah dipakai untuk customer lain.'};
+ if(!b.tgl)return {err:'Isi tanggal bukti potong.'};if(!b.npwp)return {err:'Isi NPWP / NITKU pemotong.'};
+ if(!isFinite(b.val)||!b.val)return {err:'Isi nilai PPh 23 untuk invoice ini sesuai bukti potong.'};
+ if(b.val!==b.amt)return {diff:true,err:`Nilai di bukti potong (${nf2(b.val)}) berbeda ${nf2(Math.abs(b.val-b.amt))} dari PPh 23 di sistem (${nf2(b.amt)}). Konfirmasi ke customer dulu.`};
+ if(!b.file)return {err:'Upload file bukti potong.'};
+ return {err:'',info:same.length?` Nomor ini juga dipakai untuk ${same.map(x=>x.inv).join(', ')} (satu bukti potong untuk beberapa invoice).`:''};}
+function calcBp(){const b=draftBp(),e=bpErr(b);
+ $('bBan').className='alert '+(e.err?(e.diff?'alert-danger':'alert-warning'):'alert-success');$('bBan').textContent=e.err||('Siap diproses. Setelah disimpan, status menjadi Selesai dan piutang invoice lunas.'+e.info);
+ $('bJv').innerHTML=jtable(bpJournal(b),b.tgl||TODAY,{id:'bJvT',empty:'Tanpa jurnal (penerimaan sebelum tanggal berlaku)'});}
+function saveBp(){const b=draftBp(),e=bpErr(b);if(e.err){dlgErr(e.err);return false;}
+ const seq=S.seq.bpt++;b.no=`BPT/${b.tgl.slice(0,4)}/${b.tgl.slice(5,7)}/${pad(seq,4)}`;b.amt=b.val;delete b.val;S.bukti.push(b);
+ const j=bpJournal(b);if(j.length){S.jur.push({jenis:'Bukti Potong PPh 23',trx:b.no,tgl:b.tgl,lines:j});arOf(b.inv).saldo-=b.amt;}
+ const p=pphOf(b.inv);p.st='SELESAI';p.bp=b.no;
+ setTimeout(()=>{render();info('Data has been saved',`Bukti potong ${esc(b.inv)} tersimpan (<b>${esc(b.no)}</b>). Status <b>Selesai</b>${j.length?', piutang invoice lunas':' (tanpa jurnal)'}.`);},0);}
+
+/* ---------- Detail ---------- */
+function rDet(){const p=pphOf(U.det);if(!p){$('detBody').innerHTML='-';return;}
+ const r=rcpOf(p.rcp),k=kmbOf(p.kmb),b=bpOf(p.bp),a=arOf(p.inv);
+ const step=(t,d,body)=>`<div style="border-left:3px solid #3c8dbc;padding:4px 0 4px 12px;margin-bottom:14px"><b>${t}</b> <small class="text-muted">${d}</small>${body}</div>`;
+ let h=invInfo(p.inv)+`<p>Status: ${stB(p)} · Sisa piutang invoice: <b>${nf2(a.saldo)}</b></p><h4>Riwayat</h4>`;
+ h+=step('Penerimaan '+esc(r.no),tgl(r.tgl)+' · '+modeB(r.mode)+(r.legacy?' · sebelum berlaku (jurnal lama)':''),jtable(r.legacy?asIsJournal(r):receiptJournal(r),r.tgl));
+ if(p.mode==='TIDAK')h+=k?step('Pengembalian ke Client '+esc(k.no),`request ${tgl(k.tgl)} · ${esc(k.bank)} ${esc(k.rek)} a.n. ${esc(k.nmrek)} · surat ${esc(k.file)} · ${esc(rpStage(k))}`,jtable(refundJournal(k),k.paid||null,{dateTxt:'(tanggal Payment)'})):step('Pengembalian ke Client','belum diproses ke Request Payment','');
+ h+=b?step('Bukti Potong '+esc(b.no),`No ${esc(b.bp_no)} · ${tgl(b.tgl)} · NPWP ${esc(b.npwp)} · ${esc(b.file)}`,jtable(bpJournal(b),b.tgl,{empty:'Tanpa jurnal (penerimaan sebelum tanggal berlaku)'})):step('Bukti Potong','belum diterima','');
+ h+='<a class="btn btn-danger btn-sm" id="detBack"><i class="fa fa-reply"></i> Back</a>';
+ $('detBody').innerHTML=h;$('detBack').onclick=()=>{U.ptab=tabOf(p);go('pph');};}
+
+/* ---------- Jurnal ---------- */
+function rJur(){document.querySelector('#jurT tbody').innerHTML=S.jur.map((j,i)=>{const co=[...new Set(j.lines.map(l=>l.co))].join(', '),d=j.lines.reduce((t,l)=>t+l.d,0);
+ return `<tr><td>${i+1}</td><td>${tgl(j.tgl)}</td><td>${esc(j.jenis)}</td><td>${esc(j.trx)}</td><td>${esc(co)}</td><td class="text-right">${nf2(d)}</td><td><a data-jv="${i}">Lihat</a></td></tr>`;}).join('')||'<tr><td colspan="7" class="text-center text-muted">Belum ada jurnal dari uji coba.</td></tr>';
+ document.querySelectorAll('[data-jv]').forEach(a=>a.onclick=()=>{const j=S.jur[+a.dataset.jv];dlg(esc(j.jenis)+' · '+esc(j.trx),jtable(j.lines,j.tgl),{lg:true,cancel:false});});}
+
+load();{const h=(location.hash||'').slice(1);if(h==='pph-tidak')U.ptab='TIDAK';if(h==='pph-potong')U.ptab='POTONG';go(['pp','jur'].includes(h)?h:/^pph/.test(h)?'pph':'konsep');}
+
+</script>
+</body>
+</html>

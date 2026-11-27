@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta content="width=device-width, initial-scale=1" name="viewport">
+<title>SISCAL | PPh 23 Invoice (Mockup)</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/admin-lte/2.4.18/css/AdminLTE.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/admin-lte/2.4.18/css/skins/_all-skins.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
+<style>
+/* ===== side_menu.php (siscal) ===== */
+.navbar{border-radius:0 0 30px 0!important;background:rgba(255,255,255,.1)!important;backdrop-filter:blur(1rem);-webkit-backdrop-filter:blur(1rem);box-shadow:0 15px 25px rgba(0,0,0,.1)!important}
+.logo{background-color:#2F92E4!important;color:#fff!important;border-radius:0 0 17px 17px!important}
+.btn-logout-cs,.btn-helpdesk-cs{background-color:#d9534f!important;color:#fff!important;font-size:13.3px!important;padding:8px!important;margin-top:6px!important;border-radius:20px!important;width:90px;border:none!important}
+.btn-helpdesk-cs{background-color:#2F92E4!important;width:100px}
+.sidebar-toggle{margin-left:25px!important;color:#000!important}
+.sidebar-menu li.active{border-right:3.2px solid #2F92E4!important;color:#000}
+/* ===== assets/css/deposit.css (php85) ===== */
+.kwitansi-page{color:#334155}
+.deposit-monitoring-totals{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:24px}
+.deposit-monitoring-totals .deposit-summary-value{margin-bottom:0;font-size:22px}
+@media(max-width:1100px){.deposit-monitoring-totals{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.deposit-monitoring-totals{grid-template-columns:1fr}}
+.kwitansi-page>.box{border-top:3px solid #3c8dbc;border-radius:7px;box-shadow:0 2px 8px rgba(15,23,42,.06)}
+.kwitansi-page .box-header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 22px}
+.kwitansi-page .box-header:before,.kwitansi-page .box-header:after{display:none}
+.kwitansi-page .box-header .box-tools{position:static;float:none!important}
+.kwitansi-page .box-title{font-size:18px;font-weight:600;color:#24364b}
+.kwitansi-page .box-body{padding:20px 22px}
+.kwitansi-page .btn{border-radius:5px;padding:8px 13px;font-weight:500}
+.kwitansi-page .btn-sm,.kwitansi-page .btn-xs{padding:6px 11px}
+.deposit-intro{display:flex;align-items:center;justify-content:space-between;gap:22px;padding-bottom:19px}
+.deposit-intro strong{font-size:14px;font-weight:600;color:#334155}
+.deposit-intro p{color:#64748b;font-size:13px;margin:5px 0 0;line-height:1.6}
+.deposit-related{display:flex;gap:16px;flex-shrink:0}
+.deposit-related a{font-size:13px;color:#367fa9;white-space:nowrap}
+.deposit-related i{margin-right:5px}
+.deposit-filters{background:#f7f9fc;border:1px solid #e4eaf1;border-radius:6px;padding:16px 18px;margin-bottom:24px}
+.deposit-section-label{font-size:12px;font-weight:600;color:#64748b;margin:0 0 12px;text-transform:uppercase;letter-spacing:.45px}
+.deposit-section-label i{margin-right:5px}
+.kwitansi-page label{font-size:13px;font-weight:600;color:#475569;margin-bottom:7px}
+.kwitansi-page small.text-muted{display:block;margin-top:7px;font-size:12px;color:#718096;line-height:1.5}
+.kwitansi-page .chosen-container-single .chosen-single{height:35px;line-height:33px;border:1px solid #cbd5e1;border-radius:4px;box-shadow:none;background:#fff}
+.kwitansi-page .chosen-container-single .chosen-single div b{background-position:0 7px}
+.kwitansi-page .chosen-drop{border-color:#cbd5e1}
+.deposit-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:16px}
+.deposit-table-heading{font-size:15px;font-weight:600;color:#24364b}
+.deposit-grid-tools,.deposit-grid-footer{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.deposit-grid-tools{margin-bottom:12px}
+.deposit-grid-footer{margin-top:12px}
+.kwitansi-page .dataTables_length,.kwitansi-page .dataTables_filter,.kwitansi-page .dataTables_info,.kwitansi-page .dataTables_paginate{float:none!important;text-align:left!important;margin:0!important}
+.kwitansi-page .dataTables_length label,.kwitansi-page .dataTables_filter label{font-weight:400;margin:0;color:#64748b;display:inline-flex;align-items:center;gap:7px}
+.kwitansi-page .dataTables_length select{min-width:65px;height:32px;margin:0 4px;border-radius:4px}
+.kwitansi-page .dataTables_filter input{width:245px;height:34px;margin:0!important;border-radius:4px}
+.kwitansi-page .dataTables_info{padding-top:0;font-size:12px;color:#64748b}
+.deposit-table-scroll{overflow-x:auto;border:1px solid #e2e8f0;border-radius:5px}
+.kwitansi-page #deposit-table{min-width:1050px;margin:0!important;border:0;border-collapse:collapse!important}
+.kwitansi-page #deposit-table th{background:#f2f5fa;color:#475569;font-size:12px;font-weight:600;border:0;border-bottom:1px solid #dce4ef;padding:13px 12px;white-space:nowrap}
+.kwitansi-page #deposit-table td{padding:14px 12px;vertical-align:middle;border:0;border-bottom:1px solid #edf1f5;font-size:13px;line-height:1.5}
+.kwitansi-page #deposit-table tbody tr:last-child td{border-bottom:0}
+.kwitansi-page #deposit-table.table-striped>tbody>tr:nth-of-type(odd){background:#fff}
+.kwitansi-page #deposit-table tbody tr:hover{background:#f8fbfe}
+.kwitansi-page #deposit-table td:nth-child(3){font-weight:600;color:#2d506e}
+.kwitansi-page #deposit-table td:nth-child(4){min-width:180px;max-width:255px;white-space:normal;overflow-wrap:break-word}
+.deposit-nowrap{white-space:nowrap}
+.deposit-balance-guide{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:#f4f8fc;border:1px solid #e0e9f2;border-radius:6px;padding:15px 18px;margin-bottom:24px;font-size:13px}
+.deposit-balance-guide strong{color:#24754b}
+.deposit-guide-operator{color:#94a3b8;font-size:18px}
+.deposit-balance-guide small{color:#64748b;margin-left:auto}
+.monitoring-page #deposit-table td:nth-child(2){min-width:190px;font-weight:600;color:#2d506e}
+.monitoring-page #deposit-table td:nth-child(3){font-weight:400;color:#64748b}
+.monitoring-page #deposit-table td:nth-child(4){min-width:110px;max-width:none;white-space:nowrap;overflow-wrap:normal}
+.monitoring-page #deposit-table thead th:nth-child(8),.monitoring-page #deposit-table td.deposit-saldo,.monitoring-page #deposit-table [data-page-total="saldo"]{color:#24754b}
+.deposit-summary{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:16px;margin-bottom:25px}
+.deposit-summary-card{border:1px solid #e1e7ef;border-radius:6px;padding:18px;background:#fafbfd}
+.deposit-summary-label{color:#64748b;font-size:13px;font-weight:600}
+.deposit-summary-value{font-size:24px;font-weight:600;color:#24364b;margin:9px 0 12px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.deposit-summary-card p{font-size:12px;color:#64748b;margin:5px 0 0}
+.deposit-summary-breakdown{border-top:1px solid #e1e7ef;padding-top:9px}
+.deposit-summary-breakdown div{display:flex;justify-content:space-between;gap:12px;margin:5px 0;font-size:12px;color:#64748b}
+.deposit-summary-breakdown strong{white-space:nowrap;font-weight:500}
+.deposit-summary-available{background:#fafbfd;border-color:#e1e7ef}
+.deposit-summary-available .deposit-summary-value{color:#24754b}
+.monitoring-page #mutasi-table{min-width:950px;margin:0!important;border:0;border-collapse:collapse!important}
+.monitoring-page #mutasi-table th{background:#f2f5fa;color:#475569;font-size:12px;border:0;border-bottom:1px solid #dce4ef;padding:13px 12px;white-space:nowrap}
+.monitoring-page #mutasi-table td{padding:14px 12px;border:0;border-bottom:1px solid #edf1f5;vertical-align:middle;font-size:13px}
+.monitoring-page #mutasi-table tbody tr:nth-of-type(odd){background:#fff}
+.monitoring-page #mutasi-table td.deposit-incoming{color:#24754b}
+.monitoring-page #mutasi-table td.deposit-outgoing{color:#a34c4c}
+.monitoring-page #mutasi-table td.deposit-saldo{color:#24754b}
+@media(max-width:900px){.deposit-summary{grid-template-columns:1fr}.deposit-balance-guide small{width:100%;margin-left:0}}
+.deposit-amount{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.kwitansi-page .label{display:inline-block;padding:6px 9px;border-radius:4px;font-size:11px;font-weight:600;white-space:nowrap}
+.kwitansi-page .label-warning{background:#fff4db!important;color:#896114!important}
+.kwitansi-page .label-success{background:#e5f5ec!important;color:#24754b!important}
+.kwitansi-page .alert-warning,#deposit-journal-modal .alert-warning{background:#fff7e6!important;border:1px solid #f1d69a!important;color:#805b16!important;border-radius:5px}
+#deposit-journal-modal .alert-info{background:#edf6fc!important;border:1px solid #cde3f3!important;color:#356482!important;border-radius:5px}
+#deposit-journal-modal .label{display:inline-block;padding:6px 9px;border-radius:4px;font-size:11px;font-weight:600}
+#deposit-journal-modal .label-warning{background:#fff4db!important;color:#896114!important}
+#deposit-journal-modal .label-success{background:#e5f5ec!important;color:#24754b!important}
+.deposit-table-note{font-size:12px;color:#718096;margin:14px 0 0}
+.deposit-table-note i{color:#7b93aa;margin-right:4px}
+.deposit-form-page{max-width:1160px;margin:0 auto}
+.deposit-form-page .form-group{margin-bottom:22px}
+.deposit-form-section{border:1px solid #e3e9f1;border-radius:6px;padding:20px;margin-bottom:20px}
+.deposit-form-section h4{font-size:15px;font-weight:600;color:#334155;margin:0 0 18px}
+.deposit-auto-number{background:#f5f7fa;border:1px dashed #cbd5e1;border-radius:4px;padding:8px 12px;color:#64748b;min-height:35px}
+.deposit-form-page #deposit-value{font-size:19px;font-weight:600;height:44px;letter-spacing:.3px}
+.deposit-form-footer{display:flex;align-items:center;justify-content:space-between;border-top:1px solid #e5eaf0;padding-top:18px;gap:15px}
+.deposit-form-footer small{color:#718096}
+.deposit-journal.table-bordered,.deposit-journal.table-bordered>thead>tr>th,.deposit-journal.table-bordered>tbody>tr>td,.deposit-journal.table-bordered>tfoot>tr>th{border:2px solid #555}
+.deposit-journal th,.deposit-journal td{padding:10px!important;vertical-align:middle!important}
+.deposit-journal thead th{background:#f2f5fa;color:#475569}
+.deposit-journal tfoot th{background:#f2f5fa;font-weight:700}
+.deposit-detail-heading{display:flex;justify-content:space-between;align-items:center;gap:15px;background:#f5f8fc;border:1px solid #e3eaf2;padding:16px;border-radius:5px;margin-bottom:20px}
+.deposit-detail-heading h4{margin:0 0 5px;font-weight:600;color:#2d506e}
+.deposit-detail-heading small{color:#718096}
+.deposit-detail-heading strong{font-size:21px;white-space:nowrap;color:#24364b}
+#deposit-journal-modal .modal-header{background:#f7f9fc;border-radius:6px 6px 0 0;padding:16px 20px}
+#deposit-journal-modal .modal-body{padding:20px}
+#deposit-journal-modal .modal-content{border-radius:7px}
+#deposit-journal-modal .dl-horizontal dt{width:145px;font-size:12px;color:#64748b;font-weight:500;text-align:left}
+#deposit-journal-modal .dl-horizontal dd{margin-left:155px;margin-bottom:12px;overflow-wrap:break-word}
+@media(max-width:1100px){.deposit-intro{align-items:flex-start;flex-direction:column;gap:12px}}
+@media(max-width:767px){.kwitansi-page .box-header{align-items:flex-start;flex-direction:column;padding:16px}.kwitansi-page .box-body{padding:16px}.deposit-filters .row>div{margin-bottom:12px}.deposit-grid-tools,.deposit-grid-footer{align-items:flex-start;flex-direction:column}.kwitansi-page .dataTables_filter{width:100%}.kwitansi-page .dataTables_filter label{display:flex}.kwitansi-page .dataTables_filter input{width:100%;min-width:0}.deposit-related{flex-wrap:wrap;gap:12px}.deposit-form-section{padding:15px}.deposit-form-footer{align-items:flex-start;flex-direction:column}.deposit-detail-heading{align-items:flex-start;flex-direction:column}#deposit-journal-modal .dl-horizontal dd{margin-left:0}#deposit-journal-modal .dl-horizontal dt{float:none;width:auto}}
+
+/* ===== assets/css/receipt.css (php85) ===== */
+.receipt-journal.table-bordered,.receipt-journal.table-bordered>thead>tr>th,.receipt-journal.table-bordered>tbody>tr>td,.receipt-journal.table-bordered>tfoot>tr>th{border:2px solid #555}
+.receipt-money{text-align:right;min-width:110px}
+#receipt-documents td{vertical-align:middle}
+.receipt-detail-info{padding:8px 0 12px;border-bottom:1px solid #e2e8f0;margin-bottom:20px}
+.receipt-detail-info dt{width:145px;text-align:left;color:#64748b;font-size:13px;font-weight:500}
+.receipt-detail-info dd{margin-left:155px;margin-bottom:12px;overflow-wrap:anywhere}
+.receipt-detail-page h4{font-size:15px;font-weight:600;margin:24px 0 12px}
+.receipt-detail-page .receipt-journal,.receipt-detail-page .receipt-journal th,.receipt-detail-page .receipt-journal td{border:1px solid #ddd!important;text-align:center!important}
+.receipt-detail-page .table-responsive{padding:0;margin-bottom:20px}
+.receipt-detail-page td.text-right{white-space:nowrap;font-variant-numeric:tabular-nums}
+@media(max-width:767px){.receipt-detail-info dt{float:none;width:auto}.receipt-detail-info dd{margin-left:0}}
+/* Light Theme Modal: Penerimaan Piutang (SISCAL Theme) */
+#receipt-process-modal .modal-dialog {
+    width: 95% !important;
+    max-width: 1700px !important;
+    margin: 30px auto !important;
+}
+
+#receipt-process-modal .modal-content {
+    background-color: #ffffff !important;
+    color: #1e293b !important;
+    border-radius: 8px !important;
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+    overflow: hidden;
+}
+
+#receipt-process-modal .modal-header {
+    background-color: #f8fafc !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    padding: 16px 24px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+}
+
+#receipt-process-modal .modal-header:before,
+#receipt-process-modal .modal-header:after {
+    display: none !important;
+}
+
+#receipt-process-modal .modal-title {
+    color: #0A1A60 !important;
+    font-size: 18px !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.01em;
+    margin: 0 !important;
+    float: none !important;
+}
+
+#receipt-process-modal .modal-header .close {
+    color: #64748b !important;
+    font-size: 26px !important;
+    font-weight: 400 !important;
+    opacity: 0.8 !important;
+    text-shadow: none !important;
+    transition: color 0.15s ease;
+    margin: 0 !important;
+    float: none !important;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+}
+
+#receipt-process-modal .modal-header .close:hover {
+    color: #0f172a !important;
+    opacity: 1 !important;
+}
+
+#receipt-process-modal .modal-body {
+    background-color: #ffffff !important;
+    color: #1e293b !important;
+    padding: 20px 24px 24px !important;
+}
+
+#receipt-process-modal #receipt-editor {
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* Light Table Styles */
+#receipt-process-modal .table-responsive {
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 6px !important;
+    background: #ffffff !important;
+    margin-bottom: 16px;
+    padding: 0 !important;
+    overflow-x: auto;
+}
+
+#receipt-process-modal table.receipt-documents-table {
+    width: 100% !important;
+    min-width: 1350px !important;
+    margin-bottom: 0 !important;
+    border-collapse: collapse !important;
+    background-color: #ffffff !important;
+    color: #1e293b !important;
+    border: none !important;
+}
+
+#receipt-process-modal table.receipt-documents-table th,
+#receipt-process-modal table.receipt-documents-table td {
+    border: 1px solid #e2e8f0 !important;
+    padding: 8px 10px !important;
+    font-size: 13px !important;
+    vertical-align: middle !important;
+    line-height: 1.4 !important;
+}
+
+#receipt-process-modal table.receipt-documents-table thead th {
+    background-color: #E9ECF9 !important;
+    color: #0A1A60 !important;
+    font-weight: 700 !important;
+    border-bottom: 2px solid #cbd5e1 !important;
+    padding: 10px 10px !important;
+    white-space: normal;
+}
+
+#receipt-process-modal table.receipt-documents-table tbody tr:hover {
+    background-color: #f8fafc !important;
+}
+
+#receipt-process-modal table.receipt-documents-table tbody td:first-child {
+    font-weight: 600;
+    color: #0A1A60;
+}
+
+/* TAX Code Badge */
+.badge-tax-code {
+    display: inline-block;
+    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.3;
+    border-radius: 4px;
+    border: 1px solid #bfdbfe;
+    background-color: #eff6ff;
+    color: #1d4ed8;
+    text-align: center;
+}
+
+/* Light Display Box (for totals, grand total, Piutang Dagang) */
+.receipt-display-box {
+    background-color: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #0f172a !important;
+    border-radius: 4px !important;
+    padding: 6px 10px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    min-height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    font-variant-numeric: tabular-nums;
+    box-sizing: border-box;
+}
+
+.receipt-display-box#receipt-control-box.box-kontrol-balanced {
+    background-color: #f0fdf4 !important;
+    border: 1px solid #16a34a !important;
+    color: #15803d !important;
+    font-weight: 700 !important;
+}
+
+.receipt-display-box#receipt-control-box.box-kontrol-unbalanced {
+    background-color: #fef2f2 !important;
+    border: 1px solid #ef4444 !important;
+    color: #dc2626 !important;
+    font-weight: 700 !important;
+}
+
+/* White Input Box (for editable allocations) */
+#receipt-process-modal table.receipt-documents-table input.input-white {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 4px !important;
+    height: 32px !important;
+    padding: 4px 8px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    text-align: right !important;
+    box-shadow: none !important;
+    width: 100% !important;
+    box-sizing: border-box;
+}
+
+#receipt-process-modal table.receipt-documents-table input.input-white:focus {
+    border-color: #2563eb !important;
+    outline: none !important;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2) !important;
+}
+
+/* Summary Rows in modal table */
+#receipt-process-modal .receipt-summary-row th.receipt-label-cell {
+    color: #475569 !important;
+    font-weight: 600 !important;
+    text-align: right !important;
+    border: 1px solid #e2e8f0 !important;
+    padding: 6px 12px !important;
+    font-size: 12px !important;
+    background-color: #f8fafc !important;
+}
+
+#receipt-process-modal .receipt-summary-row td {
+    border: 1px solid #e2e8f0 !important;
+    padding: 4px 6px !important;
+    background-color: #ffffff !important;
+}
+
+/* Kontrol status & formula */
+.kontrol-status-wrapper {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.kontrol-status-text {
+    font-size: 13px;
+    font-weight: 700;
+    color: #15803d;
+}
+
+.kontrol-status-text.unbalanced {
+    color: #dc2626;
+}
+
+.kontrol-formula {
+    color: #64748b;
+    font-size: 11px;
+    margin-top: 3px;
+    font-family: inherit;
+}
+
+/* Control Banner */
+.receipt-control-banner {
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    margin: 18px 0 20px;
+    line-height: 1.5;
+}
+
+.receipt-control-banner.banner-success {
+    background-color: #f0fdf4;
+    border: 1px solid #86efac;
+    color: #166534;
+}
+
+.receipt-control-banner.banner-danger {
+    background-color: #fef2f2;
+    border: 1px solid #fca5a5;
+    color: #991b1b;
+}
+
+.receipt-control-banner.banner-warning {
+    background-color: #fffbeb;
+    border: 1px solid #fde68a;
+    color: #92400e;
+}
+
+/* Journal Table */
+#receipt-process-modal .receipt-journal-preview-table {
+    width: 100% !important;
+    min-width: 900px !important;
+    margin-top: 10px;
+    margin-bottom: 0 !important;
+    border-collapse: collapse !important;
+    background-color: #ffffff !important;
+    color: #1e293b !important;
+    border: 1px solid #e2e8f0 !important;
+}
+
+#receipt-process-modal .receipt-journal-preview-table th,
+#receipt-process-modal .receipt-journal-preview-table td {
+    border: 1px solid #e2e8f0 !important;
+    padding: 10px 14px !important;
+    font-size: 13px !important;
+    vertical-align: middle !important;
+}
+
+#receipt-process-modal .receipt-journal-preview-table thead th {
+    background-color: #E9ECF9 !important;
+    color: #0A1A60 !important;
+    font-weight: 700 !important;
+    border-bottom: 2px solid #cbd5e1 !important;
+}
+
+#receipt-process-modal .receipt-journal-preview-table tbody tr:hover {
+    background-color: #f8fafc !important;
+}
+
+#receipt-process-modal .receipt-journal-preview-table tfoot th {
+    background-color: #f8fafc !important;
+    border-top: 2px solid #cbd5e1 !important;
+    color: #0A1A60 !important;
+    padding: 12px 14px !important;
+    font-weight: 700 !important;
+}
+
+/* Modal Bottom Actions */
+.receipt-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 24px;
+    padding-top: 12px;
+}
+
+.receipt-modal-actions .btn {
+    min-width: 100px;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 8px 20px;
+    border-radius: 4px;
+}
+
+#receipt-process-modal #receipt-message {
+    background-color: #fef2f2 !important;
+    border: 1px solid #fca5a5 !important;
+    color: #991b1b !important;
+    margin-bottom: 15px;
+}
+.receipt-section{border:1px solid #e1e7ef;border-radius:6px;padding:20px;margin-bottom:20px;background:#fff;min-width:0}
+.receipt-section-heading{display:flex;align-items:flex-start;gap:12px;margin-bottom:22px}
+.receipt-form-page .receipt-section-heading h4{margin:0 0 6px;font-size:15px}
+.receipt-section-heading p{font-size:12px;color:#64748b;margin:0;line-height:1.6}
+.receipt-step{display:flex;align-items:center;justify-content:center;flex-shrink:0;width:29px;height:29px;border-radius:50%;background:#eaf3fa;color:#367fa9;font-size:13px;font-weight:600}
+.receipt-selection-bar,.receipt-submit-bar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-top:16px}
+.receipt-selection-bar{background:#f5f8fc;border-radius:5px;padding:12px 15px;color:#64748b;font-size:13px}
+.receipt-selection-bar strong{display:inline-block;color:#2d506e;padding:3px 10px;background:#e5eef8;border-radius:4px;margin-left:5px}
+.receipt-payment-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:16px 0}
+.receipt-payment-summary>div{background:#f5f8fc;border:1px solid #e2e8f0;border-radius:5px;padding:14px}
+.receipt-payment-summary span{display:block;color:#64748b;font-size:12px;margin-bottom:8px}
+.receipt-payment-summary strong{font-size:18px;color:#24364b;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.receipt-payment-summary>div:last-child{background:#eef8f2;border-color:#cfe7d8}
+.receipt-form-page .receipt-submit-bar #receipt-preview{margin-top:0}
+.receipt-form-page .receipt-section .form-group:last-child{margin-bottom:0}
+.receipt-form-page #receipt-outstanding{min-width:1100px}
+.receipt-form-page #receipt-documents{min-width:1700px}
+.receipt-form-page .receipt-section .table-responsive{margin-bottom:12px}
+@media(max-width:767px){.receipt-section{padding:15px}.receipt-payment-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.receipt-submit-bar>div{display:flex;gap:8px;flex-wrap:wrap}}
+.receipt-legacy-links{display:flex;align-items:center;gap:16px;flex-wrap:wrap;color:#718096;font-size:12px;border-top:1px solid #edf1f5;padding:12px 0 20px}
+.receipt-filter-actions{margin-top:16px;display:flex;gap:8px}
+.receipt-page .receipt-header-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.receipt-list-filter-actions{margin-top:25px;flex-wrap:nowrap}
+.receipt-list-filter-actions .btn{white-space:nowrap}
+@media(max-width:767px){.receipt-list-filter-actions{margin-top:0}}
+.receipt-page .table-responsive{border:1px solid #e2e8f0;border-radius:5px;padding:12px}
+.receipt-page table{margin-bottom:0!important}
+.receipt-page table th{background:#f2f5fa;color:#475569;font-size:12px;white-space:nowrap;padding:12px!important}
+.receipt-page table td{padding:12px!important;vertical-align:middle!important;font-size:13px}
+.receipt-page #receipt-table{min-width:900px}
+.receipt-page #receipt-table thead th:nth-child(7){font-weight:700}
+.receipt-page #receipt-table td:nth-child(7){text-align:right;font-weight:400;white-space:nowrap;font-variant-numeric:tabular-nums}
+.receipt-page #receipt-table td:last-child{white-space:nowrap}
+.receipt-page #receipt-table tfoot th{background:#eef8f2;color:#24754b}
+.receipt-page .receipt-continuation td{border-top:1px dashed #e2e8f0;background:#fafcfe}
+.receipt-page #receipt-table td.receipt-group-cell{vertical-align:middle!important;background:#fff}
+.receipt-page .dataTables_filter .btn{margin-left:6px}
+.receipt-form-page .form-group{margin-bottom:22px}
+.receipt-form-page .form-group small{display:block;color:#718096;font-size:12px;margin-top:7px;line-height:1.5}
+.receipt-form-page h4,#receipt-modal h4{font-size:15px;font-weight:600;color:#334155;margin-top:24px;margin-bottom:15px}
+.receipt-form-page #receipt-bank-amount{height:34px;font-size:14px;font-weight:600}
+.receipt-form-page #receipt-form>.row{margin-bottom:8px}
+.receipt-form-page #receipt-editor{border:1px solid #e3e9f1;border-radius:6px;padding:18px;margin:20px 0}
+.receipt-form-page #receipt-preview{margin-top:15px}
+#receipt-modal .modal-content{border-radius:7px}
+#receipt-modal .modal-header{background:#f7f9fc;padding:16px 20px;border-radius:7px 7px 0 0}
+#receipt-modal .modal-header h4{margin:0}
+#receipt-modal .modal-body{padding:20px}
+#receipt-modal .modal-body>h4:first-child{margin-top:0;background:#f2f5fa;padding:14px;border-radius:5px;color:#2d506e}
+#receipt-modal p{line-height:1.8;color:#475569}
+#receipt-modal th{background:#f2f5fa;white-space:nowrap;padding:10px}
+#receipt-modal td{padding:10px;vertical-align:middle}
+#receipt-modal .text-right{font-variant-numeric:tabular-nums;white-space:nowrap}
+@media(max-width:767px){.receipt-page .deposit-toolbar{align-items:flex-start;flex-direction:column}.receipt-page .table-responsive{padding:8px}.receipt-form-page #receipt-editor{padding:10px}.receipt-legacy-links{gap:10px}}
+
+/* ===== mockup only ===== */
+.mock-bar{display:flex;align-items:center;gap:14px;margin:12px 30px 0 0;font-size:12px;color:#334155}
+.mock-bar label{font-weight:500;margin:0;cursor:pointer}
+.mock-bar .btn{border-radius:20px;font-size:12px;padding:5px 12px}
+.show-chg .chg{outline:2px dashed #f39c12;outline-offset:3px}
+.newtag{display:none;background:#f39c12;color:#fff;font-size:10px;font-weight:700;border-radius:3px;padding:1px 5px;margin-left:6px;vertical-align:middle;letter-spacing:.3px}
+.show-chg .newtag{display:inline-block}
+.mock-cases{border:2px dashed #f39c12;background:#fffaf0;border-radius:7px;padding:12px 16px;margin-bottom:18px;font-size:13px;color:#4b3a12}
+.mock-cases summary{cursor:pointer;font-weight:700;color:#8a5a00;outline:none}
+.mock-cases ol,.mock-cases ul{margin:10px 0 4px;padding-left:20px}.mock-cases li{margin-bottom:6px;line-height:1.55}
+.mock-cases code{background:#fff3d6;color:#7a4b00;padding:1px 4px;border-radius:3px}
+.content-wrapper{min-height:calc(100vh - 50px)}
+.coa-assumed{color:#b45309!important;font-style:italic}
+tr.jr-new td{background:#fff8e6!important}
+tr.jr-none td{color:#94a3b8;font-style:italic}
+select:disabled,input:disabled{background:#eef1f5!important;cursor:not-allowed}
+.pph-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.pph-tile{border:1px solid #e1e7ef;border-radius:6px;padding:14px 16px;background:#fafbfd;cursor:pointer}
+.pph-tile:hover{border-color:#94a3b8}
+.pph-tile .lbl{color:#64748b;font-size:12.5px;font-weight:600}
+.pph-tile .val{font-size:21px;font-weight:600;color:#24364b;margin:6px 0 2px;font-variant-numeric:tabular-nums}
+.pph-tile small{color:#64748b}
+.pph-tile.warn .val{color:#b45309}.pph-tile.danger .val{color:#c0392b}.pph-tile.ok .val{color:#24754b}
+@media(max-width:900px){.pph-tiles{grid-template-columns:1fr 1fr}}
+.st{display:inline-block;padding:3px 8px;border-radius:10px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.st-setor{background:#fde8e8;color:#b42318}.st-bp{background:#fff4dc;color:#9a6200}.st-done{background:#e3f4ea;color:#1e7a46}
+.st-legacy{background:#eef1f5;color:#475569;font-weight:500}
+.mode{display:inline-block;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:600}
+.mode-potong{background:#e8f0fb;color:#1d4f91}.mode-titip{background:#f3e8fb;color:#6b2c91}.mode-none{background:#eef1f5;color:#475569}
+.age-old{color:#c0392b;font-weight:600}
+.pph-help{background:#f8fafc;border:1px solid #e2e8f0;border-radius:5px;padding:9px 12px;margin-top:8px;font-size:12.5px;color:#334155;line-height:1.55}
+.cmp-box{border:2px dashed #f39c12;background:#fffaf0;border-radius:7px;padding:10px 14px;margin:12px 0;font-size:12.5px}
+.cmp-box summary{cursor:pointer;font-weight:700;color:#8a5a00}
+.cmp-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:10px}
+.cmp-grid h5{margin:0 0 6px;font-weight:700}
+@media(max-width:900px){.cmp-grid{grid-template-columns:1fr}}
+.pick-table td,.pick-table th{vertical-align:middle!important;font-size:12.5px}
+.pick-table tr.disabled td{color:#a0aec0}
+.timeline-pph{list-style:none;padding:0;margin:0 0 10px;border-left:3px solid #cbd5e1;margin-left:10px}
+.timeline-pph>li{position:relative;padding:0 0 22px 22px}
+.timeline-pph>li:before{content:'';position:absolute;left:-9px;top:3px;width:15px;height:15px;border-radius:50%;background:#fff;border:3px solid #94a3b8}
+.timeline-pph>li.done:before{border-color:#1e7a46;background:#1e7a46}
+.timeline-pph>li.wait:before{border-color:#d97706}
+.timeline-pph h4{margin:0 0 4px;font-size:15px;font-weight:700;color:#0A1A60}
+.timeline-pph .meta{font-size:12.5px;color:#475569;margin-bottom:8px}
+.journal-mini th,.journal-mini td{font-size:12.5px;padding:6px 9px!important}
+.journal-mini thead th{background:#E9ECF9;color:#0A1A60}
+.konsep h3{font-size:18px;font-weight:700;color:#0A1A60;margin:22px 0 10px}
+.konsep h3:first-child{margin-top:0}
+.konsep p,.konsep li{font-size:13.5px;line-height:1.65;color:#334155}
+.flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0 16px}
+.flow .step{border:1px solid #cbd5e1;background:#fff;border-radius:6px;padding:8px 12px;font-size:12.5px;max-width:240px}
+.flow .step b{display:block;color:#0A1A60}
+.flow .arr{color:#94a3b8;font-size:18px}
+.konsep table td,.konsep table th{font-size:12.5px}
+.ar-sum{display:flex;flex-wrap:wrap;gap:22px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:12px 16px;margin-bottom:18px}
+.ar-sum div{font-size:12px;color:#64748b}.ar-sum b{display:block;font-size:16px;color:#24364b;font-variant-numeric:tabular-nums}
+.file-mock{border:1px dashed #94a3b8;border-radius:4px;padding:8px 12px;color:#64748b;font-size:12.5px;background:#fafbfd}
+</style>
+</head>
+<body class="skin-blue-light fixed sidebar-mini show-chg">
+<div class="wrapper">
+<header class="main-header">
+  <a href="#konsep" class="logo"><img src="data:image/png;base64,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" class="logo-mini" alt="" width="250%"><img src="data:image/png;base64,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" class="logo-lg" alt="SISCAL" width="95%"></a>
+  <nav class="navbar navbar-static-top">
+    <a href="#" class="sidebar-toggle" data-toggle="push-menu" role="button"><span class="sr-only">Toggle navigation</span></a>
+    <div class="navbar-custom-menu">
+      <ul class="nav navbar-nav" style="margin-right:30px;">
+        <li><div class="mock-bar"><label><input type="checkbox" id="mock-chg" checked> Tandai perubahan</label><button type="button" class="btn btn-warning" id="mock-reset"><i class="fa fa-refresh"></i> Reset data</button></div></li>
+        <li><a href="#" class="btn-logout-cs"><span style="margin-left:10px;"><i class="fa fa-power-off"></i> Logout</span></a></li>
+      </ul>
+    </div>
+  </nav>
+</header>
+<aside class="main-sidebar">
+  <section class="sidebar">
+    <div class="user-panel">
+      <div class="pull-left image"><img src="data:image/png;base64,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" class="img-circle" alt=""></div>
+      <div class="pull-left info"><p>finance</p><a href="#"><i class="fa fa-circle text-success"></i> Online</a></div>
+    </div>
+    <ul class="sidebar-menu" data-widget="tree">
+      <li class="header">MOCKUP</li>
+      <li data-nav="konsep"><a href="#konsep"><i class="fa fa-lightbulb-o"></i> <span>Ringkasan Konsep</span></a></li>
+      <li class="header">MAIN NAVIGATION</li>
+      <li class="treeview active menu-open"><a href="#"><i class="fa fa-bank"></i> <span>Finance</span><span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span></a>
+        <ul class="treeview-menu" style="display:block">
+          <li data-nav="create"><a href="#create"><i class="fa fa-credit-card"></i> <span>Penerimaan Uang</span></a></li>
+          <li data-nav="pph23"><a href="#pph23"><i class="fa fa-percent"></i> <span>PPh 23 Invoice</span> <span class="newtag">BARU</span></a></li>
+          <li><a href="#" onclick="return false" style="color:#a0aec0" title="Menu lama, dimatikan setelah modul baru berjalan"><i class="fa fa-ban"></i> <span><s>Kontrol / Update PPh23</s></span></a></li>
+        </ul>
+      </li>
+    </ul>
+  </section>
+</aside>
+<div class="content-wrapper">
+  <section class="content">
+    <div id="mock-flash"></div>
+    <div id="page"></div>
+  </section>
+</div>
+<footer class="main-footer"><strong>SISCAL</strong> · mockup PPh 23 Invoice · data contoh disimpan di browser ini saja</footer>
+</div>
+
+<div class="modal fade" id="m-modal" tabindex="-1" role="dialog">
+  <div class="modal-dialog" role="document" style="width:min(1250px,96vw)"><div class="modal-content">
+    <div class="modal-header"><button type="button" class="close" data-dismiss="modal">&times;</button><h4 class="modal-title" id="m-title"></h4></div>
+    <div class="modal-body" id="m-body"></div>
+  </div></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/admin-lte/2.4.18/js/adminlte.min.js"></script>
+<script>
+(function($){'use strict';
+var TODAY='2026-11-27', GO_LIVE='2026-11-01', KEY='siscal_mock_pph23_v1';
+var BANKS=[
+ {accid:'1020-10-1',acc_name:'BANK BCA',norek:'4363005287'},
+ {accid:'1102-40-01',acc_name:'BANK BCA',norek:'4363078888'},
+ {accid:'1020-10-20',acc_name:'BANK MANDIRI',norek:'1240008808900'}];
+var COA={'1050-40-20':'PPH 23','9010-10-40':'ADMINISTRASI BANK','1030-10-10':'PIUTANG DAGANG USAHA','2010302':'HUTANG PPH 23 (TITIPAN)'};
+var ASSUMED={'2010302':true};
+var MODE={POTONG:'Dipotong Client',TITIP:'Titip Setor',NONE:'Tidak Ada PPh'};
+var MON=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+function bank(a){for(var i=0;i<BANKS.length;i++)if(BANKS[i].accid===a)return BANKS[i];return null;}
+function bankTxt(a){var b=bank(a);return b?b.acc_name+' / '+b.norek:'—';}
+function bankName(a){var b=bank(a);return b?b.acc_name+' '+b.norek:'BANK';}
+function esc(s){return $('<span>').text(s==null?'':String(s)).html();}
+function money(v){var n=Math.round(Number(v)||0),neg=n<0;n=Math.abs(n);return (neg?'-':'')+String(n).replace(/\B(?=(\d{3})+(?!\d))/g,'.');}
+function amt(v){var s=String(v==null?'':v).replace(/\./g,'').trim();if(s==='')return 0;return /^\d+$/.test(s)&&s.length<=15?Number(s):NaN;}
+function pad(n,l){n=String(n);while(n.length<l)n='0'+n;return n;}
+function jdate(d){if(!d)return '';var p=d.split('-');return p[2]+' '+MON[+p[1]-1].substr(0,3)+' '+p[0];}
+function days(d){return Math.round((new Date(TODAY)-new Date(d))/86400000);}
+function pphTarget(sales){return Math.floor((sales*2+50)/100);}
+function dpp(sales){return Math.floor((sales*11+6)/12);}
+function masaTxt(m){if(!m)return '-';var p=m.split('-');return MON[+p[1]-1]+' '+p[0];}
+
+/* ---------- data ---------- */
+function seed(){
+ var s={seq:{pu:146,stp:2,bpt:2},
+  customers:[{id:'C001',name:'PT SINAR PRESISI TEKNIK',npwp:'01.234.567.8-415.000'},{id:'C002',name:'PT MITRA KALIBRASI UTAMA',npwp:'02.345.678.9-416.000'},{id:'C003',name:'PT CAHAYA INDUSTRI MANDIRI',npwp:'03.456.789.0-417.000'},{id:'C004',name:'PT BUMI TEKNIK SEJAHTERA',npwp:'04.567.890.1-418.000'},{id:'C005',name:'PT ANUGERAH METROLOGI',npwp:'05.678.901.2-419.000'},{id:'C006',name:'PT GLOBAL INSTRUMEN NUSANTARA',npwp:'06.789.012.3-420.000'}],
+  ar:[
+   {invoice_no:'0071/STM/IX/26',customer_id:'C001',date:'2026-09-24',tax:'PKP',penjualan:10000000,ppn:1100000,saldo:0},
+   {invoice_no:'0101/STM/XI/26',customer_id:'C001',date:'2026-11-02',tax:'PKP',penjualan:10000000,ppn:1100000,saldo:200000},
+   {invoice_no:'0115/STM/XI/26',customer_id:'C001',date:'2026-11-06',tax:'PKP',penjualan:20000000,ppn:2200000,saldo:22200000},
+   {invoice_no:'0120/STM/XI/26',customer_id:'C002',date:'2026-11-03',tax:'NON_PKP',penjualan:30000000,ppn:0,saldo:600000},
+   {invoice_no:'0125/STM/XI/26',customer_id:'C002',date:'2026-11-04',tax:'PKP',penjualan:5000000,ppn:550000,saldo:100000},
+   {invoice_no:'0130/STM/XI/26',customer_id:'C003',date:'2026-11-01',tax:'PKP',penjualan:15000000,ppn:1650000,saldo:300000},
+   {invoice_no:'0135/STM/XI/26',customer_id:'C004',date:'2026-11-02',tax:'PKP',penjualan:8000000,ppn:880000,saldo:0},
+   {invoice_no:'0140/STM/XI/26',customer_id:'C005',date:'2026-11-13',tax:'NON_PKP',penjualan:35000000,ppn:0,saldo:35000000},
+   {invoice_no:'0145/STM/XI/26',customer_id:'C006',date:'2026-11-14',tax:'PKP',penjualan:20000000,ppn:2200000,saldo:22200000},
+   {invoice_no:'0146/STM/XI/26',customer_id:'C006',date:'2026-11-16',tax:'PKP',penjualan:4000000,ppn:440000,saldo:4440000}],
+  receipts:[],pph:[],setoran:[],bukti:[]};
+ function rc(id,date,cid,mode,bankCoa,lines,legacy){
+  var r={id:id,no:'PU/'+date.substr(0,4)+'/'+date.substr(5,2)+'/'+pad(id,6),journal_no:'JUR-PU-'+date.substr(0,7).replace('-','')+'-'+id,date:date,customer_id:cid,mode:mode,bank:bankCoa,legacy:!!legacy,lines:lines};
+  r.bank_amount=lines.reduce(function(t,l){return t+bankPart(mode,l);},0);
+  s.receipts.push(r);
+  lines.forEach(function(l){if(l.pph&&mode!=='NONE')s.pph.push({invoice_no:l.doc_no,customer_id:cid,receipt_no:r.no,receipt_date:date,mode:mode,amount:l.pph,status:mode==='TITIP'?'BELUM_SETOR':'MENUNGGU_BP',legacy:!!legacy,setor_no:'',bp_no:''});});
+  return r;
+ }
+ rc(120,'2026-10-08','C001','POTONG','1102-40-01',[{doc_no:'0071/STM/IX/26',saldo:11100000,pph:200000,admin:0,sisa:0}],true);
+ rc(138,'2026-11-03','C003','TITIP','1020-10-1',[{doc_no:'0130/STM/XI/26',saldo:16650000,pph:300000,admin:0,sisa:0}]);
+ rc(139,'2026-11-04','C004','POTONG','1020-10-20',[{doc_no:'0135/STM/XI/26',saldo:8880000,pph:160000,admin:0,sisa:0}]);
+ rc(142,'2026-11-05','C001','POTONG','1102-40-01',[{doc_no:'0101/STM/XI/26',saldo:11100000,pph:200000,admin:0,sisa:0}]);
+ rc(144,'2026-11-10','C002','TITIP','1020-10-1',[{doc_no:'0120/STM/XI/26',saldo:30000000,pph:600000,admin:0,sisa:0}]);
+ rc(145,'2026-11-11','C002','TITIP','1020-10-1',[{doc_no:'0125/STM/XI/26',saldo:5550000,pph:100000,admin:0,sisa:0}]);
+ // setoran titipan C003 + bukti potong C004 sudah ada
+ s.setoran.push({no:'STP/2026/11/0001',journal_no:'JUR-STP-202611-0001',date:'2026-11-12',customer_id:'C003',bank:'1020-10-1',masa:'2026-11',billing:'123456789012345',ntpn:'A1B2C3D4E5F6G7H8',lines:[{invoice_no:'0130/STM/XI/26',amount:300000}]});
+ s.bukti.push({no:'BPT/2026/11/0001',journal_no:'JUR-BPT-202611-0001',bp_no:'2611A0012345',bp_date:'2026-11-18',masa:'2026-11',npwp:'04.567.890.1-418.000',customer_id:'C004',file:'BPPU_2611A0012345.pdf',created:'2026-11-20',lines:[{invoice_no:'0135/STM/XI/26',amount:160000,legacy:false}]});
+ s.pph.forEach(function(p){
+  if(p.invoice_no==='0130/STM/XI/26'){p.status='MENUNGGU_BP';p.setor_no='STP/2026/11/0001';}
+  if(p.invoice_no==='0135/STM/XI/26'){p.status='SELESAI';p.bp_no='BPT/2026/11/0001';}
+ });
+ return s;
+}
+function bankPart(mode,l){return l.saldo-l.sisa-l.admin-(mode==='POTONG'?l.pph:0);}
+var S;
+function load(){try{var raw=localStorage.getItem(KEY);if(raw){S=JSON.parse(raw);return;}}catch(e){}S=seed();}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+function cust(id){for(var i=0;i<S.customers.length;i++)if(S.customers[i].id===id)return S.customers[i];return {name:'',npwp:''};}
+function arOf(no){for(var i=0;i<S.ar.length;i++)if(S.ar[i].invoice_no===no)return S.ar[i];return null;}
+function pphOf(no){for(var i=0;i<S.pph.length;i++)if(S.pph[i].invoice_no===no)return S.pph[i];return null;}
+function receiptByNo(no){for(var i=0;i<S.receipts.length;i++)if(S.receipts[i].no===no)return S.receipts[i];return null;}
+function setorByNo(no){for(var i=0;i<S.setoran.length;i++)if(S.setoran[i].no===no)return S.setoran[i];return null;}
+function bpByNo(no){for(var i=0;i<S.bukti.length;i++)if(S.bukti[i].no===no)return S.bukti[i];return null;}
+function pendingPph(no){var p=pphOf(no);return p&&!p.legacy&&p.status!=='SELESAI'?p.amount:0;}
+
+/* ---------- jurnal ---------- */
+function L(coa,d,c,ket,isNew){return {coa:coa,name:COA[coa]||bankName(coa),debit:d,credit:c,ket:ket,isNew:!!isNew};}
+function receiptJournal(r){
+ var j=[],cn=cust(r.customer_id).name,docs=r.lines.map(function(l){return l.doc_no;}).join(', ');
+ if(r.legacy)return asIsJournal(r);
+ j.push(L(r.bank,r.bank_amount,0,'Penerimaan '+bankName(r.bank)+' dari '+cn+' untuk invoice '+docs));
+ r.lines.forEach(function(l){if(l.admin)j.push(L('9010-10-40',l.admin,0,'Biaya admin bank invoice '+l.doc_no));});
+ r.lines.forEach(function(l){
+  var p=r.mode==='NONE'?0:l.pph,cr=l.saldo-l.sisa-p;
+  j.push(L('1030-10-10',0,cr,'Pelunasan piutang invoice '+l.doc_no+' - '+cn+(p?' (PPh 23 Rp '+money(p)+' tetap di piutang, menunggu bukti potong)':''),!!p));
+  if(r.mode==='TITIP'&&p)j.push(L('2010302',0,p,'Titipan PPh 23 invoice '+l.doc_no+' dari '+cn+', wajib disetor',true));
+ });
+ return j;
+}
+function asIsJournal(r){
+ var j=[],cn=cust(r.customer_id).name,docs=r.lines.map(function(l){return l.doc_no;}).join(', ');
+ var pphOn=r.mode==='POTONG';
+ var bankAmt=r.lines.reduce(function(t,l){return t+l.saldo-l.sisa-l.admin-(pphOn?l.pph:0);},0);
+ j.push(L(r.bank,bankAmt,0,'Penerimaan '+bankName(r.bank)+' dari '+cn+' untuk invoice '+docs));
+ r.lines.forEach(function(l){if(pphOn&&l.pph)j.push(L('1050-40-20',l.pph,0,'PPh 23 invoice '+l.doc_no));if(l.admin)j.push(L('9010-10-40',l.admin,0,'Biaya admin bank invoice '+l.doc_no));});
+ r.lines.forEach(function(l){j.push(L('1030-10-10',0,l.saldo,'Piutang invoice '+l.doc_no));if(l.sisa)j.push(L('1030-10-10',l.sisa,0,'Sisa piutang invoice '+l.doc_no));});
+ return j;
+}
+function setorJournal(s){
+ var cn=cust(s.customer_id).name,j=[],t=0;
+ s.lines.forEach(function(l){t+=l.amount;j.push(L('2010302',l.amount,0,'Setor titipan PPh 23 invoice '+l.invoice_no+' a.n. '+cn+' · NTPN '+(s.ntpn||'-'),true));});
+ j.push(L(s.bank,0,t,'Setor PPh 23 titipan '+cn+' via '+bankName(s.bank)+' · kode billing '+(s.billing||'-')));
+ return j;
+}
+function bpJournal(b){
+ var cn=cust(b.customer_id).name,j=[];
+ b.lines.forEach(function(l){if(l.legacy)return;
+  j.push(L('1050-40-20',l.amount,0,'PPh 23 invoice '+l.invoice_no+' · bukti potong '+(b.bp_no||'-')+' dari '+cn,true));
+  j.push(L('1030-10-10',0,l.amount,'Pelunasan sisa piutang (PPh 23) invoice '+l.invoice_no+' dengan bukti potong '+(b.bp_no||'-'),true));});
+ return j;
+}
+function jtable(lines,date,opt){
+ opt=opt||{};var d=0,c=0,b='';
+ lines.forEach(function(x){d+=x.debit;c+=x.credit;
+  b+='<tr class="'+(x.isNew?'jr-new':'')+'">'+(date?'<td class="deposit-nowrap">'+jdate(date)+'</td>':'')+'<td class="deposit-nowrap'+(ASSUMED[x.coa]?' coa-assumed':'')+'">'+esc(x.coa||'(pilih bank)')+(ASSUMED[x.coa]?' <small>(asumsi)</small>':'')+'</td><td>'+esc(x.name)+'</td><td>'+esc(x.ket)+'</td><td class="text-right">'+money(x.debit)+'</td><td class="text-right">'+money(x.credit)+'</td></tr>';});
+ if(!lines.length)b='<tr class="jr-none"><td colspan="'+(date?6:5)+'" class="text-center">'+(opt.empty||'Tidak ada jurnal')+'</td></tr>';
+ var bal=d===c;
+ return '<div class="table-responsive"><table class="table table-bordered journal-mini" style="min-width:820px"><thead><tr>'+(date?'<th style="width:105px">Tanggal</th>':'')+'<th style="width:105px">COA</th><th style="width:200px">Nama Account</th><th>Keterangan</th><th class="text-right" style="width:120px">Debit</th><th class="text-right" style="width:120px">Kredit</th></tr></thead><tbody>'+b+'</tbody>'+
+  (lines.length?'<tfoot><tr><th colspan="'+(date?4:3)+'" class="text-center">Balance'+(bal?'':' <span style="color:#c0392b">(selisih '+money(d-c)+')</span>')+'</th><th class="text-right">'+money(d)+'</th><th class="text-right">'+money(c)+'</th></tr></tfoot>':'')+'</table></div>';
+}
+var COA_NOTE='<p class="text-muted" style="font-size:12px;margin-top:-6px"><i class="fa fa-info-circle"></i> COA <span class="coa-assumed">2010302 Hutang PPh 23 (Titipan)</span> masih asumsi, menunggu konfirmasi Accounting. Baris berlatar kuning adalah baris yang baru/berubah dibanding sekarang.</p>';
+
+/* ---------- shell ---------- */
+function flash(html,type){$('#mock-flash').html(html?'<div class="alert alert-'+(type||'success')+' alert-dismissible"><button type="button" class="close" data-dismiss="alert">&times;</button>'+html+'</div>':'');}
+function cases(items,title){return '<details class="mock-cases chg" open><summary><i class="fa fa-flask"></i> '+(title||'Skenario uji (mockup)')+'</summary><ol>'+items.map(function(i){return '<li>'+i+'</li>';}).join('')+'</ol></details>';}
+function statusBadge(p){
+ if(p.status==='BELUM_SETOR')return '<span class="st st-setor">Titipan Belum Disetor</span>';
+ if(p.status==='MENUNGGU_BP')return '<span class="st st-bp">Menunggu Bukti Potong</span>';
+ return '<span class="st st-done">Selesai</span>';
+}
+function modeBadge(m){return '<span class="mode mode-'+(m==='POTONG'?'potong':m==='TITIP'?'titip':'none')+'">'+MODE[m]+'</span>';}
+var keepFlash=false;
+function route(){
+ if(!keepFlash)flash('');keepFlash=false;
+ var h=(location.hash||'#konsep').substr(1).split('/'),p=h[0];
+ $('.sidebar-menu li[data-nav]').removeClass('active');
+ $('.sidebar-menu li[data-nav="'+({detail:'pph23'}[p]||p)+'"]').addClass('active');
+ $(window).scrollTop(0);
+ if(p==='create')pageCreate();else if(p==='pph23')pageList();
+ else if(p==='detail')pageDetail(decodeURIComponent(h.slice(1).join('/')));else pageKonsep();
+}
+
+/* ---------- Ringkasan Konsep ---------- */
+function pageKonsep(){
+ var html='<div class="kwitansi-page"><div class="box box-primary"><div class="box-header with-border"><h3 class="box-title">Ringkasan Konsep · Modul PPh 23 Invoice</h3></div><div class="box-body konsep">'+
+ '<h3>Intinya</h3><p>Piutang tetap <b>Penjualan + PPN</b> (tagihan invoice), akun piutang dan jurnal pembentukan invoice <b>tidak berubah</b>. Bagian PPh 23 dari piutang baru dianggap lunas saat <b>bukti potong</b> diterima, karena bukti potong itulah "alat bayar" client untuk bagian tersebut. Modul ini hanya finalisasi: baris jurnal PPh 23 yang sekarang dibuat saat penerimaan dipindah ke saat bukti potong diterima.</p>'+
+ '<h3>Tiga pilihan PPh 23 di Penerimaan Uang</h3><table class="table table-bordered" style="max-width:980px"><thead><tr><th>Pilihan</th><th>Kapan dipakai</th><th>Uang yang masuk</th><th>Status PPh setelah penerimaan</th></tr></thead><tbody>'+
+ '<tr><td>'+modeBadge('POTONG')+'</td><td>Client memotong PPh 23 dan menyetor sendiri (yang seharusnya)</td><td>Tagihan − PPh 23</td><td><span class="st st-bp">Menunggu Bukti Potong</span></td></tr>'+
+ '<tr><td>'+modeBadge('TITIP')+'</td><td>Client bayar penuh, menitipkan PPh 23 untuk kita setorkan</td><td>Tagihan penuh</td><td><span class="st st-setor">Titipan Belum Disetor</span></td></tr>'+
+ '<tr><td>'+modeBadge('NONE')+'</td><td>Client bukan pemotong PPh 23</td><td>Tagihan penuh</td><td>Tidak dilacak (sama seperti sekarang)</td></tr></tbody></table>'+
+ '<h3>Alur</h3><p><b>Dipotong client</b></p><div class="flow"><div class="step"><b>Penerimaan Uang</b>Bank masuk tagihan − PPh. Sisa piutang = PPh</div><span class="arr">→</span><div class="step"><b>Terima Bukti Potong</b>PPh 23 diakui, piutang lunas</div></div>'+
+ '<p><b>Titip setor</b></p><div class="flow"><div class="step"><b>Penerimaan Uang</b>Bank masuk penuh. Kelebihan = hutang titipan. Sisa piutang = PPh</div><span class="arr">→</span><div class="step"><b>Setor Titipan</b>Kita setor ke negara (kode billing, NTPN)</div><span class="arr">→</span><div class="step"><b>Terima Bukti Potong</b>Dari client. PPh 23 diakui, piutang lunas</div></div>'+
+ '<h3>Contoh jurnal</h3><p>Penjualan 10.000.000 · PPN 1.100.000 · tagihan 11.100.000 · PPh 23 (2% × penjualan) 200.000.</p>'+
+ '<table class="table table-bordered" style="max-width:980px"><thead><tr><th>Tahap</th><th>Dipotong client</th><th>Titip setor</th></tr></thead><tbody>'+
+ '<tr><td>Penerimaan</td><td>Dr Bank 10.900.000<br>Cr Piutang 10.900.000</td><td>Dr Bank 11.100.000<br>Cr Piutang 10.900.000<br>Cr Hutang Titipan PPh 23 200.000</td></tr>'+
+ '<tr><td>Setor titipan</td><td>—</td><td>Dr Hutang Titipan PPh 23 200.000<br>Cr Bank 200.000</td></tr>'+
+ '<tr><td>Bukti potong diterima</td><td colspan="2">Dr PPh 23 (1050-40-20) 200.000 / Cr Piutang 200.000</td></tr>'+
+ '<tr style="background:#f8fafc"><td>Sekarang (pembanding)</td><td>Dr Bank 10.900.000, Dr PPh 23 200.000 / Cr Piutang 11.100.000, langsung saat penerimaan</td><td>Dr Bank 11.100.000 / Cr Piutang 11.100.000, titipan tidak tercatat</td></tr></tbody></table>'+
+ '<h3>Asumsi di mockup ini</h3><ul>'+
+ '<li>COA Hutang Titipan PPh 23 = <span class="coa-assumed">2010302</span> (sistem lama memakai akun ini). Menunggu Accounting.</li>'+
+ '<li>Tidak ada COA baru. Akun lain yang dipakai sudah ada: Piutang 1030-10-10, PPh 23 1050-40-20, Admin 9010-10-40.</li>'+
+ '<li>Tanggal berlaku contoh: <b>'+jdate(GO_LIVE)+'</b>. Penerimaan sebelum tanggal ini sudah menjurnal PPh 23 saat penerimaan, jadi input bukti potongnya <b>administratif tanpa jurnal</b>.</li>'+
+ '<li>Tidak ada pilih customer: invoice yang sudah diterima langsung muncul di index PPh 23, dipisah tab <b>PPh 23 Dipotong</b> dan <b>PPh 23 Tidak Dipotong (Titip Setor)</b>, dengan aksi per baris seperti layar lama "Update Pph23 Tidak Dipotong".</li><li>Input per invoice. Satu bukti potong atau satu NTPN untuk beberapa invoice: nomor yang sama diisi di tiap invoice, asal customernya sama.</li>'+
+ '<li>Nilai di bukti potong harus sama dengan PPh 23 di sistem. Kalau beda, ditolak dan dicek ke customer (fitur selisih belum ada di versi ini).</li>'+
+ '<li>Untuk titipan, bukti potong baru bisa diinput setelah titipan disetor.</li>'+
+ '<li>Tanggal jurnal bukti potong = tanggal bukti potong. Tanggal jurnal setoran = tanggal setor.</li>'+
+ '<li>Nomor usulan: Setor Titipan <code>STP/yyyy/mm/nnnn</code> (jurnal <code>JUR-STP-…</code>), Terima Bukti Potong <code>BPT/yyyy/mm/nnnn</code> (jurnal <code>JUR-BPT-…</code>).</li>'+
+ '<li>Menu lama Kontrol PPh23 Dipotong / Update PPh23 Tidak Dipotong dimatikan setelah modul ini berjalan.</li></ul>'+
+ '<h3>Masih dibahas</h3><ul><li>Bukti potong tidak pernah terbit: dibebankan ke biaya atau ditagih ulang?</li><li>Selisih kecil nilai bukti potong vs sistem.</li><li>Bukti potong yang datang <i>sebelum</i> uangnya diterima.</li><li>Pembatalan setoran / bukti potong yang salah input.</li></ul>'+
+ '<p style="margin-top:18px"><a class="btn btn-primary" href="#create">Coba Penerimaan Uang <i class="fa fa-arrow-right"></i></a> <a class="btn btn-default" href="#pph23">Lihat Modul PPh 23 Invoice</a></p>'+
+ '</div></div></div>';
+ $('#page').html(html);
+}
+
+/* ---------- Buat Penerimaan Uang ---------- */
+var F;
+function pageCreate(){
+ F={selected:{}};
+ var bankOpts=BANKS.map(function(b){return '<option value="'+b.accid+'">'+esc(b.acc_name+' / '+b.norek)+'</option>';}).join('');
+ var custOpts='<option value="">- Pilih Customer -</option>'+S.customers.map(function(c){return '<option value="'+c.id+'">'+esc(c.name)+'</option>';}).join('');
+ var html='<div class="kwitansi-page receipt-page receipt-form-page receipt-classic-page"><div class="box box-primary"><div class="box-header with-border"><h3 class="box-title">Buat Penerimaan Uang</h3></div><div class="box-body">'+
+ cases(['<b>Dipotong client:</b> PT SINAR PRESISI TEKNIK · invoice <code>0115/STM/XI/26</code> (tagihan 22.200.000, PPh 400.000) · PPh 23 <b>Dipotong Client</b> · Bank BCA · Uang Masuk <b>21.800.000</b>. Hasil: piutang tersisa 400.000 berstatus Menunggu Bukti Potong.',
+  '<b>Titip setor:</b> PT ANUGERAH METROLOGI · invoice <code>0140/STM/XI/26</code> (35.000.000 Non PPN, PPh 700.000) · PPh 23 <b>Titip Setor</b> · Uang Masuk <b>35.000.000</b>. Hasil: Cr Hutang Titipan 700.000, status Titipan Belum Disetor.',
+  '<b>Tidak ada PPh:</b> PT GLOBAL INSTRUMEN NUSANTARA · invoice <code>0146/STM/XI/26</code> · Uang Masuk <b>4.440.000</b>. Hasil: sama seperti sekarang, tidak masuk modul PPh 23.',
+  'Invoice yang sisa piutangnya tinggal PPh 23 (mis. <code>0101/STM/XI/26</code> milik PT SINAR PRESISI TEKNIK) <b>tidak muncul</b> di sini. Pelunasannya lewat menu PPh 23 Invoice.',
+  'Di modal rincian, buka <b>Bandingkan dengan jurnal sekarang</b> untuk melihat bedanya.'])+
+ '<p class="alert alert-info" style="margin-bottom:16px">Mockup ini hanya menampilkan bagian yang berubah. Jenis Kwitansi Deposit, Penerimaan Belum Teridentifikasi, Pakai Deposit, Lebih Bayar, dan Alokasi manual tetap seperti sekarang dan tidak dimockup.</p>'+
+ '<form id="receipt-form" onsubmit="return false;">'+
+ '<div class="row"><div class="col-sm-6 form-group"><label>Jenis Penerimaan <span class="text-danger">*</span></label><select class="form-control" disabled><option>Invoice</option></select></div>'+
+ '<div class="col-sm-6 form-group"><label for="r-date">Tanggal Penerimaan <span class="text-danger">*</span></label><input type="date" class="form-control" id="r-date" value="'+TODAY+'" max="'+TODAY+'"></div></div>'+
+ '<div class="row"><div class="col-sm-6 form-group"><label for="r-cust">Customer <span class="text-danger">*</span></label><select class="form-control" id="r-cust">'+custOpts+'</select></div>'+
+ '<div class="col-sm-6 form-group chg"><label for="r-pph">PPh 23 <span class="text-danger">*</span> <span class="newtag">BERUBAH</span></label><select id="r-pph" class="form-control"><option value="">- Pilih -</option><option value="POTONG">Dipotong Client</option><option value="TITIP">Titip Setor</option><option value="NONE">Tidak Ada PPh</option></select><div class="pph-help" id="r-pph-help">Sekarang pilihannya Ya / Tidak. Pilih salah satu untuk melihat penjelasannya.</div></div></div>'+
+ '<div class="row"><div class="col-sm-6 form-group"><label for="r-bank">Bank / Rekening <span class="text-danger">*</span></label><select class="form-control" id="r-bank"><option value="">- Pilih Bank / Rekening -</option>'+bankOpts+'</select></div>'+
+ '<div class="col-sm-6 form-group"><label for="r-amount">Uang Masuk Bank <span class="text-danger">*</span></label><input class="form-control receipt-money" id="r-amount" inputmode="numeric" value="0"></div></div>'+
+ '<div class="table-responsive"><table class="table table-bordered table-striped" width="100%"><thead><tr style="background-color:#E9ECF9;color:#0A1A60;"><th>Tgl Invoice</th><th>Nomor Invoice</th><th>TAX Code</th><th>Penjualan</th><th>PPN</th><th>PPH 23</th><th>Total Tagihan</th><th>Saldo Piutang</th><th>Pilih</th></tr></thead><tbody id="r-docs"></tbody></table></div>'+
+ '<div class="receipt-selection-bar"><span>Dokumen terpilih: <strong id="r-count">0</strong></span><div style="display:flex;gap:10px;align-items:center"><a class="btn btn-default" href="#pph23"><i class="fa fa-arrow-left"></i> Kembali</a><button type="button" class="btn btn-primary" id="r-process">Proses Rincian <i class="fa fa-arrow-right"></i></button></div></div>'+
+ '<div id="r-msg" role="alert" style="display:none;margin-top:14px"></div></form></div></div></div>';
+ $('#page').html(html);
+ $('#r-cust').on('change',function(){F.selected={};renderDocs();});
+ $('#r-pph').on('change',function(){
+  var t={POTONG:'Client memotong PPh 23 dan menyetorkannya sendiri. Uang masuk = tagihan − PPh 23. Bagian PPh 23 <b>tetap di piutang</b> dengan status <b>Menunggu Bukti Potong</b> sampai bukti potongnya diinput di menu PPh 23 Invoice.',
+   TITIP:'Client bayar penuh dan menitipkan PPh 23 untuk kita setorkan. Uang masuk = tagihan penuh. Bagian PPh 23 dicatat sebagai <b>Hutang Titipan PPh 23</b>, dan bagian piutangnya tetap terbuka sampai bukti potong diterima. Status awal <b>Titipan Belum Disetor</b>.',
+   NONE:'Client bukan pemotong PPh 23. Uang masuk = tagihan penuh. Sama seperti pilihan "Tidak" sekarang, tidak dilacak di modul PPh 23.'}[this.value];
+  $('#r-pph-help').html(t||'Pilih salah satu.');renderDocs();});
+ $('#r-amount').on('input',function(){var d=this.value.replace(/[^0-9]/g,'').replace(/^0+(?=\d)/,'');this.value=d?money(d):'';});
+ $('#r-docs').on('change','.r-pick',function(){var no=$(this).attr('data-no');if(this.checked)F.selected[no]=true;else delete F.selected[no];$('#r-count').text(Object.keys(F.selected).length);});
+ $('#r-process').on('click',openReceiptModal);
+ renderDocs();
+}
+function payable(a){return a.saldo-pendingPph(a.invoice_no);}
+function linePph(a,mode){if(mode==='NONE'||!mode)return 0;var p=pphOf(a.invoice_no);return p?0:pphTarget(a.penjualan);}
+function renderDocs(){
+ var cid=$('#r-cust').val(),mode=$('#r-pph').val(),rows='';
+ S.ar.filter(function(a){return a.customer_id===cid&&payable(a)>0;}).forEach(function(a){
+  var p=linePph(a,mode||'POTONG');
+  rows+='<tr><td>'+a.date+'</td><td>'+esc(a.invoice_no)+'</td><td>'+a.tax+'</td><td class="text-right">'+money(a.penjualan)+'</td><td class="text-right">'+money(a.ppn)+'</td><td class="text-right">'+(mode==='NONE'?'0':money(p))+'</td><td class="text-right">'+money(a.penjualan+a.ppn)+'</td><td class="text-right">'+money(payable(a))+'</td><td class="text-center"><input type="checkbox" class="r-pick" data-no="'+esc(a.invoice_no)+'"'+(F.selected[a.invoice_no]?' checked':'')+'></td></tr>';});
+ var hidden=S.ar.filter(function(a){return a.customer_id===cid&&a.saldo>0&&payable(a)<=0;});
+ if(hidden.length)rows+='<tr class="chg"><td colspan="9" class="text-muted" style="font-size:12.5px"><i class="fa fa-info-circle"></i> '+hidden.length+' invoice sisa piutangnya tinggal PPh 23 ('+hidden.map(function(a){return esc(a.invoice_no);}).join(', ')+'), jadi tidak ditampilkan. Pelunasannya lewat <a href="#pph23">PPh 23 Invoice</a>. <span class="newtag">BARU</span></td></tr>';
+ $('#r-docs').html(rows||'<tr><td colspan="9" class="text-center text-muted">'+(cid?'Tidak ada invoice outstanding.':'Pilih customer untuk melihat dokumen outstanding.')+'</td></tr>');
+ $('#r-count').text(Object.keys(F.selected).length);
+}
+function rMsg(s){$('#r-msg').attr('class','alert alert-danger').text(s).toggle(!!s);}
+function openReceiptModal(){
+ var cid=$('#r-cust').val(),mode=$('#r-pph').val(),b=$('#r-bank').val(),nos=Object.keys(F.selected);
+ if(!cid||!nos.length||!mode)return rMsg('Pilih customer, dokumen, dan pilihan PPh 23 dahulu.');
+ if(!b)return rMsg('Bank / Rekening wajib diisi.');
+ rMsg('');
+ var rows='';
+ nos.forEach(function(no){var a=arOf(no),p=linePph(a,mode);
+  rows+='<tr data-no="'+esc(no)+'"><td style="font-weight:600;color:#0A1A60">'+esc(no)+'</td><td class="text-center"><span class="badge-tax-code">'+a.tax+'</span></td><td class="text-right">'+money(a.penjualan)+'</td><td class="text-right">'+money(a.ppn)+'</td><td class="text-right">'+money(a.penjualan+a.ppn)+'</td><td class="text-right">'+money(payable(a))+'</td><td class="text-right chg">'+money(p)+'</td>'+
+  '<td><input class="form-control receipt-money input-white" data-field="admin" inputmode="numeric"></td><td><input class="form-control receipt-money input-white" data-field="sisa" inputmode="numeric"></td><td class="text-right r-bankpart"></td></tr>';});
+ $('#m-title').html('Penerimaan Piutang · '+modeBadge(mode));
+ $('#m-body').html('<div class="table-responsive"><table class="table table-bordered receipt-documents-table" id="r-lines"><thead><tr><th>Nomor Invoice</th><th class="text-center">TAX Code</th><th class="text-right">Penjualan</th><th class="text-right">PPN</th><th class="text-right">Total Tagihan</th><th class="text-right">Saldo Piutang</th><th class="text-right chg">PPh 23<br><small style="font-weight:400;color:#64748b">'+(mode==='POTONG'?'menunggu bukti potong':mode==='TITIP'?'titipan':'-')+'</small></th><th class="text-right" style="min-width:110px">Biaya Admin</th><th class="text-right" style="min-width:110px">Sisa Piutang</th><th class="text-right">Harus Masuk Bank</th></tr></thead><tbody>'+rows+'</tbody>'+
+  '<tfoot><tr class="receipt-summary-row"><th colspan="9" class="text-right">Total harus masuk bank</th><td class="text-right"><b id="t-need">0</b></td></tr><tr class="receipt-summary-row"><th colspan="9" class="text-right">Uang Masuk Bank (header)</th><td class="text-right"><b>'+money(amt($('#r-amount').val()))+'</b></td></tr><tr class="receipt-summary-row"><th colspan="9" class="text-right">Kontrol</th><td class="text-right"><b id="t-ctrl">0</b></td></tr></tfoot></table></div>'+
+  '<div id="r-banner" class="receipt-control-banner"></div><h4 style="margin-top:16px">Preview Jurnal</h4><div id="r-journal"></div>'+COA_NOTE+
+  '<details class="cmp-box"><summary><i class="fa fa-exchange"></i> Bandingkan dengan jurnal sekarang</summary><div class="cmp-grid"><div><h5>Sekarang</h5><div id="r-asis"></div></div><div><h5>Usulan</h5><div id="r-new2"></div></div></div></details>'+
+  '<div class="receipt-modal-actions"><button type="button" id="r-save" class="btn btn-success" disabled>Proses</button><button type="button" class="btn btn-danger" data-dismiss="modal">Batal</button></div>');
+ $('#m-modal').modal('show');
+ $('#r-lines').on('input','.receipt-money',function(){var d=this.value.replace(/[^0-9]/g,'').replace(/^0+(?=\d)/,'');this.value=d?money(d):'';calcReceipt();});
+ $('#r-save').on('click',saveReceipt);
+ calcReceipt();
+}
+function draftReceipt(){
+ var mode=$('#r-pph').val(),lines=[],ok=true;
+ $('#r-lines tbody tr').each(function(){var no=$(this).attr('data-no'),a=arOf(no),admin=amt($(this).find('[data-field="admin"]').val()),sisa=amt($(this).find('[data-field="sisa"]').val());
+  if(!isFinite(admin)||!isFinite(sisa))ok=false;
+  var l={doc_no:no,saldo:payable(a),pph:linePph(a,mode),admin:admin||0,sisa:sisa||0};
+  if(bankPart(mode,l)<0)ok=false;
+  lines.push(l);$(this).find('.r-bankpart').text(money(bankPart(mode,l)));});
+ var r={date:$('#r-date').val(),customer_id:$('#r-cust').val(),mode:mode,bank:$('#r-bank').val(),lines:lines,legacy:false};
+ r.bank_amount=amt($('#r-amount').val());
+ r.need=lines.reduce(function(t,l){return t+bankPart(mode,l);},0);
+ r.ok=ok;return r;
+}
+function calcReceipt(){
+ var r=draftReceipt(),ctrl=r.need-r.bank_amount,admin=r.lines.reduce(function(t,l){return t+l.admin;},0);
+ $('#t-need').text(money(r.need));$('#t-ctrl').text(money(ctrl)).css('color',ctrl===0?'#1e7a46':'#c0392b');
+ var msg,cls='banner-danger';
+ if(!r.ok)msg='Nominal tidak valid atau Admin/Sisa melebihi saldo.';
+ else if(admin>10000)msg='Total biaya admin melebihi Rp 10.000.';
+ else if(ctrl>0)msg='Uang masuk kurang Rp '+money(ctrl)+'. Alokasikan ke Biaya Admin atau Sisa Piutang.';
+ else if(ctrl<0)msg='Uang masuk lebih Rp '+money(-ctrl)+'. (Lebih bayar tetap seperti sekarang, tidak dimockup.)'+(r.mode==='POTONG'?' Kalau client ternyata bayar penuh, mungkin seharusnya pilih Titip Setor.':'');
+ else{cls='banner-success';msg='Kontrol 0. Periksa jurnal di bawah, lalu klik Proses.';}
+ $('#r-banner').attr('class','receipt-control-banner '+cls).text(msg);
+ var j=receiptJournal(r);$('#r-journal').html(jtable(j,r.date));$('#r-new2').html(jtable(j));$('#r-asis').html(jtable(asIsJournal(r)));
+ $('#r-save').prop('disabled',!(r.ok&&ctrl===0&&admin<=10000));
+}
+function saveReceipt(){
+ var r=draftReceipt();if(!window.confirm('Simpan penerimaan dan jurnal?'))return;
+ var id=S.seq.pu++;r.id=id;r.no='PU/'+r.date.substr(0,4)+'/'+r.date.substr(5,2)+'/'+pad(id,6);r.journal_no='JUR-PU-'+r.date.substr(0,7).replace('-','')+'-'+id;
+ delete r.need;delete r.ok;S.receipts.push(r);
+ var tracked=[];
+ r.lines.forEach(function(l){var a=arOf(l.doc_no),p=r.mode==='NONE'?0:l.pph;
+  a.saldo=a.saldo-(l.saldo-l.sisa-p);
+  if(p){S.pph.push({invoice_no:l.doc_no,customer_id:r.customer_id,receipt_no:r.no,receipt_date:r.date,mode:r.mode,amount:p,status:r.mode==='TITIP'?'BELUM_SETOR':'MENUNGGU_BP',legacy:false,setor_no:'',bp_no:''});tracked.push(l.doc_no);}});
+ save();$('#m-modal').modal('hide');keepFlash=true;
+ flash('Penerimaan <b>'+r.no+'</b> tersimpan.'+(tracked.length?' PPh 23 invoice '+tracked.map(esc).join(', ')+' masuk daftar <b>'+(r.mode==='TITIP'?'Titipan Belum Disetor':'Menunggu Bukti Potong')+'</b>.':''));
+ if(tracked.length){LF.tab=r.mode;LF.status='OPEN';}location.hash=tracked.length?'#pph23':'#konsep';
+}
+
+/* ---------- Index PPh 23 Invoice (pola layar lama "Update Pph23 Tidak Dipotong") ---------- */
+var LF={tab:'POTONG',status:'OPEN',search:''};
+function sumAmt(a){return a.reduce(function(t,p){return t+p.amount;},0);}
+function pageList(){
+ var pot=S.pph.filter(function(p){return p.mode==='POTONG'&&p.status!=='SELESAI';}),tit=S.pph.filter(function(p){return p.mode==='TITIP'&&p.status!=='SELESAI';});
+ var html='<div class="kwitansi-page receipt-page"><div class="box box-primary"><div class="box-header with-border"><h3 class="box-title">PPh 23 Invoice <span class="newtag">BARU</span></h3><div class="box-tools receipt-header-actions">'+
+ '<a class="btn btn-primary btn-sm" href="#create"><i class="fa fa-plus"></i> Buat Penerimaan</a> <button type="button" class="btn btn-success btn-sm" disabled title="Tidak dimockup"><i class="fa fa-file-excel-o"></i> Excel</button></div></div><div class="box-body">'+
+ cases(['Tidak ada pilih customer. Invoice yang sudah diterima di Penerimaan Uang dengan pilihan PPh 23 <b>Dipotong Client</b> atau <b>Titip Setor</b> langsung muncul di tab masing-masing.',
+  '<b>Tab PPh 23 Dipotong:</b> klik <i class="fa fa-paper-plane"></i> <b>Bukti Potong</b> pada <code>0101/STM/XI/26</code> → isi No Bukti Potong, tanggal, masa, nilai 200.000 → Proses. Jurnal Dr PPh 23 / Cr Piutang. Pada <code>0071/STM/IX/26</code> (sebelum tanggal berlaku) tidak ada jurnal.',
+  '<b>Tab PPh 23 Tidak Dipotong (Titip Setor):</b> <code>0120/STM/XI/26</code> → <i class="fa fa-paper-plane"></i> <b>Setor</b> → isi bank, masa, kode billing, NTPN → Proses. Baris tetap di tab ini dengan aksi berganti jadi <b>Bukti Potong</b>.',
+  'Satu bukti potong / satu NTPN untuk beberapa invoice: input di tiap baris dengan nomor yang sama (customer harus sama). Coba setor <code>0125/STM/XI/26</code> dengan NTPN yang sama dengan 0120.',
+  'Klik <i class="fa fa-search"></i> untuk melihat riwayat dan jurnal per tahap. Filter Status untuk melihat yang sudah Selesai.'])+
+ '<ul class="nav nav-tabs" style="margin-bottom:14px"><li class="'+(LF.tab==='POTONG'?'active':'')+'"><a href="#" class="l-tab" data-tab="POTONG">PPh 23 Dipotong <span class="badge" style="background:#d97706">'+pot.length+'</span></a></li>'+
+ '<li class="'+(LF.tab==='TITIP'?'active':'')+'"><a href="#" class="l-tab" data-tab="TITIP">PPh 23 Tidak Dipotong (Titip Setor) <span class="badge" style="background:#c0392b">'+tit.length+'</span></a></li></ul>'+
+ '<p class="text-muted" id="l-sub" style="font-size:12.5px;margin:0 0 12px"></p>'+
+ '<div class="deposit-grid-tools" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px"><div><label style="font-weight:500;margin:0">Status <select id="l-status" class="form-control input-sm" style="display:inline-block;width:auto;margin-left:6px"><option value="OPEN">Belum Selesai</option><option value="SELESAI">Selesai</option><option value="">Semua</option></select></label></div>'+
+ '<div><label style="font-weight:500;margin:0">Search: <input id="l-search" class="form-control input-sm" style="display:inline-block;width:260px;margin-left:6px" placeholder="Invoice, customer, NTPN, bukti potong"></label></div></div>'+
+ '<div class="table-responsive"><table class="table table-bordered table-striped" width="100%"><thead><tr style="background:#E9ECF9;color:#0A1A60" id="l-head"></tr></thead><tbody id="l-rows"></tbody></table></div><div class="dataTables_info" id="l-info"></div>'+
+ '<p class="deposit-table-note"><i class="fa fa-info-circle"></i> Umur dihitung dari tanggal penerimaan. Label "Sebelum berlaku" = penerimaan sebelum '+jdate(GO_LIVE)+' yang PPh 23-nya sudah dijurnal saat penerimaan, jadi input bukti potongnya tanpa jurnal.</p>'+
+ '</div></div></div>';
+ $('#page').html(html);
+ $('#l-status').val(LF.status);$('#l-search').val(LF.search);
+ $('.l-tab').on('click',function(e){e.preventDefault();LF.tab=$(this).attr('data-tab');$('.l-tab').parent().removeClass('active');$(this).parent().addClass('active');renderList();});
+ $('#l-status').on('change',function(){LF.status=this.value;renderList();});
+ $('#l-search').on('input',function(){LF.search=this.value;renderList();});
+ $('#l-rows').on('click','.act-bp',function(){openBpModal($(this).attr('data-no'));});
+ $('#l-rows').on('click','.act-setor',function(){openSetorModal($(this).attr('data-no'));});
+ renderList();
+}
+function actionBtn(p){
+ var d='<a class="btn btn-xs btn-info" title="Detail" href="#detail/'+encodeURIComponent(p.invoice_no)+'"><i class="fa fa-search"></i></a> ';
+ if(p.status==='BELUM_SETOR')return d+'<button type="button" class="btn btn-xs btn-success act-setor" data-no="'+esc(p.invoice_no)+'" title="Setor titipan"><i class="fa fa-paper-plane"></i> Setor</button>';
+ if(p.status==='MENUNGGU_BP')return d+'<button type="button" class="btn btn-xs btn-success act-bp" data-no="'+esc(p.invoice_no)+'" title="Input bukti potong"><i class="fa fa-paper-plane"></i> Bukti Potong</button>';
+ return d;
+}
+function renderList(){
+ var tit=LF.tab==='TITIP';
+ var all=S.pph.filter(function(p){return p.mode===LF.tab;}),open=all.filter(function(p){return p.status!=='SELESAI';});
+ $('#l-sub').html(tit?'Client bayar penuh dan menitipkan PPh 23. Kita <b>setor</b> dulu (NTPN), lalu tagih <b>bukti potong</b> ke client. Belum disetor: <b>Rp '+money(sumAmt(open.filter(function(p){return p.status==='BELUM_SETOR';})))+'</b> · menunggu bukti potong: <b>Rp '+money(sumAmt(open.filter(function(p){return p.status==='MENUNGGU_BP';})))+'</b>'
+  :'Client memotong dan menyetor sendiri. Tagih <b>bukti potong</b> ke client. Menunggu bukti potong: <b>Rp '+money(sumAmt(open))+'</b> ('+open.length+' invoice)');
+ $('#l-head').html('<th>No</th><th>No. Invoice</th><th>Customer</th><th>Penerimaan</th><th class="text-right">Nominal PPh 23</th><th>Status</th>'+(tit?'<th>Setoran (NTPN)</th>':'')+'<th>Bukti Potong</th><th style="min-width:140px">Action</th>');
+ var rows=all.filter(function(p){
+  if(LF.status==='OPEN'&&p.status==='SELESAI')return false;
+  if(LF.status==='SELESAI'&&p.status!=='SELESAI')return false;
+  if(LF.search){var s=setorByNo(p.setor_no),b=bpByNo(p.bp_no),hay=[p.invoice_no,p.receipt_no,cust(p.customer_id).name,s&&s.ntpn,b&&b.bp_no].join(' ').toLowerCase();if(hay.indexOf(LF.search.toLowerCase())<0)return false;}
+  return true;}).sort(function(a,b){return a.receipt_date<b.receipt_date?-1:1;});
+ var html='';
+ rows.forEach(function(p,i){var a=arOf(p.invoice_no),s=setorByNo(p.setor_no),b=bpByNo(p.bp_no),age=days(p.receipt_date);
+  html+='<tr><td>'+(i+1)+'</td><td><b>'+esc(p.invoice_no)+'</b><br><small class="text-muted">'+jdate(a.date)+'</small>'+(p.legacy?'<br><span class="st st-legacy" style="margin-top:4px">Sebelum berlaku</span>':'')+'</td><td style="min-width:170px">'+esc(cust(p.customer_id).name)+'</td><td class="deposit-nowrap">'+esc(p.receipt_no)+'<br><small class="text-muted">'+jdate(p.receipt_date)+'</small></td><td class="text-right deposit-amount">'+money(p.amount)+'</td><td>'+statusBadge(p)+(p.status==='SELESAI'?'':'<br><small class="'+(age>30?'age-old':'text-muted')+'">'+age+' hari sejak penerimaan</small>')+'</td>'+
+  (tit?'<td>'+(s?esc(s.ntpn)+'<br><small class="text-muted">'+jdate(s.date)+'</small>':'<span class="text-muted">Belum</span>')+'</td>':'')+
+  '<td>'+(b?esc(b.bp_no)+'<br><small class="text-muted">'+jdate(b.bp_date)+'</small>':'<span class="text-muted">Belum</span>')+'</td><td class="deposit-nowrap">'+actionBtn(p)+'</td></tr>';});
+ $('#l-rows').html(html||'<tr><td colspan="'+(tit?9:8)+'" class="text-center text-muted">Tidak ada data.</td></tr>');
+ $('#l-info').text('Showing '+(rows.length?1:0)+' to '+rows.length+' of '+rows.length+' entries');
+}
+function invoiceInfo(no){
+ var p=pphOf(no),a=arOf(no),s=setorByNo(p.setor_no);
+ return '<div class="ar-sum"><div>Invoice<b style="font-size:14px">'+esc(no)+'</b></div><div>Customer<b style="font-size:14px">'+esc(cust(p.customer_id).name)+'</b></div><div>Penerimaan<b style="font-size:14px">'+esc(p.receipt_no)+'</b></div><div>Jenis<b style="font-size:13px">'+modeBadge(p.mode)+'</b></div>'+(s?'<div>Setoran<b style="font-size:13px">NTPN '+esc(s.ntpn)+'</b></div>':'')+'<div>PPh 23<b>'+money(p.amount)+'</b></div></div>';
+}
+
+/* ---------- Modal Setor Titipan (per invoice) ---------- */
+var SM;
+function openSetorModal(no){
+ var p=pphOf(no);SM={no:no,customer_id:p.customer_id};
+ var bankOpts=BANKS.map(function(b){return '<option value="'+b.accid+'">'+esc(b.acc_name+' / '+b.norek)+'</option>';}).join('');
+ $('#m-title').html('Setor Titipan PPh 23');
+ $('#m-body').html(invoiceInfo(no)+
+  '<div class="row"><div class="col-sm-4 form-group"><label for="s-date">Tanggal Setor <span class="text-danger">*</span></label><input type="date" id="s-date" class="form-control" value="'+TODAY+'" max="'+TODAY+'"></div>'+
+  '<div class="col-sm-4 form-group"><label for="s-bank">Bank / Rekening Pembayar <span class="text-danger">*</span></label><select id="s-bank" class="form-control"><option value="">- Pilih Bank / Rekening -</option>'+bankOpts+'</select></div>'+
+  '<div class="col-sm-4 form-group"><label for="s-masa">Masa Pajak <span class="text-danger">*</span></label><input type="month" id="s-masa" class="form-control" value="'+p.receipt_date.substr(0,7)+'"></div></div>'+
+  '<div class="row"><div class="col-sm-4 form-group"><label for="s-billing">Kode Billing <span class="text-danger">*</span></label><input id="s-billing" class="form-control" maxlength="15" inputmode="numeric" placeholder="15 digit"></div>'+
+  '<div class="col-sm-4 form-group"><label for="s-ntpn">NTPN <span class="text-danger">*</span></label><input id="s-ntpn" class="form-control" maxlength="16" style="text-transform:uppercase" placeholder="16 karakter"></div>'+
+  '<div class="col-sm-4 form-group"><label>Bukti Setor (PDF/JPG)</label><div class="file-mock"><i class="fa fa-upload"></i> Pilih file… <small>(tidak dimockup)</small></div></div></div>'+
+  '<div id="s-banner" class="receipt-control-banner banner-warning"></div><h4 style="margin-top:16px">Preview Jurnal</h4><div id="s-journal"></div>'+COA_NOTE+
+  '<div class="receipt-modal-actions"><button type="button" id="s-save" class="btn btn-success" disabled>Proses</button><button type="button" class="btn btn-danger" data-dismiss="modal">Batal</button></div>');
+ $('#m-modal').modal('show');
+ $('#s-date,#s-bank,#s-masa,#s-billing,#s-ntpn').on('input change',calcSetor);
+ $('#s-save').on('click',saveSetor);
+ calcSetor();
+}
+function draftSetor(){
+ return {date:$('#s-date').val(),customer_id:SM.customer_id,bank:$('#s-bank').val(),masa:$('#s-masa').val(),billing:$.trim($('#s-billing').val()),ntpn:$.trim($('#s-ntpn').val()).toUpperCase(),lines:[{invoice_no:SM.no,amount:pphOf(SM.no).amount}]};
+}
+function calcSetor(){
+ var s=draftSetor(),err='',info='';
+ var same=S.setoran.filter(function(x){return x.ntpn===s.ntpn;});
+ if(!s.bank)err='Pilih bank / rekening pembayar.';
+ else if(!s.masa)err='Isi masa pajak.';
+ else if(!/^\d{15}$/.test(s.billing))err='Kode billing harus 15 digit angka.';
+ else if(!/^[0-9A-Z]{16}$/.test(s.ntpn))err='NTPN harus 16 karakter huruf/angka.';
+ else if(same.some(function(x){return x.customer_id!==s.customer_id;}))err='NTPN ini sudah dipakai untuk customer lain.';
+ else if(same.length)info=' NTPN ini juga dipakai untuk invoice '+same.map(function(x){return x.lines[0].invoice_no;}).join(', ')+' (satu setoran untuk beberapa invoice).';
+ $('#s-banner').attr('class','receipt-control-banner '+(err?'banner-warning':'banner-success')).text(err||('Siap diproses. Setelah disimpan, status menjadi Menunggu Bukti Potong.'+info));
+ $('#s-journal').html(jtable(setorJournal(s),s.date));
+ $('#s-save').prop('disabled',!!err);
+}
+function saveSetor(){
+ var s=draftSetor();if(!window.confirm('Simpan setoran titipan PPh 23 dan jurnalnya?'))return;
+ var seq=S.seq.stp++;s.no='STP/'+s.date.substr(0,4)+'/'+s.date.substr(5,2)+'/'+pad(seq,4);s.journal_no='JUR-STP-'+s.date.substr(0,7).replace('-','')+'-'+pad(seq,4);
+ S.setoran.push(s);var p=pphOf(SM.no);p.status='MENUNGGU_BP';p.setor_no=s.no;
+ save();$('#m-modal').modal('hide');flash('Setoran titipan invoice <b>'+esc(SM.no)+'</b> tersimpan ('+s.no+'). Status sekarang <b>Menunggu Bukti Potong</b>.');route2();
+}
+
+/* ---------- Modal Bukti Potong (per invoice) ---------- */
+var BM;
+function openBpModal(no){
+ var p=pphOf(no);BM={no:no,customer_id:p.customer_id};
+ $('#m-title').html('Input Bukti Potong PPh 23');
+ $('#m-body').html(invoiceInfo(no)+
+  '<div class="row"><div class="col-sm-4 form-group"><label for="b-no">No Bukti Potong <span class="text-danger">*</span></label><input id="b-no" class="form-control" maxlength="30" style="text-transform:uppercase" placeholder="Nomor BPPU dari Coretax"></div>'+
+  '<div class="col-sm-4 form-group"><label for="b-date">Tanggal Bukti Potong <span class="text-danger">*</span></label><input type="date" id="b-date" class="form-control" value="'+TODAY+'" max="'+TODAY+'"><small class="text-muted">Dipakai sebagai tanggal jurnal (asumsi).</small></div>'+
+  '<div class="col-sm-4 form-group"><label for="b-masa">Masa Pajak <span class="text-danger">*</span></label><input type="month" id="b-masa" class="form-control" value="'+p.receipt_date.substr(0,7)+'"></div></div>'+
+  '<div class="row"><div class="col-sm-4 form-group"><label for="b-npwp">NPWP / NITKU Pemotong <span class="text-danger">*</span></label><input id="b-npwp" class="form-control" value="'+esc(cust(p.customer_id).npwp)+'"><small class="text-muted">Terisi dari master customer, bisa diubah.</small></div>'+
+  '<div class="col-sm-4 form-group"><label for="b-value">PPh 23 di Bukti Potong untuk invoice ini <span class="text-danger">*</span></label><input id="b-value" class="form-control receipt-money" inputmode="numeric" placeholder="Sesuai bukti potong"></div>'+
+  '<div class="col-sm-4 form-group"><label>File Bukti Potong (PDF) <span class="text-danger">*</span></label><div class="file-mock"><i class="fa fa-upload"></i> Pilih file… <small>(tidak dimockup)</small></div></div></div>'+
+  '<div id="b-banner" class="receipt-control-banner banner-warning"></div><h4 style="margin-top:16px">Preview Jurnal</h4><div id="b-journal"></div>'+COA_NOTE+
+  '<div class="receipt-modal-actions"><button type="button" id="b-save" class="btn btn-success" disabled>Proses</button><button type="button" class="btn btn-danger" data-dismiss="modal">Batal</button></div>');
+ $('#m-modal').modal('show');
+ $('#b-value').on('input',function(){var d=this.value.replace(/[^0-9]/g,'').replace(/^0+(?=\d)/,'');this.value=d?money(d):'';});
+ $('#b-npwp,#b-no,#b-date,#b-masa,#b-value').on('input change',calcBp);
+ $('#b-save').on('click',saveBp);
+ calcBp();
+}
+function draftBp(){
+ var p=pphOf(BM.no);
+ return {customer_id:BM.customer_id,npwp:$.trim($('#b-npwp').val()),bp_no:$.trim($('#b-no').val()).toUpperCase(),bp_date:$('#b-date').val(),masa:$('#b-masa').val(),value:amt($('#b-value').val()),lines:[{invoice_no:BM.no,amount:p.amount,legacy:p.legacy}]};
+}
+function calcBp(){
+ var b=draftBp(),err='',info='',diff=false,sys=b.lines[0].amount;
+ var same=S.bukti.filter(function(x){return x.bp_no===b.bp_no;});
+ if(!b.bp_no)err='Isi nomor bukti potong.';
+ else if(same.some(function(x){return x.customer_id!==b.customer_id;}))err='Nomor bukti potong ini sudah dipakai untuk customer lain.';
+ else if(!b.npwp)err='Isi NPWP / NITKU pemotong.';
+ else if(!b.masa)err='Isi masa pajak.';
+ else if(!isFinite(b.value)||!b.value)err='Isi nilai PPh 23 untuk invoice ini sesuai bukti potong.';
+ else if(b.value!==sys){diff=true;err='Nilai di bukti potong (Rp '+money(b.value)+') berbeda Rp '+money(Math.abs(b.value-sys))+' dari PPh 23 di sistem (Rp '+money(sys)+'). Konfirmasi ke customer dulu.';}
+ if(!err&&same.length)info=' Nomor ini juga dipakai untuk invoice '+same.map(function(x){return x.lines[0].invoice_no;}).join(', ')+' (satu bukti potong untuk beberapa invoice).';
+ var j=bpJournal(b);
+ $('#b-banner').attr('class','receipt-control-banner '+(err?(diff?'banner-danger':'banner-warning'):'banner-success')).text(err||('Siap diproses.'+(j.length?'':' Invoice sebelum tanggal berlaku, jadi hanya dicatat tanpa jurnal.')+info));
+ $('#b-journal').html(jtable(j,b.bp_date,{empty:'Tidak ada jurnal: PPh 23 invoice ini sudah dijurnal saat penerimaan (sebelum tanggal berlaku)'}));
+ $('#b-save').prop('disabled',!!err);
+}
+function saveBp(){
+ var b=draftBp();if(!window.confirm('Simpan bukti potong'+(bpJournal(b).length?' dan jurnalnya':'')+'?'))return;
+ var seq=S.seq.bpt++,d=b.bp_date;b.no='BPT/'+d.substr(0,4)+'/'+d.substr(5,2)+'/'+pad(seq,4);b.journal_no=bpJournal(b).length?'JUR-BPT-'+d.substr(0,7).replace('-','')+'-'+pad(seq,4):'';b.created=TODAY;b.file='(contoh).pdf';delete b.value;
+ S.bukti.push(b);
+ var l=b.lines[0],p=pphOf(l.invoice_no);p.status='SELESAI';p.bp_no=b.no;if(!l.legacy){arOf(l.invoice_no).saldo-=l.amount;}
+ save();$('#m-modal').modal('hide');flash('Bukti potong <b>'+esc(b.bp_no)+'</b> untuk invoice <b>'+esc(l.invoice_no)+'</b> tersimpan ('+b.no+'). Status <b>Selesai</b>.');route2();
+}
+function route2(){keepFlash=true;setTimeout(route,350);}
+
+/* ---------- Detail per invoice ---------- */
+function pageDetail(no){
+ var p=pphOf(no),a=arOf(no);
+ if(!p||!a){$('#page').html('<div class="alert alert-warning">Data tidak ditemukan.</div>');return;}
+ var r=receiptByNo(p.receipt_no),s=setorByNo(p.setor_no),b=bpByNo(p.bp_no),cn=cust(p.customer_id).name;
+ var line=null;r.lines.forEach(function(l){if(l.doc_no===no)line=l;});
+ var tagihan=a.penjualan+a.ppn,paid=line.saldo-line.sisa-(p.mode==='POTONG'?p.amount:0)-line.admin;
+ var steps='<li class="done"><h4>Invoice '+esc(no)+'</h4><div class="meta">'+jdate(a.date)+' · Penjualan Rp '+money(a.penjualan)+' · PPN Rp '+money(a.ppn)+' · Piutang Rp '+money(tagihan)+' (tidak berubah)</div></li>';
+ steps+='<li class="done"><h4>Penerimaan '+esc(r.no)+' · '+modeBadge(p.mode)+'</h4><div class="meta">'+jdate(r.date)+' · '+esc(bankTxt(r.bank))+' · '+(p.legacy?'<span class="st st-legacy">Sebelum berlaku: PPh 23 sudah dijurnal di sini (cara lama)</span>':'Jurnal '+esc(r.journal_no))+'</div>'+jtable(receiptJournal(r),r.date)+'</li>';
+ if(p.mode==='TITIP')steps+=s?'<li class="done"><h4>Setor Titipan '+esc(s.no)+'</h4><div class="meta">'+jdate(s.date)+' · Masa '+masaTxt(s.masa)+' · Kode billing '+esc(s.billing)+' · NTPN '+esc(s.ntpn)+' · Jurnal '+esc(s.journal_no)+'</div>'+jtable(setorJournal(s),s.date)+'</li>'
+  :'<li class="wait"><h4>Setor Titipan</h4><div class="meta"><span class="st st-setor">Belum disetor</span> · titipan Rp '+money(p.amount)+' sudah '+days(p.receipt_date)+' hari. <button type="button" class="btn btn-xs btn-success act-setor" data-no="'+esc(no)+'"><i class="fa fa-paper-plane"></i> Setor</button></div></li>';
+ steps+=b?'<li class="done"><h4>Bukti Potong '+esc(b.bp_no)+'</h4><div class="meta">'+jdate(b.bp_date)+' · Masa '+masaTxt(b.masa)+' · Pemotong '+esc(cn)+' ('+esc(b.npwp)+') · Dicatat '+esc(b.no)+(b.journal_no?' · Jurnal '+esc(b.journal_no):' · tanpa jurnal')+' · <a href="#" onclick="return false">'+esc(b.file||'file.pdf')+'</a></div>'+jtable(bpJournal({customer_id:b.customer_id,bp_no:b.bp_no,lines:b.lines.filter(function(l){return l.invoice_no===no;})}),b.bp_date,{empty:'Tanpa jurnal: PPh 23 sudah dijurnal saat penerimaan (sebelum berlaku)'})+'</li>'
+  :'<li class="wait"><h4>Bukti Potong</h4><div class="meta"><span class="st st-bp">Menunggu</span>'+(p.mode==='TITIP'&&!s?' · bisa diinput setelah titipan disetor':' · <button type="button" class="btn btn-xs btn-success act-bp" data-no="'+esc(no)+'"><i class="fa fa-paper-plane"></i> Bukti Potong</button>')+'</div></li>';
+ var html='<div class="kwitansi-page receipt-page receipt-detail-page"><div class="box box-primary"><div class="box-header with-border"><h3 class="box-title">Detail PPh 23 · '+esc(no)+' <span class="newtag">BARU</span></h3><a class="btn btn-default" href="#pph23"><i class="fa fa-arrow-left"></i> Kembali</a></div><div class="box-body">'+
+ '<div class="ar-sum"><div>Customer<b style="font-size:14px">'+esc(cn)+'</b></div><div>Piutang (Penjualan + PPN)<b>'+money(tagihan)+'</b></div><div>Dibayar via bank<b>'+money(paid)+'</b></div><div>PPh 23<b>'+money(p.amount)+'</b></div><div>Saldo piutang sekarang<b>'+money(a.saldo)+'</b></div><div>Status<b style="font-size:13px">'+statusBadge(p)+'</b></div></div>'+
+ '<ul class="timeline-pph">'+steps+'</ul>'+COA_NOTE+'</div></div></div>';
+ $('#page').html(html);
+ $('#page .act-setor').on('click',function(){openSetorModal($(this).attr('data-no'));});
+ $('#page .act-bp').on('click',function(){openBpModal($(this).attr('data-no'));});
+}
+
+/* ---------- init ---------- */
+$(function(){
+ load();
+ $('#mock-chg').on('change',function(){$('body').toggleClass('show-chg',this.checked);});
+ $('#mock-reset').on('click',function(){if(!window.confirm('Kembalikan data contoh ke awal?'))return;try{localStorage.removeItem(KEY);}catch(e){}S=seed();save();keepFlash=true;flash('Data contoh dikembalikan ke awal.','info');route();});
+ $(window).on('hashchange',route);
+ route();
+});
+}(jQuery));
+</script>
+</body>
+</html>
