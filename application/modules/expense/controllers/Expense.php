@@ -1188,7 +1188,7 @@ class Expense extends Admin_Controller
 		));
 	}
 
-	public function periodik_print($id)
+	public function periodik_print($id, $detail_id = null)
 	{
 		$this->beginAudit(__FUNCTION__, array('id' => $id), array('id', 'no_doc', 'outcome'));
 		// Fetch header record
@@ -1204,10 +1204,29 @@ class Expense extends Admin_Controller
 			show_404();
 		}
 
-		// Fetch detail records
-		$q_detail = $this->db->get_where('tr_pengajuan_rutin_detail', ['no_doc' => $header->no_doc]);
+		// Fetch detail records; $detail_id membatasi cetakan ke satu item (PI-) milik batch ini
+		$where = ['no_doc' => $header->no_doc];
+		if ($detail_id !== null) {
+			$where['id'] = $detail_id;
+		}
+		$q_detail = $this->db->get_where('tr_pengajuan_rutin_detail', $where);
 		$this->auditObserve($q_detail);
 		$detail = $q_detail ? $q_detail->result() : array();
+
+		$item_no = '';
+		if ($detail_id !== null) {
+			if (empty($detail)) {
+				$this->completeAudit('Gagal mencetak pengajuan periodik: item tidak ditemukan', 0, array(
+					'id' => $id,
+					'no_doc' => $header->no_doc,
+					'outcome' => 'not_found'
+				));
+				show_404();
+			}
+			$item_no = (string) $detail[0]->no_item;
+			// Approval per item: tanggal di cetakan mengikuti item, bukan keputusan terakhir batch.
+			$header->approved_date = $detail[0]->item_approved_date;
+		}
 
 		// Resolve department name
 		$dept_name = $this->Expense_model->GetDepartmentName($header->departement);
@@ -1233,6 +1252,7 @@ class Expense extends Admin_Controller
 			'data'      => $header,
 			'detail'    => $detail,
 			'dept_name' => $dept_name,
+			'item_no'   => $item_no,
 		);
 
 		$this->load->view('periodik_print', $view_data);

@@ -174,8 +174,11 @@ class ExpenseTestResult {
         }
 
         if (strpos($this->table, 'tr_pengajuan_rutin_detail') !== false) {
+            if (!empty($scenario['missing_item'])) {
+                return array();
+            }
             return array(
-                (object) array('id' => 1, 'no_doc' => 'PR-RUTIN-001', 'coa' => '1304-01-01', 'nama' => 'ATK', 'nilai' => 500000)
+                (object) array('id' => 1, 'no_item' => 'PI-2026-00001', 'item_approved_date' => '2026-11-23', 'no_doc' => 'PR-RUTIN-001', 'coa' => '1304-01-01', 'nama' => 'ATK', 'nilai' => 500000)
             );
         }
 
@@ -730,6 +733,16 @@ list($e, $out, $ctrl, $ex) = expense_run('periodik_print', array('missing_record
 check($e['status'] === 0, 'periodik_print (404): status 0');
 check($e['context']['data']['outcome'] === 'not_found', 'periodik_print (404): outcome not_found');
 check($ex instanceof Show404Exception, 'periodik_print: Show404Exception thrown');
+
+// B2. Cetak satu item (PI-)
+list($e) = expense_run('periodik_print', array(), array(), array(10, 1));
+check($e['status'] === 1, 'periodik_print (item): status 1');
+check($e['context']['data']['outcome'] === 'printed', 'periodik_print (item): outcome printed');
+
+// B3. Item bukan milik batch (404)
+list($e, $out, $ctrl, $ex) = expense_run('periodik_print', array('missing_item' => true, 'expect_404' => true), array(), array(10, 999));
+check($e['context']['data']['outcome'] === 'not_found', 'periodik_print (item 404): outcome not_found');
+check($ex instanceof Show404Exception, 'periodik_print (item 404): Show404Exception thrown');
 
 // C. Query failure
 list($e) = expense_run('periodik_print', array('fail_query' => true), array(), array(10));

@@ -2706,6 +2706,15 @@ class Request_payment_model extends BF_Model
 
         // Periodik
         if ($kategori == 'Periodik' || strpos($no_dok, 'PERIODIK-') === 0) {
+            // Nomor item (PI-): cetak item itu saja. Tanpa fallback ke $id karena $id di sini ID detail, bukan header.
+            if (periodik_is_item_no($no_dok)) {
+                $item = $this->db->select('h.id, d.id as detail_id')
+                    ->from('tr_pengajuan_rutin_detail d')
+                    ->join('tr_pengajuan_rutin h', 'h.no_doc = d.no_doc')
+                    ->where('d.no_item', $no_dok)
+                    ->get()->row();
+                return $item ? base_url('expense/periodik_print/' . $item->id . '/' . $item->detail_id) : '';
+            }
             if ($no_dok !== '') {
                 $get_periodik = $this->db->select('id')->get_where('tr_pengajuan_rutin', ['no_doc' => $no_dok])->row();
                 if (!empty($get_periodik)) {

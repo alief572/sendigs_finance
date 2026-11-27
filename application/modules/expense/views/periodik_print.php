@@ -187,7 +187,7 @@ function formatDate($date)
 	<!-- Document Header -->
 	<div class="document-header">
 		<h4>Pengajuan Periodik</h4>
-		<p><?= $data->no_doc ?></p>
+		<p><?= !empty($item_no) ? $item_no . ' (Batch ' . $data->no_doc . ')' : $data->no_doc ?></p>
 	</div>
 
 	<!-- Informasi Pengajuan -->
