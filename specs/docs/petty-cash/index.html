@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SENDIGS SS | Petty Cash</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/driver.js@1.3.1/dist/driver.css">
+<script src="https://cdn.jsdelivr.net/npm/driver.js@1.3.1/dist/driver.js.iife.js"></script>
+<style>
+/* ===== Shell AdminLTE (skin-blue) seperti aplikasi SENDIGS SS ===== */
+:root{--header:#3c8dbc;--logo:#367fa9;--side:#222d32;--side-sub:#2c3b41;--side-text:#b8c7ce;--bg:#ecf0f5;--chg:#f39c12;}
+*{box-sizing:border-box;}
+html,body{margin:0;}
+body{font-family:"Source Sans Pro","Segoe UI","Helvetica Neue",Helvetica,Arial,sans-serif;font-size:14px;color:#333;background:var(--bg);}
+a{color:#3c8dbc;text-decoration:none;cursor:pointer;}
+.main-header{position:fixed;top:0;left:0;right:0;height:50px;z-index:100;background:var(--header);display:flex;}
+.logo{width:230px;background:var(--logo);color:#fff;font-size:20px;font-weight:700;text-align:center;line-height:50px;flex:none;}
+.navbar{flex:1;display:flex;align-items:center;justify-content:space-between;padding:0 15px;color:#fff;}
+.navbar .burger{background:none;border:0;color:#fff;font-size:18px;cursor:pointer;padding:0 10px 0 0;}
+.nav-right{display:flex;align-items:center;gap:22px;font-size:14px;}
+.nav-right a{color:#fff;}
+.nav-right .user{display:flex;align-items:center;gap:8px;}
+.avatar{width:22px;height:22px;border-radius:50%;background:#f5d6a8;border:2px solid #e6b97a;display:inline-block;}
+.chg-toggle{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;}
+.nav-right button{background:#fff;color:#3c8dbc;border:0;border-radius:3px;padding:4px 10px;font:inherit;font-size:12px;cursor:pointer;}
+.sidebar{position:fixed;top:50px;bottom:0;left:0;width:230px;background:var(--side);overflow-y:auto;z-index:90;}
+.sidebar .menu-search{padding:12px 10px 22px;}
+.sidebar .menu-search div{display:flex;align-items:center;gap:8px;border:1px solid #4b5a61;border-radius:4px;padding:10px;color:#b8c7ce;font-size:13px;}
+.sidebar ul{list-style:none;margin:0;padding:0;}
+.sidebar .item>a{display:flex;align-items:center;gap:10px;padding:12px 15px;color:var(--side-text);}
+.sidebar .item>a .fa{width:16px;text-align:center;}
+.sidebar .item>a .chev{margin-left:auto;font-size:11px;}
+.sidebar .item.open>a{background:#1e282c;color:#fff;border-left:3px solid var(--header);padding-left:12px;}
+.sidebar .sub{background:var(--side-sub);padding:5px 0;}
+.sidebar .sub a{display:flex;justify-content:space-between;align-items:center;padding:7px 10px 7px 22px;color:#8aa4af;font-size:14px;white-space:nowrap;}
+.sidebar .sub a span:first-child::before{content:"\203A  ";}
+.sidebar .sub a.active{color:#fff;font-weight:600;}
+.sidebar .cnt{background:#f39c12;color:#fff;border-radius:9px;font-size:10px;font-weight:700;padding:0 6px;}
+.sidebar .cnt:empty{display:none;}
+.content-wrapper{margin-left:230px;margin-top:50px;padding:15px;min-height:calc(100vh - 50px);}
+.content-header h1{font-size:24px;font-weight:400;margin:4px 0 14px;color:#333;}
+.content-header h1 .fa{margin-right:6px;}
+.hidden{display:none !important;}
+@media (max-width:900px){.sidebar{display:none;}.content-wrapper{margin-left:0;padding:12px 16px;}.logo{width:auto;padding:0 14px;font-size:17px;}.nav-right .hide-sm{display:none;}}
+
+/* ===== Bootstrap 3 / AdminLTE dasar ===== */
+.box{position:relative;background:#fff;border-top:3px solid #d2d6de;border-radius:3px;margin-bottom:20px;box-shadow:0 1px 1px rgba(0,0,0,.1);}
+.box.box-primary{border-top-color:#3c8dbc;}
+.box-header{padding:10px;position:relative;}
+.box-header.with-border{border-bottom:1px solid #f4f4f4;}
+.box-header .box-title{display:inline-block;margin:0;font-size:18px;line-height:1.1;}
+.box-body{padding:10px;}
+.pull-right{float:right;}
+.clearfix::after{content:"";display:table;clear:both;}
+.breadcrumb{list-style:none;display:flex;gap:6px;background:none;padding:0;margin:0 0 5px;font-size:12px;}
+.breadcrumb li+li::before{content:"/";color:#ccc;margin-right:6px;}
+.breadcrumb .active{color:#777;}
+.badge{display:inline-block;min-width:10px;padding:3px 7px;font-size:12px;font-weight:700;color:#fff;line-height:1;vertical-align:middle;white-space:nowrap;text-align:center;background:#777;border-radius:10px;}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:6px 12px;font-size:14px;line-height:1.42857;border:1px solid transparent;border-radius:3px;cursor:pointer;font-family:inherit;color:#fff;white-space:nowrap;}
+.btn-sm{padding:5px 10px;font-size:12px;line-height:1.5;}
+.btn-xs{padding:1px 5px;font-size:12px;}
+.btn-block{display:flex;width:100%;}
+.btn-default{background:#f4f4f4;color:#444;border-color:#ddd;}
+.btn-primary{background:#3c8dbc;border-color:#367fa9;}
+.btn-success{background:#00a65a;border-color:#008d4c;}
+.btn-warning{background:#f39c12;border-color:#e08e0b;}
+.btn-danger{background:#dd4b39;border-color:#d73925;}
+.btn-info{background:#00c0ef;border-color:#00acd6;}
+.btn-link{background:none;color:#3c8dbc;border:0;padding-left:0;}
+.btn:disabled{opacity:.65;cursor:not-allowed;}
+.form-control{display:block;width:100%;height:34px;padding:6px 12px;font-size:14px;color:#555;background:#fff;border:1px solid #d2d6de;border-radius:0;font-family:inherit;}
+.input-sm,.form-control.input-sm{height:30px;padding:5px 10px;font-size:12px;}
+textarea.form-control{height:auto;}
+.form-control:disabled,.form-control[readonly]{background:#eee;}
+.input-group{display:flex;}
+.input-group-addon{padding:5px 10px;font-size:12px;background:#fff;border:1px solid #d2d6de;border-left:0;border-right:0;}
+.row{display:flex;flex-wrap:wrap;margin:0 -8px;}
+.row>[class*=col-]{padding:0 8px;}
+.col-md-2{width:16.6667%}.col-md-3{width:25%}.col-md-4{width:33.3333%}.col-md-6{width:50%}.col-md-12{width:100%}
+.col-sm-4{width:33.3333%}
+@media (max-width:991px){.row>[class*=col-]{width:50%;}}
+@media (max-width:600px){.row>[class*=col-]{width:100%;}}
+.text-right{text-align:right !important;}.text-center{text-align:center !important;}.text-muted{color:#777;}.text-danger{color:#dd4b39;}
+.table{width:100%;max-width:100%;border-collapse:collapse;margin-bottom:20px;}
+.table>thead>tr>th,.table>tbody>tr>td,.table>tfoot>tr>td,.table>tfoot>tr>th{padding:8px;line-height:1.42857;vertical-align:top;border-top:1px solid #f4f4f4;}
+.table-bordered,.table-bordered>thead>tr>th,.table-bordered>tbody>tr>td{border:1px solid #f4f4f4;}
+.table-striped>tbody>tr:nth-of-type(odd){background:#f9f9f9;}
+.bg-blue>th,thead.bg-primary th,.bg-primary>th{background:#3c8dbc !important;color:#fff;}
+tfoot.bg-primary th,tfoot.bg-primary td{background:#3c8dbc;color:#fff;}
+.alert{padding:15px;margin-bottom:20px;border:1px solid transparent;border-radius:3px;color:#fff;}
+.alert-info{background:#00c0ef;border-color:#00acd6;}
+.alert-warning{background:#f39c12;border-color:#e08e0b;}
+.alert-danger{background:#dd4b39;border-color:#d73925;}
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin-top:12px;}
+.dash-card{background:#fff;border:1px solid #d9dee5;border-left:4px solid #f39c12;border-radius:4px;padding:12px 14px;cursor:pointer;}
+.dash-card:hover{box-shadow:0 2px 6px rgba(0,0,0,.12);}
+.dash-card.sel{outline:2px solid #3c8dbc;box-shadow:0 2px 8px rgba(60,141,188,.35);background:#f4f9fd;}
+.dash-card.done{border-left-color:#00a65a;}
+.dash-card .dc-t{font-size:12px;font-weight:700;text-transform:uppercase;color:#555;}
+.dash-card .dc-n{font-size:13px;color:#666;margin-top:4px;}
+.dash-card .dc-v{font-size:20px;font-weight:700;margin-top:2px;}
+.dash-card .dc-a{font-size:11.5px;color:#777;margin-top:6px;}
+.dash-card .dc-a span{display:inline-block;padding:1px 6px;border-radius:8px;background:#f1f1f1;margin-right:3px;}
+.dash-card .dc-a span.old{background:#f8d7da;color:#a94442;}
+.dash-filter{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;}
+.dash-filter label{display:block;font-size:12px;margin-bottom:3px;}
+.nav-tabs{display:flex;list-style:none;margin:0;padding:0;border-bottom:1px solid #ddd;}
+.nav-tabs>li>a{display:block;padding:10px 15px;margin-right:2px;color:#444;border:1px solid transparent;border-radius:0;}
+.nav-tabs>li.active>a{color:#555;background:#fff;border:1px solid #ddd;border-bottom-color:transparent;border-top:3px solid #3c8dbc;font-weight:600;margin-bottom:-1px;}
+.dt-info{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-top:10px;font-size:13px;}
+.pager{display:flex;}
+.pager button{border:1px solid #ddd;background:#fff;color:#555;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer;margin-left:-1px;}
+.pager button.on{background:#3c8dbc;border-color:#3c8dbc;color:#fff;}
+.pager button:disabled{color:#bbb;cursor:default;}
+.dt-empty{text-align:center;color:#777;padding:18px !important;}
+
+/* ===== penanda mockup ===== */
+body.show-chg .chg{outline:2px dashed var(--chg);outline-offset:2px;}
+.newtag{display:none;background:var(--chg);color:#fff;font-size:9px;font-weight:700;border-radius:2px;padding:1px 4px;margin-left:4px;vertical-align:middle;letter-spacing:.3px;}
+body.show-chg .newtag{display:inline-block;}
+.legend{background:#fffbe6;border:1px dashed #e0b84a;border-radius:4px;padding:8px 12px;margin:0 0 12px;font-size:12.5px;color:#6b5513;}
+details.cases{border:1px solid #e3e8ee;border-left:3px solid var(--chg);border-radius:3px;padding:8px 12px;margin-bottom:12px;background:#fff;font-size:13px;}
+details.cases summary{cursor:pointer;font-weight:600;}
+details.cases ol{margin:8px 0 2px;padding-left:20px;}
+details.cases li{margin:3px 0;}
+ul.chg-list{margin:6px 0 0 18px;padding:0;}ul.chg-list li{margin-bottom:6px;}
+
+/* ===== modal & swal ===== */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-start;justify-content:center;z-index:200;padding-top:60px;}
+.modal-bg.on{display:flex;}
+.modal{background:#fff;border-radius:4px;width:620px;max-width:95vw;box-shadow:0 5px 15px rgba(0,0,0,.5);max-height:85vh;display:flex;flex-direction:column;}
+.modal-header{padding:15px;border-bottom:1px solid #e5e5e5;display:flex;justify-content:space-between;align-items:center;}
+.modal-header h4{margin:0;font-size:18px;font-weight:500;}
+.modal-header .close{background:none;border:0;font-size:21px;font-weight:700;opacity:.4;cursor:pointer;}
+.modal-body{padding:15px;overflow:auto;}
+.modal-footer{padding:15px;border-top:1px solid #e5e5e5;text-align:right;display:flex;justify-content:flex-end;gap:6px;}
+.modal.swal{width:470px;text-align:center;}
+.modal.swal .modal-header{display:none;}
+.modal.swal .modal-body{padding:24px 20px 6px;}
+.modal.swal .modal-footer{justify-content:center;border:0;padding-bottom:22px;}
+.swal-ic{width:70px;height:70px;border-radius:50%;border:4px solid;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;font-size:32px;}
+.swal-ic.warning{border-color:#f8bb86;color:#f8bb86;}.swal-ic.success{border-color:#a5dc86;color:#a5dc86;}.swal-ic.error{border-color:#f27474;color:#f27474;}
+.swal-t{font-size:26px;font-weight:600;color:#575757;margin-bottom:8px;}
+.swal-x{color:#797979;font-size:15px;}
+.dlg-err{color:#dd4b39;font-size:13px;margin-top:8px;}
+/* ===== tambahan: Petty Cash (meniru expense_petty_cash, petty_cash_vuca_sustain, pembayaran_material) ===== */
+.bg-blue{background:#0073b7 !important;}.bg-green{background:#00a65a !important;}.bg-gray{background:#999 !important;}.bg-yellow{background:#f39c12 !important;}.bg-red{background:#dd4b39 !important;}.bg-purple{background:#605ca8 !important;}.bg-aqua{background:#00c0ef !important;}
+.money{text-align:right;white-space:nowrap;}
+.tamp-note{background:#f4f8fb;border:1px solid #d6e4ef;border-radius:3px;padding:8px 12px;font-size:12.5px;color:#31708f;margin-bottom:10px;}
+.asis-note{background:#fdf3f2;border:1px solid #f1c9c4;border-radius:3px;padding:8px 12px;font-size:12.5px;color:#a94442;margin:6px 0 10px;}
+.modal.lg{width:980px;}
+.du{background:#fff3cd;color:#8a6d3b;padding:0 4px;border-radius:2px;font-weight:600;white-space:nowrap;}
+.sum-card{background:linear-gradient(135deg,#3c8dbc,#00c0ef);color:#fff;border-radius:6px;padding:14px 16px;margin-bottom:14px;}
+.sum-card .card-row{display:flex;flex-wrap:wrap;gap:10px 26px;}
+.sum-card .label-text{font-size:11px;text-transform:uppercase;opacity:.85;letter-spacing:.3px;}
+.sum-card .value-text{font-size:18px;font-weight:700;}
+.sum-card .value-text.text-sm{font-size:14px;}
+.kontrol{border:2px dashed var(--chg);border-radius:6px;background:#fffdf5;padding:12px 14px;margin-bottom:14px;}
+.kontrol h4{margin:0 0 8px;font-size:15px;}
+.kontrol table{margin:0;max-width:640px;}
+.kontrol td{padding:5px 8px !important;font-size:13.5px;}
+.kontrol .tot td{font-weight:700;border-top:2px solid #ccc !important;}
+.sel-ok{color:#00a65a;font-weight:700;}.sel-no{color:#dd4b39;font-weight:700;}
+.sel-warn{background:#fcf8e3;border:2px solid #f39c12;border-left-width:6px;border-radius:4px;padding:10px 14px;margin:10px 0 0;font-size:13.5px;color:#8a6d3b;}
+.sel-warn .fa{color:#e08e0b;}
+tr.row-sel>td{background:#fff3cd !important;}
+.pc-panel{border:1px solid #e3e8ee;border-radius:4px;margin-bottom:10px;background:#fff;}
+.pc-panel .ph{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#f7f9fb;border-bottom:1px solid #e3e8ee;}
+.pc-panel .ph b{font-size:14px;}.pc-panel .pm{font-size:12px;color:#777;}
+.pc-panel .pb{padding:8px 12px;}
+.pc-panel table{font-size:12.5px;margin-bottom:8px;}
+.jv-h{font-size:12px;font-weight:700;color:#555;margin:6px 0 4px;}
+.ja-meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 16px;margin:0 0 10px;padding:12px;border:1px solid #d8e0eb;border-radius:6px;background:#f8fafc}.ja-meta dt{margin-bottom:3px;font-size:12px;font-weight:500;color:#526176}.ja-meta dd{margin:0;font-weight:600;overflow-wrap:anywhere}
+@media (max-width:900px){.ja-meta{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.ja-lines{width:100%;font-size:12.5px;border-collapse:collapse;margin-bottom:4px}.ja-lines thead th,.ja-lines tfoot th{padding:7px 9px;background:#1a78b1;color:#fff;font-weight:600}.ja-lines td{padding:7px 9px;border:1px solid #d8e0eb;vertical-align:top}.ja-money{text-align:right;white-space:nowrap}
+.ja-lines td:nth-child(1),.ja-lines td:nth-child(4),.ja-lines td:nth-child(7){white-space:nowrap}.ja-lines td:nth-child(6){min-width:200px}
+.jvT{font-size:12.5px;}
+.row-lock{opacity:.45;}
+.label{display:inline;padding:.2em .6em .3em;font-size:75%;font-weight:700;line-height:1;color:#fff;text-align:center;white-space:nowrap;vertical-align:baseline;border-radius:.25em;}
+.label-default{background:#d2d6de;color:#444;}.label-warning{background:#f39c12;}.label-success{background:#00a65a;}.label-danger{background:#dd4b39;}.label-info{background:#00c0ef;}.label-primary{background:#3c8dbc;}
+.small-box{border-radius:2px;position:relative;display:block;margin-bottom:20px;box-shadow:0 1px 1px rgba(0,0,0,.1);color:#fff;overflow:hidden;}
+.small-box .inner{padding:10px;}.small-box h3{font-size:30px;font-weight:700;margin:0 0 10px;white-space:nowrap;}.small-box p{font-size:15px;margin:0;}
+.small-box .icon{position:absolute;top:-5px;right:10px;font-size:70px;color:rgba(0,0,0,.15);}
+.callout{border-radius:3px;margin:0 0 20px;padding:15px 30px 15px 15px;border-left:5px solid #eee;}
+.callout h4{margin-top:0;font-weight:600;}.callout p:last-child{margin-bottom:0;}
+.callout-danger{background:#dd4b39;border-color:#c23321;color:#fff;}
+.form-group label{display:block;font-weight:700;font-size:13px;margin-bottom:5px;}
+.text-red{color:#dd4b39 !important;}
+.bg-primary{background:#3c8dbc !important;color:#fff;}
+.jlab{display:inline-block;font-size:12px;font-weight:700;color:#fff;padding:3px 8px;border-radius:3px;margin:4px 0 6px;}
+.jl-stm{background:#3c8dbc;}.jl-co{background:#f39c12;}.jl-ic{background:#00c0ef;}
+table.jtbl{font-size:12px;margin-bottom:8px;}table.jtbl thead{background:#f5f5f5;}table.jtbl tfoot{background:#f9f9f9;font-weight:700;}
+.jurnal-section h5{font-size:12px;font-weight:600;color:#555;margin:10px 0 6px;}
+.pc-panel .pt{font-size:14px;font-weight:600;}
+.pel-intro h2{font-size:20px;margin:0 0 2px;}.pel-intro p{color:#777;margin:0 0 10px;font-size:13px;}
+.pel-reason{font-size:11.5px;color:#a94442;margin-top:4px;}.pel-reason strong{display:block;}
+.dv label{font-size:12px;color:#777;font-weight:600;margin:0;}.dv div{font-size:14px;margin-bottom:10px;}
+.trf-blk{border:1px solid #d2d6de;border-left:4px solid #3c8dbc;border-radius:4px;padding:10px 12px;margin:10px 0;background:#fff;}
+.trf-h{font-size:14px;margin-bottom:6px;}.trf-h a{margin-left:8px;font-size:12px;cursor:pointer;}
+.detail-head{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:10px;}
+.sumx{display:flex;gap:18px;flex-wrap:wrap;}.sumx div{font-size:11px;color:#777;text-align:right;}.sumx b{display:block;font-size:18px;color:#333;}
+.detail-foot{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-top:12px;border-top:1px solid #eee;padding-top:10px;}
+tr.rej-row>td{background:#fdecea !important;}
+.form-tbl td{padding:4px 6px;vertical-align:top;font-size:13px;}
+.ro-box{background:#eee;border:1px solid #d2d6de;padding:5px 10px;font-size:12.5px;border-radius:3px;}
+.pc-card{display:block;padding:12px 14px;margin-bottom:8px;border:1px solid #e0e0e0;border-left:4px solid #00a65a;border-radius:4px;cursor:pointer;color:#333 !important;}
+.pc-card:hover{background:#f0faff;border-left-color:#00c0ef;}
+.pc-card small{display:block;color:#888;}
+.it-in{min-width:80px;}
+.binfo{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
+.binfo div{flex:1;min-width:150px;border:1px solid #d9dee5;border-left:4px solid #3c8dbc;border-radius:4px;padding:6px 10px;font-size:12px;background:#fff;}
+.binfo b{display:block;font-size:16px;}
+.binfo .warn{border-left-color:#dd4b39;}
+.flt{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;margin-bottom:10px;}
+.flt label{font-weight:600;color:#555;margin-right:6px;font-size:13px;}
+.flt .grp{display:flex;align-items:center;}
+.flt select{min-width:150px;width:auto;}
+.ev{font-size:11.5px;}
+.print-doc{font-size:12.5px;}
+.print-doc h3{text-align:center;margin:0 0 4px;}
+.print-doc .ttd{display:flex;justify-content:space-around;margin-top:24px;text-align:center;}
+.print-doc .ttd div{width:30%;}
+.print-doc .ttd span{display:block;height:50px;}
+.driver-popover{font-family:inherit;max-width:340px;}.driver-popover-title{font-size:15px;}.driver-popover-description{font-size:13px;line-height:1.5;}
+/* ===== Tutorial v2: tombol di baris atas konten (tidak menutupi Simpan), menu halaman ini + alur proses ===== */
+.tour-bar{float:right;position:relative;z-index:20;margin:0 0 8px 12px}
+.tour-btn{display:inline-flex;align-items:center;gap:7px;background:#00a65a;color:#fff;border:0;border-radius:18px;padding:7px 16px 7px 12px;font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.18)}
+.tour-btn:hover{background:#008d4c}.tour-btn .tb-ic{font-size:16px;line-height:1}
+.tour-menu{position:absolute;right:0;top:calc(100% + 6px);width:380px;max-width:calc(100vw - 32px);max-height:70vh;overflow:auto;background:#fff;color:#333;border:1px solid #ccc;border-radius:4px;box-shadow:0 8px 24px rgba(0,0,0,.22);font-size:13px;text-align:left}
+.tour-menu[hidden]{display:none}
+.tour-menu h4{margin:0;padding:8px 14px;font-size:12px;letter-spacing:.3px;text-transform:uppercase;color:#666;background:#f4f4f4;border-bottom:1px solid #e3e3e3}
+.tour-menu button{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid #eee;background:#fff;padding:9px 14px;cursor:pointer;font:inherit;color:#333}
+.tour-menu button:hover,.tour-menu button:focus{background:#eef6fb;outline:none}
+.tour-menu button small{display:block;color:#777;margin-top:2px;font-size:12px}
+.tour-pg{display:inline-block;background:#3c8dbc;color:#fff;border-radius:3px;padding:1px 7px;font-size:11px;font-weight:600;margin-bottom:6px}
+.driver-popover.tour-pop{max-width:400px;min-width:340px}
+.driver-popover.tour-pop .driver-popover-navigation-btns button{white-space:nowrap}
+.driver-popover.tour-pop .driver-popover-footer{gap:10px}
+.tour-fl{font-size:11.5px;color:#888;margin-bottom:3px}
+.driver-popover.tour-pop .driver-popover-progress-text{font-size:11.5px}
+</style>
+</head>
+<body class="show-chg">
+<header class="main-header">
+  <div class="logo">SENDIGS SS</div>
+  <div class="navbar">
+    <button class="burger" type="button"><i class="fa fa-bars"></i></button>
+    <div class="nav-right">
+      <label class="chg-toggle"><input type="checkbox" id="chgToggle" checked> Tandai perubahan</label>
+      <a id="navSum"><i class="fa fa-list-ul"></i> Ringkasan perubahan</a>
+      <button type="button" id="btnReset"><i class="fa fa-refresh"></i> Reset data</button>
+      <a class="hide-sm">Helpdesk</a><a class="hide-sm">Manual Book</a>
+      <span class="user"><span class="avatar"></span>Admin</span>
+    </div>
+  </div>
+</header>
+<aside class="sidebar">
+  <div class="menu-search"><div><i class="fa fa-search"></i>Cari menu...</div></div>
+  <ul>
+    <li class="item"><a><i class="fa fa-dashboard"></i>Dashboard</a></li>
+    <li class="item open">
+      <a><i class="fa fa-table"></i>Master Data<i class="fa fa-angle-down chev"></i></a>
+      <ul class="sub"><li><a data-go="ms"><span>Master Petty Cash</span><span class="cnt"></span></a></li></ul>
+    </li>
+    <li class="item open">
+      <a><i class="fa fa-file-text-o"></i>Expense Petty Cash<i class="fa fa-angle-down chev"></i></a>
+      <ul class="sub">
+        <li><a data-go="pcp"><span>Transaksi Petty Cash</span><span class="cnt" id="c_pcp"></span></a></li>
+        <li><a data-go="rpc"><span>Pelaporan Petty Cash</span><span class="cnt" id="c_rpc"></span></a></li>
+        <li><a data-go="apv"><span>Approval Pelaporan</span><span class="cnt" id="c_apv"></span></a></li>
+        <li><a data-go="php"><span>Petty Cash VUCA/Sustain</span><span class="cnt" id="c_php"></span></a></li>
+      </ul>
+    </li>
+    <li class="item open">
+      <a><i class="fa fa-bank"></i>Finance<i class="fa fa-angle-down chev"></i></a>
+      <ul class="sub">
+        <li><a data-go="rq"><span>Request Payment</span><span class="cnt" id="c_rq"></span></a></li>
+        <li><a data-go="rapv"><span>Approval Request Payment</span><span class="cnt" id="c_rapv"></span></a></li>
+        <li><a data-go="rrec"><span>Record Request Payment</span><span class="cnt"></span></a></li>
+        <li><a data-go="pay"><span>Payment List</span><span class="cnt" id="c_pay"></span></a></li>
+      </ul>
+    </li>
+    <li class="item open">
+      <a><i class="fa fa-book"></i>Accounting<i class="fa fa-angle-down chev"></i></a>
+      <ul class="sub"><li><a data-go="jur"><span>Jurnal All · Petty Cash</span><span class="cnt" id="c_jur"></span></a></li></ul>
+    </li>
+    <li class="item"><a><i class="fa fa-cog"></i>Settings<i class="fa fa-angle-left chev"></i></a></li>
+  </ul>
+</aside>
+
+<main class="content-wrapper">
+<div class="tour-bar" id="tourBar"><button type="button" class="tour-btn" id="tourBtn" aria-haspopup="true" aria-expanded="false"><span class="tb-ic">&#10067;</span> Tutorial</button><div class="tour-menu" id="tourMenu" hidden></div></div>
+<p class="legend"><b>Mockup to-be, alur penuh.</b> Transaksi → Pelaporan → Approval → (VUCA/SUSTAIN: Payment Hutang) → Payment → Jurnal All, mengikuti modul yang berjalan (<code>expense_petty_cash</code>, <code>petty_cash_vuca_sustain</code>, <code>pembayaran_material</code>, <code>jurnal_all</code>). Garis putus oranye / <span class="newtag" style="display:inline-block">BARU</span> = yang berubah: (1) <b>Saldo Petty Cash</b> di Pelaporan sebagai kontrol, (2) <b>jurnal pencatatan dibuat saat approve Pelaporan</b>, (3) Refill dan Payment Hutang lewat <b>Request Payment → Approval → Record → Payment</b> sesuai konsep Request Payment terbaru (1 transfer = 1 payment = 1 nomor BK, bank dipilih saat Payment). Kotak merah = kondisi kode sekarang yang perlu dicek. Tanggal hari ini di mockup: <b>23-Nov-2026</b>.</p>
+
+<!-- ================= MASTER ================= -->
+<section class="page" id="pg-ms">
+  <div class="content-header"><h1>Master Petty Cash</h1></div>
+  <div class="tamp-note">Menu yang sudah berjalan (<code>petty_cash_master</code>). <b>Total Budget</b> = jumlah nominal Detail COA (plafon uang yang dipegang pemegang petty cash). <span class="chg">Baru: field <b>COA Petty Cash</b> (akun kas petty cash-nya) di bawah Keterangan; sekarang hanya ada COA biaya di Detail COA.<span class="newtag">BARU</span></span><br><b>Project ini: 1 master</b> untuk semua company (satu kas fisik). Company (STM / VUCA / SUSTAIN) dipilih di tiap pencatatan; pencatatan VUCA/SUSTAIN menjadi hutang ke STM. Tombol Tambah tetap ada untuk project lain yang butuh lebih dari 1 master (mis. kas kecil per company dengan beban berbeda).</div>
+  <div class="box"><div class="box-header"><button class="btn btn-success btn-sm" type="button" id="msAdd"><i class="fa fa-plus"></i>&nbsp;Tambah</button></div><div class="box-body"><div style="overflow-x:auto"><table class="table table-bordered table-striped" id="msT"><thead><tr><th width="40">No</th><th>Nama</th><th>Keterangan</th><th class="chg">COA Petty Cash <span class="newtag">BARU</span></th><th width="120">Action</th></tr></thead><tbody></tbody></table></div></div></div>
+</section>
+
+<!-- ================= TRANSAKSI (PENCATATAN) ================= -->
+<section class="page" id="pg-pcp">
+  <div class="content-header"><h1>Transaksi Petty Cash</h1></div>
+  <details class="cases"><summary>Skenario uji (urutan lengkap ada di test-case-petty-cash.md)</summary><ol>
+    <li><b>STM</b>: centang PCP-2026-0101, 0102, 0103 (minggu 16–20 Nov) → <b>Buat Pelaporan</b> → menu Pelaporan → <b>Ajukan</b> → isi <b>Saldo Petty Cash</b> 2.600.000 (selisih −50.000) → Ajukan.</li>
+    <li><b>Approval Pelaporan</b> → Approval → Approve → jurnal per pencatatan (tanggal pencatatan) masuk Jurnal All, dokumen refill masuk Finance → Request Payment.</li>
+    <li><b>VUCA</b>: approve RPC-2026-0042 → menu <b>Petty Cash VUCA/Sustain</b> → Payment Hutang → Proses Payment Hutang.</li>
+    <li><b>Finance</b>: Request Payment → Atur Pembayaran &amp; Ajukan → Approval Request Payment → Payment List → Payment.</li>
+    <li><b>Jurnal All · Petty Cash</b>: Posting jurnal yang pending.</li>
+  </ol></details>
+  <div class="box"><div class="box-header">
+    <button class="btn btn-success btn-sm" type="button" id="pcAdd"><i class="fa fa-plus"></i> Tambah Pencatatan</button>
+    <button class="btn btn-primary btn-sm" type="button" id="pcBuat" disabled><i class="fa fa-file-text-o"></i> Buat Pelaporan</button>
+  </div><div class="box-body">
+    <div style="overflow-x:auto"><table class="table table-bordered table-striped" id="pcT"><thead><tr><th width="30"><input type="checkbox" id="pcAll"></th><th width="30">No</th><th>No Pencatatan</th><th>No Pelaporan</th><th>Tanggal</th><th>Company</th><th>Request By</th><th>Keterangan</th><th>Nominal</th><th>Status</th><th width="150">Action</th></tr></thead><tbody></tbody></table></div>
+  </div></div>
+</section>
+<section class="page" id="pg-pcf">
+  <div class="content-header"><h1>Transaksi Petty Cash</h1></div>
+  <div id="pcfBody"></div>
+</section>
+<section class="page" id="pg-pcv">
+  <div class="content-header"><h1>Transaksi Petty Cash</h1></div>
+  <div id="pcvBody"></div>
+</section>
+
+<!-- ================= PELAPORAN ================= -->
+<section class="page" id="pg-rpc">
+  <div class="content-header"><h1>Pelaporan Petty Cash</h1></div>
+  <div class="box">
+    <div class="box-body pel-intro" style="padding-bottom:0"><h2>Daftar pelaporan</h2><p>Tinjau pengeluaran per periode, status pelaporan, dan catatan penolakan.</p></div>
+    <div class="box-header"><div class="row">
+      <div class="col-md-3 form-group"><label>Company</label><select id="rpcCo" class="form-control input-sm" multiple size="3" style="height:auto"><option>STM</option><option>VUCA</option><option>SUSTAIN</option></select></div>
+      <div class="col-md-3 form-group"><label>Status</label><select id="rpcSts" class="form-control input-sm"><option value="">Semua status</option><option value="draft">Draft</option><option value="waiting">Waiting</option><option value="approved">Approved</option><option value="reject">Reject</option></select></div>
+      <div class="col-md-3 form-group"><label>&nbsp;</label><button type="button" class="btn btn-sm btn-primary" id="rpcGo"><i class="fa fa-filter"></i> Terapkan filter</button> <button type="button" class="btn btn-sm btn-default" id="rpcReset"><i class="fa fa-refresh"></i> Reset</button></div>
+    </div></div>
+    <div class="box-body"><div style="overflow-x:auto"><table class="table" id="rpcT"><thead><tr><th width="30">No</th><th>No Pelaporan</th><th>Periode</th><th>Company</th><th>Pencatatan</th><th>Total periode (Rp)</th><th class="chg">Saldo Petty Cash <span class="newtag">BARU</span></th><th>Status</th><th width="150">Aksi</th></tr></thead><tbody></tbody></table></div></div>
+  </div>
+</section>
+
+<!-- ================= KONFIRMASI / VIEW / APPROVAL PELAPORAN ================= -->
+<section class="page" id="pg-cf">
+  <div class="content-header"><h1 id="cfTitle">Konfirmasi Pelaporan</h1></div>
+  <div id="cfBody"></div>
+</section>
+
+<!-- ================= APPROVAL ================= -->
+<section class="page" id="pg-apv">
+  <div class="content-header"><h1>Approval Pelaporan</h1></div>
+  <div class="box"><div class="box-header with-border"><h3 class="box-title"><i class="fa fa-check-circle"></i>&nbsp;Approval Pelaporan Petty Cash</h3></div><div class="box-body">
+    <div style="overflow-x:auto"><table class="table table-bordered table-striped" id="apvT"><thead><tr><th width="30">No</th><th>No Pelaporan</th><th>Periode</th><th>Company</th><th class="text-center">Jumlah Pencatatan</th><th class="text-right">Grand Total</th><th class="text-right chg">Saldo Petty Cash <span class="newtag">BARU</span></th><th class="text-right chg">Selisih Saldo <span class="newtag">BARU</span></th><th width="80" class="text-center">Action</th></tr></thead><tbody></tbody></table></div>
+  </div></div>
+</section>
+
+<!-- ================= PETTY CASH VUCA/SUSTAIN ================= -->
+<section class="page" id="pg-php">
+  <div class="content-header"><h1>Petty Cash VUCA/Sustain</h1></div>
+  <div class="box box-primary"><div class="box-header"><div class="row">
+      <div class="col-md-3 form-group"><label>Company</label><select id="phpCo" class="form-control input-sm"><option value="">Semua</option><option>VUCA</option><option>SUSTAIN</option></select></div>
+      <div class="col-md-3 form-group"><label>Status</label><select id="phpSts" class="form-control input-sm"><option value="">Semua</option><option value="draft">Draft</option><option value="waiting payment">Waiting Payment</option><option value="done payment">Paid</option></select></div>
+      <div class="col-md-3 form-group"><label>&nbsp;</label><button type="button" class="btn btn-sm btn-primary" id="phpGo"><i class="fa fa-search"></i> Filter</button> <button type="button" class="btn btn-sm btn-default" id="phpReset"><i class="fa fa-refresh"></i> Reset</button></div>
+    </div></div>
+    <div class="box-body"><div style="overflow-x:auto"><table class="table table-bordered table-striped" id="phpT"><thead><tr><th width="30">No</th><th>No Pelaporan</th><th>No Payment Hutang</th><th>Periode</th><th>Company</th><th class="text-right">Jumlah Pencatatan</th><th class="text-right">Grand Total Periode</th><th>Status</th><th width="120">Action</th></tr></thead><tbody></tbody></table></div></div>
+  </div>
+</section>
+<section class="page" id="pg-phc">
+  <div class="content-header"><h1>Petty Cash VUCA/Sustain</h1></div>
+  <div id="phcBody"></div>
+</section>
+
+<!-- ================= REQUEST PAYMENT (konsep terbaru) ================= -->
+<section class="page" id="pg-rq">
+  <div class="content-header"><h1>Request Payment</h1></div>
+  <div class="tamp-note chg">Mengikuti konsep Request Payment terbaru (mockup <code>specs/docs/request-payment</code>). <b>Sekarang</b> Refill dan Payment Hutang petty cash langsung siap bayar di Payment List. <b>To-be:</b> masuk daftar ini dulu → <b>Atur Pembayaran &amp; Ajukan</b> (PGJ, 1 company) → Approval Request Payment → Record (Excel acuan transfer) → Payment per transfer. Refill selalu dibayar <b>STM</b> ke pemegang petty cash (1 kas untuk semua company); Payment Hutang dibayar VUCA/SUSTAIN ke rekening STM.<span class="newtag">BARU</span></div>
+  <div class="box"><div class="box-body">
+    <div class="flt"><div class="grp"><label>Company</label><select class="form-control input-sm" id="rqCo"><option value="">Semua</option><option>STM</option><option>VUCA</option><option>SUSTAIN</option></select></div></div>
+    <div style="overflow-x:auto"><table class="table table-bordered table-striped" id="rqT"><thead><tr><th width="30"></th><th>No</th><th>No. Dokumen / Kategori</th><th>Request By</th><th>Tanggal</th><th>Company</th><th>Keperluan</th><th>Rekening di dokumen</th><th class="text-right">Dibayarkan</th></tr></thead><tbody></tbody></table></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><span class="text-muted" id="rqInfo"></span><button type="button" class="btn btn-primary btn-sm" id="rqAtur" disabled><i class="fa fa-cog"></i> Atur Pembayaran &amp; Ajukan</button></div>
+  </div></div>
+</section>
+
+<!-- ================= ATUR PEMBAYARAN ================= -->
+<section class="page" id="pg-atur">
+  <div class="content-header"><h1>Request Payment</h1></div>
+  <div id="aturBody"></div>
+</section>
+
+<!-- ================= APPROVAL REQUEST PAYMENT ================= -->
+<section class="page" id="pg-rapv">
+  <div class="content-header"><h1>Approval Request Payment</h1></div>
+  <div class="box"><div class="box-body">
+    <div style="overflow-x:auto"><table class="table table-bordered table-striped" id="rapvT"><thead><tr><th>No. Pengajuan</th><th>Company</th><th>Tanggal Pengajuan</th><th>Jumlah Dokumen</th><th>Jumlah Transfer</th><th class="text-right">Total Dibayarkan</th><th>Action</th></tr></thead><tbody></tbody></table></div>
+  </div></div>
+</section>
+<section class="page" id="pg-rapvd">
+  <div class="content-header"><h1>Approval Request Payment</h1></div>
+  <div id="rvBody"></div>
+</section>
+
+<!-- ================= RECORD REQUEST PAYMENT ================= -->
+<section class="page" id="pg-rrec">
+  <div class="content-header"><h1>Record Request Payment</h1></div>
+  <div class="box"><div class="box-body">
+    <p class="text-muted" style="margin-top:0;font-size:13px">Riwayat pengajuan yang sudah diputuskan. Print Excel (acuan transfer) seperti mockup Request Payment, tidak diulang di sini.</p>
+    <div style="overflow-x:auto"><table class="table table-bordered table-striped" id="rrecT"><thead><tr><th>No. Pengajuan</th><th>Company</th><th>Tanggal Pengajuan</th><th>Tanggal Diputuskan</th><th>Jumlah Transfer</th><th class="text-right">Total Dibayarkan</th><th>Status Pembayaran</th><th>Action</th></tr></thead><tbody></tbody></table></div>
+  </div></div>
+</section>
+
+<!-- ================= PAYMENT LIST ================= -->
+<section class="page" id="pg-pay">
+  <div class="content-header"><h1>Payment List</h1></div>
+  <div class="tamp-note chg">Konsep Request Payment terbaru: yang dibayar <b>per transfer</b> dari pengajuan (PGJ) yang sudah di-approve. <b>1 transfer = 1 payment = 1 nomor BK</b>, walau isinya beberapa dokumen. <b>Bank dipilih saat Payment</b>, juga untuk Payment Hutang (sekarang ditulis tetap di kode).<span class="newtag">BARU</span></div>
+  <div class="box"><div class="box-header"><button class="btn btn-success btn-sm" type="button" id="payNew">Payment</button></div><div class="box-body">
+    <div style="overflow-x:auto"><table class="table table-bordered table-striped" id="payT"><thead><tr class="bg-blue"><th>No Payment</th><th>No. Pengajuan / Transfer</th><th>No Dokumen</th><th>Tgl Bayar</th><th>Penerima</th><th class="text-right">Nilai Bayar</th><th>Keterangan</th><th>Jurnal</th></tr></thead><tbody></tbody></table></div>
+  </div></div>
+</section>
+
+<!-- ================= LIST REQUEST PAYMENT (per transfer) ================= -->
+<section class="page" id="pg-prq">
+  <div class="content-header"><h1>List Request Payment</h1></div>
+  <div class="box"><div class="box-header" style="display:flex;gap:4px;flex-wrap:wrap">
+    <button class="btn btn-danger btn-sm" type="button" id="prqBack"><i class="fa fa-arrow-left"></i> Back</button>
+    <button class="btn btn-success btn-sm" type="button" id="prqGo" disabled><i class="fa fa-check"></i> Proses</button></div>
+  <div class="box-body">
+    <p class="text-muted chg" style="font-size:12.5px;margin-top:0">Dipilih <b>per transfer</b> (1 baris = 1 kali transfer sesuai Excel pengajuan). 1 payment = 1 transfer.<span class="newtag">BARU</span></p>
+    <div style="overflow-x:auto"><table class="table table-bordered" id="prqT"><thead><tr><th>No</th><th>No. Pengajuan</th><th>Tgl Approve</th><th>Company</th><th>Penerima / Rekening Tujuan</th><th>No. Dokumen</th><th class="text-right">Admin</th><th class="text-right">Jumlah Transfer</th><th>Option</th></tr></thead><tbody></tbody></table></div>
+  </div></div>
+</section>
+
+<!-- ================= FORM PAYMENT ================= -->
+<section class="page" id="pg-pf">
+  <div class="content-header"><h1>Payment List</h1></div>
+  <div id="pfBody"></div>
+</section>
+
+<!-- ================= JURNAL ALL ================= -->
+<section class="page" id="pg-jur">
+  <div class="content-header"><h1>Jurnal All · Petty Cash</h1></div>
+  <div class="tamp-note chg" id="jurNote">Staging <code>tr_jurnal</code> sampai diposting. <b>To-be:</b> jurnal pencatatan (jenis <i>Petty Cash</i>) baru muncul <b>setelah Pelaporan di-approve</b>, bertanggal pencatatan. Jurnal pencatatan lama yang dibuat saat simpan dibiarkan. Jurnal Refill Pettycash dan Payment Hutang Petty Cash dibuat saat Submit Payment, No Transaksi = nomor BK (1 nomor per payment); bank mengikuti pilihan di Payment.<span class="newtag">BARU</span></div>
+  <div class="box"><div class="box-body">
+    <div class="flt"><div class="grp"><label>Jenis</label><select class="form-control input-sm" id="jurJn"><option value="">Semua</option><option>Petty Cash</option><option>Refill Pettycash</option><option>Payment Hutang Petty Cash</option></select></div>
+      <div class="grp"><label>Status</label><select class="form-control input-sm" id="jurSt"><option value="">Semua</option><option value="pending">Pending</option><option value="posted">Posted</option></select></div></div>
+    <div style="overflow-x:auto"><table class="table table-bordered table-striped" id="jurT"><thead><tr class="bg-blue"><th>Tanggal Jurnal</th><th>No Jurnal</th><th>Jenis</th><th>No Transaksi</th><th>Pelaporan</th><th>Buku</th><th>Dibuat saat</th><th class="text-right">Total</th><th>Status</th><th>Aksi</th></tr></thead><tbody></tbody></table></div>
+  </div></div>
+</section>
+
+<!-- ================= RINGKASAN ================= -->
+<section class="page" id="pg-sum">
+  <div class="content-header"><h1><i class="fa fa-list-ul"></i>Ringkasan Perubahan</h1></div>
+  <div class="row">
+    <div class="col-md-6"><div class="box box-primary"><div class="box-body"><b>Yang berubah</b><ul class="chg-list">
+      <li><b>Saldo Petty Cash</b> (baru) di halaman konfirmasi Pelaporan: diisi pemegang petty cash dari <b>hitung fisik uang</b> sebelum Ajukan, sebagai kontrol.</li>
+      <li>Kontrol: <b>Saldo seharusnya = Total Budget − pengeluaran yang belum di-refill</b> (sama dengan Sisa Budget). Dibandingkan dengan Saldo Petty Cash → <b>Selisih</b>. Tampil di konfirmasi, daftar Pelaporan, daftar dan halaman Approval, dan cetak Pelaporan. Disimpan saat Ajukan.</li>
+      <li><b>Jurnal pencatatan dibuat saat approve Pelaporan</b>, bukan saat simpan. 1 jurnal per pencatatan, bentuk tetap (STM Dr Beban / Cr Kas Kecil; VUCA/SUSTAIN jurnal company + jurnal STM). Tanggal jurnal = tanggal masing-masing pencatatan.</li>
+      <li>Pencatatan draft, yang diedit, dan yang pelaporannya ditolak <b>tidak punya jurnal</b>; hapus-buat ulang jurnal saat edit dan tombol Retry jurnal tidak diperlukan lagi.</li>
+      <li>Halaman konfirmasi menampilkan <b>preview</b> jurnal per pencatatan. <b>Approval</b> punya kotak tersendiri <b>Preview Jurnal (dibentuk saat Approve)</b>: semua jurnal yang akan dibentuk, total debit, dan info Request Payment refill / Payment Hutang (PC-R-04).</li>
+      <li><b>Request Payment &amp; Payment konsep terbaru</b> (PC-R-07): Refill (company STM, ke pemegang petty cash) dan Payment Hutang (company VUCA/SUSTAIN, ke rekening STM) tidak lagi langsung ke Payment List, tetapi Request Payment → Atur Pembayaran (PGJ, transfer, admin, rekening tujuan) → Approval Request Payment → Record → Payment per transfer. <b>1 transfer = 1 payment = 1 nomor BK.</b> Bank dipilih saat Payment, termasuk Payment Hutang (bank company + bank STM penerima).</li>
+      <li><b>Peringatan selisih saldo</b> (PC-R-05): bila Saldo Petty Cash ≠ saldo seharusnya, kotak peringatan tampil di konfirmasi, dialog Ajukan, baris Approval (disorot, "Perlu dicek"), halaman Approval, dan dialog Approve. Ajukan dan Approve tetap bisa; Dept Head Finance mengecek selisihnya.</li>
+      <li><b>COA Payment Hutang</b> (PC-R-05): sisi company Dr <b>2103-01-0x Hutang ke STM</b> (bukan 2203-01-01 Hutang Hubungan Istimewa), sisi STM Cr <b>1103-01-0x Piutang VUCA/SUSTAIN</b>, sama dengan jurnal pencatatan.</li>
+      <li><b>Master Petty Cash: field COA Petty Cash</b> (akun kas petty cash, pilihan seluruh COA master, wajib) di bawah Keterangan; kolom baru di daftar master. Dipakai di jurnal pencatatan (Kredit, menggantikan Kas Kecil yang tertulis tetap) dan jurnal refill (Debit) (PC-R-04).</li>
+    </ul><b>Tidak berubah</b><ul class="chg-list">
+      <li>Pencatatan (evidence wajib per item, tanggal hari ini, peringatan Grand Total &gt; Sisa Budget), aturan Pelaporan (draft, 1 company, 1 minggu), Approval (approver dari master, reject min. 10 karakter).</li>
+      <li>Nominal refill = Grand Total RPC; jurnal refill Dr COA Petty Cash / Cr Bank di buku STM.</li>
+      <li>VUCA/SUSTAIN: Payment Hutang (PHP) dibuat dari menu Petty Cash VUCA/Sustain.</li>
+    </ul></div></div></div>
+    <div class="col-md-6"><div class="box" style="border-top-color:#f39c12"><div class="box-body"><b>Sudah diputuskan</b><ul class="chg-list">
+      <li>Saldo Petty Cash = input hasil hitung fisik, sebagai kontrol (arahan atasan).</li>
+      <li>Tanggal jurnal = tanggal masing-masing pencatatan.</li>
+      <li>Bentuk jurnal tetap seperti sekarang (1 jurnal per pencatatan).</li>
+      <li>Pencatatan lama yang sudah punya jurnal dibiarkan.</li>
+      <li>Nominal refill = Grand Total RPC.</li>
+      <li>Selisih saldo: tampil + peringatan, tetap bisa disimpan/diajukan; Dept Head Finance mengecek.</li>
+      <li>Saldo Petty Cash wajib diisi saat Ajukan.</li>
+      <li>Payment Hutang memakai Hutang ke STM (2103-01-0x), bukan Hutang Hubungan Istimewa.</li>
+      <li>COA Petty Cash master wajib; untuk VUCA/SUSTAIN dipakai di sisi STM.</li>
+      <li>Selisih saldo hanya informasi (tidak dijurnal).</li>
+      <li>Bank Payment Hutang dipilih saat Payment.</li>
+      <li>Refill hanya untuk <b>kas kecil STM</b> (satu-satunya kas kecil): refill selalu company STM / PGJ STM, termasuk pelaporan VUCA/SUSTAIN (PC-R-09).</li>
+      <li>Penerimaan STM dari Payment Hutang dijurnal saat Payment (Bank STM penerima), tidak lewat Alokasi Penerimaan (PC-R-09).</li>
+      <li>Project ini: <b>1 Master Petty Cash</b> untuk semua company; company dipilih di pencatatan (VUCA/SUSTAIN → hutang ke STM). Tambah master tetap tersedia untuk project lain.</li>
+    </ul><b>Perlu dikonfirmasi</b> <span class="du">(diisi user)</span><ol class="chg-list" id="sumQ">
+      <li class="text-muted">Tidak ada pertanyaan terbuka.</li>
+    </ol></div></div></div>
+  </div>
+</section>
+</main>
+
+<div class="modal-bg" id="dlg"><div class="modal" id="dlgBox">
+  <div class="modal-header"><h4 id="dlgT"></h4><button class="close" type="button" id="dlgX">&times;</button></div>
+  <div class="modal-body"><div id="dlgB"></div><div class="dlg-err" id="dlgErr"></div></div>
+  <div class="modal-footer"><button type="button" class="btn btn-success" id="dlgOk">OK</button><button type="button" class="btn btn-danger" id="dlgNo">Batal</button></div>
+</div></div>
+
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const nf=n=>(n<0?'-':'')+Math.abs(Math.round(n)).toLocaleString('id-ID');
+const BLN=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+const tgl=s=>{if(!s)return '-';const [y,m,d]=s.split('-');return d+'-'+BLN[+m-1]+'-'+y;};
+const ROMAN=['','I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
+const TODAY='2026-11-23';
+const monday=s=>{const d=new Date(s+'T00:00:00Z');const k=(d.getUTCDay()+6)%7;d.setUTCDate(d.getUTCDate()-k);return d.toISOString().slice(0,10);};
+const addD=(s,n)=>{const d=new Date(s+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);};
+const COAS=[['6101-01-01','Biaya Transportasi'],['6101-02-01','Biaya Konsumsi'],['6101-03-01','Biaya ATK']]; // contoh
+const coaNm=c=>(COAS.find(x=>x[0]===c)||[c,c])[1];
+const KAS=['1101-01-02','Kas Kecil'];
+// MP: pilihan COA = seluruh coa_master (get_coa_list). Mockup: beberapa contoh; nama selain dari kode ditandai (contoh).
+const COA_ALL=[['1101-01-01','Kas (contoh)'],['1101-01-02','Kas Kecil'],['1101-01-03','Kas Kecil Proyek (contoh)'],['1101-02-01','Bank STM'],['1101-02-09','Bank BCA STM'],['6101-01-01','Biaya Transportasi'],['6101-02-01','Biaya Konsumsi'],['6101-03-01','Biaya ATK']];
+const coaAllNm=c=>(COA_ALL.find(x=>x[0]===c)||[c,c])[1];
+const kasOf=msId=>{const m=ms(msId);return m&&m.coaPc?[m.coaPc,coaAllNm(m.coaPc)]:KAS;};
+const IC={VUCA:{h:['2103-01-01','Hutang ke STM'],p:['1103-01-01','Piutang VUCA']},SUSTAIN:{h:['2103-01-02','Hutang ke STM'],p:['1103-01-02','Piutang SUSTAIN']}};
+const BANKS=[['1101-02-09','Bank BCA STM'],['1101-02-01','Bank STM']];
+const bankNm=c=>(BANKS.find(b=>b[0]===c)||[c,c])[1];
+
+/* ---------- data ---------- */
+let S;
+const P=(no,ms,co,t,by,ket,items,st)=>({no,ms,co,tgl:t,by,ket,items:items.map(i=>({coa:i[0],peng:i[1],spek:i[5]||'',qty:i[2],nom:i[3],ev:i[4]||('nota-'+no.slice(-4)+'.jpg')})),sts:st||'draft',rpc:null,legacyJur:false});
+function seed(){
+  // Project ini: 1 master untuk semua company. Company dipilih di tiap pencatatan (seperti form pencatatan sekarang).
+  S={ms:[{id:'PC-01',nama:'Petty Cash',ket:'Kas kecil kantor (STM, VUCA, SUSTAIN)',coaPc:'1101-01-02',det:[['6101-01-01',2000000,'Transportasi'],['6101-02-01',1500000,'Konsumsi'],['6101-03-01',1500000,'ATK']]}],
+     pcp:[],rpc:[],rp:[],php:[],pgj:[],pay:[],jur:[],seqP:107,seqR:43,seqJ:121,seqPhp:12,seqPgj:77,seqBk:21};
+  // --- STM 9–13 Nov: approved, refill sudah dibayar; jurnal pencatatan lama (dibuat saat simpan) ---
+  const o1=[P('PCP-2026-0090','PC-01','STM','2026-11-10','Budi','Bensin operasional',[['6101-01-01','Bensin',2,300000]],'approved'),P('PCP-2026-0091','PC-01','STM','2026-11-12','Sari','Snack tamu',[['6101-02-01','Snack',1,400000]],'approved')];
+  o1.forEach(p=>{p.legacyJur=true;p.rpc='RPC-2026-0040';S.pcp.push(p);});
+  S.rpc.push({no:'RPC-2026-0040',co:'STM',ms:'PC-01',start:'2026-11-09',end:'2026-11-13',ids:o1.map(p=>p.no),sts:'approved',saldo:null,seharusnya:null,alasan:'',legacy:true});
+  o1.forEach(p=>mkJurnal(p,'Simpan pencatatan (as is)'));
+  // --- VUCA 2–6 Nov: approved, refill dibayar, Payment Hutang masih draft ---
+  const o2=[P('PCP-2026-0086','PC-01','VUCA','2026-11-04','Dewi','Konsumsi workshop',[['6101-02-01','Konsumsi',10,35000]],'approved')];
+  o2.forEach(p=>{p.legacyJur=true;p.rpc='RPC-2026-0039';S.pcp.push(p);});
+  S.rpc.push({no:'RPC-2026-0039',co:'VUCA',ms:'PC-01',start:'2026-11-02',end:'2026-11-06',ids:o2.map(p=>p.no),sts:'approved',saldo:null,seharusnya:null,alasan:'',legacy:true});
+  o2.forEach(p=>mkJurnal(p,'Simpan pencatatan (as is)'));
+  // Refill RPC-0039 (VUCA) dan RPC-0040 (STM): diajukan di PGJ STM, sudah dibayar. PHP-0011: PGJ VUCA sudah di-approve, belum dibayar.
+  S.rp.push(mkDoc('RPC-2026-0039','refill_pettycash','STM','2026-11-09',350000,'Refill petty cash VUCA periode 02-Nov-2026 — 06-Nov-2026','Erna'));
+  const g77=mkPgj('STM',['RPC-2026-0039'],'2026-11-09');g77.sts='final';g77.dec='2026-11-09';
+  doPay(g77,g77.trf[0],{tgl:'2026-11-10',bank:'1101-02-09',charge:0});
+  S.rp.push(mkDoc('RPC-2026-0040','refill_pettycash','STM','2026-11-16',1000000,'Refill petty cash STM periode 09-Nov-2026 — 13-Nov-2026','Erna'));
+  const g78=mkPgj('STM',['RPC-2026-0040'],'2026-11-16');g78.sts='final';g78.dec='2026-11-16';
+  doPay(g78,g78.trf[0],{tgl:'2026-11-17',bank:'1101-02-09',charge:0});
+  S.php.push({no:'PHP-2026-0011',rpc:'RPC-2026-0039',co:'VUCA',sts:'waiting payment'});
+  S.rp.push(mkDoc('PHP-2026-0011','petty_cash_hutang','VUCA','2026-11-11',350000,'Payment Hutang Petty Cash VUCA - RPC-2026-0039','Finance VUCA'));
+  const g79=mkPgj('VUCA',['PHP-2026-0011'],'2026-11-11');g79.sts='final';g79.dec='2026-11-12';
+  S.jur.forEach(j=>j.sts='posted');
+  // --- STM 16–20 Nov: draft ---
+  S.pcp.push(P('PCP-2026-0101','PC-01','STM','2026-11-17','Budi','Bensin & tol meeting client',[['6101-01-01','Bensin',1,200000],['6101-01-01','Tol',1,150000]]));
+  S.pcp.push(P('PCP-2026-0102','PC-01','STM','2026-11-18','Sari','Konsumsi rapat bulanan',[['6101-02-01','Nasi kotak',15,30000]]));
+  S.pcp.push(P('PCP-2026-0103','PC-01','STM','2026-11-19','Budi','ATK kantor',[['6101-03-01','Kertas A4',3,100000],['6101-03-01','Tinta printer',1,200000]]));
+  // --- STM minggu ini ---
+  S.pcp.push(P('PCP-2026-0106','PC-01','STM','2026-11-23','Sari','Parkir kunjungan client',[['6101-01-01','Parkir',1,50000]]));
+  // --- VUCA 16–20 Nov: RPC-2026-0042 menunggu approval (selisih -50.000) ---
+  const v=[P('PCP-2026-0104','PC-01','VUCA','2026-11-16','Dewi','Konsumsi training',[['6101-02-01','Konsumsi',20,30000]],'waiting'),P('PCP-2026-0105','PC-01','VUCA','2026-11-20','Dewi','Transport trainer',[['6101-01-01','Taksi',2,200000]],'waiting')];
+  v.forEach(p=>{p.rpc='RPC-2026-0042';S.pcp.push(p);});
+  S.rpc.push({no:'RPC-2026-0042',co:'VUCA',ms:'PC-01',start:'2026-11-16',end:'2026-11-20',ids:v.map(p=>p.no),sts:'waiting',saldo:2650000,seharusnya:2700000,alasan:''}); // diajukan 21-Nov: 5.000.000 − (VUCA 1.000.000 + STM 0101–0103 1.300.000)
+  return S;}
+const gt=p=>p.items.reduce((a,i)=>a+i.qty*i.nom,0);
+const pc=no=>S.pcp.find(p=>p.no===no);
+const ms=id=>S.ms.find(m=>m.id===id);
+const rpcOf=no=>S.rpc.find(r=>r.no===no);
+const rpOf=no=>S.rp.find(x=>x.no===no);
+const budget=m=>m.det.reduce((a,d)=>a+d[1],0);
+const refillPaid=no=>S.rp.some(x=>x.no===no&&x.tipe==='refill_pettycash'&&x.sts==='dibayar');
+// sama dengan get_budget_terpakai: pencatatan non-reject yang RPC-nya belum dibayar
+const terpakai=id=>S.pcp.filter(p=>p.ms===id&&p.sts!=='reject'&&!(p.rpc&&refillPaid(p.rpc))).reduce((a,p)=>a+gt(p),0);
+const sisa=id=>budget(ms(id))-terpakai(id);
+const rpcTotal=r=>r.ids.reduce((a,n)=>a+gt(pc(n)),0);
+const coOf=p=>p.co;
+function jurLines(p){const co=coOf(p),G=gt(p),K=kasOf(p.ms),M=ms(p.ms),src=' ('+(M?M.nama:'petty cash')+')';
+  const deb=p.items.map(i=>({coa:i.coa,nm:coaNm(i.coa),ket:i.peng+' - '+p.no+(i.qty>1?' ('+i.qty+' x '+nf(i.nom)+')':''),d:i.qty*i.nom,c:0}));
+  if(co==='STM')return [{buku:'STM',trx:p.no,lines:deb.concat([{coa:K[0],nm:K[1],ket:'Pengeluaran petty cash '+p.no+src,d:0,c:G}])}];
+  return [{buku:co,trx:p.no,lines:deb.concat([{coa:IC[co].h[0],nm:IC[co].h[1],ket:'Hutang ke STM atas petty cash '+p.no+' (dibayar dari kas kecil STM)',d:0,c:G}])},
+    {buku:'STM',trx:p.no,lines:[{coa:IC[co].p[0],nm:IC[co].p[1],ket:'Piutang '+co+' atas petty cash '+p.no,d:G,c:0},{coa:K[0],nm:K[1],ket:'Pengeluaran petty cash '+p.no+' untuk '+co+src,d:0,c:G}]}];}
+const ajv=t=>String(S.seqJ++).padStart(5,'0')+'-AJV-'+ROMAN[+t.slice(5,7)]+'-'+t.slice(2,4);
+function mkJurnal(p,saat){return jurLines(p).map(set=>{const j={no:ajv(p.tgl),jenis:'Petty Cash',tgl:p.tgl,trx:p.no,rpc:p.rpc,buku:set.buku,saat,lines:set.lines,sts:'pending'};S.jur.push(j);return j;});}
+/* ---------- Request Payment & Payment (konsep terbaru, specs/docs/request-payment) ---------- */
+// Rekening tujuan di dokumen. Refill: ke pemegang petty cash. Payment Hutang: ke rekening STM. (contoh)
+const REK={pemegang:{bank:'BCA',no:'436.300.9911',an:'Erna Susanti'},STM:{bank:'BCA',no:'436.300.5287',an:'PT Sentral Tehnologi Managemen'}};
+// Bank pembayar per company: [COA, nama account, rekening]. STM dari mockup Request Payment; VUCA/SUSTAIN contoh.
+const BANKCO={STM:[['1101-02-09','Bank BCA STM','BCA 436.300.5287'],['1101-02-01','Bank STM','Mandiri 123.000.4567.8']],
+  VUCA:[['1101-02-09','Bank BCA VUCA (contoh)','BCA VUCA (contoh)'],['1101-02-01','Bank Mandiri VUCA (contoh)','Mandiri VUCA (contoh)']],
+  SUSTAIN:[['1101-02-09','Bank BCA SUSTAIN (contoh)','BCA SUSTAIN (contoh)'],['1101-02-01','Bank Mandiri SUSTAIN (contoh)','Mandiri SUSTAIN (contoh)']]};
+const bankOf=(co,c)=>(BANKCO[co]||[]).find(b=>b[0]===c);
+const ADM=['(belum ada)','Administrasi Bank']; // No COA belum ada di JURNAL PEMBAYARAN - SSC
+const KAT={refill_pettycash:'Refill Pettycash',petty_cash_hutang:'Petty Cash Hutang'};
+const rekPlain=r=>r&&r.no?r.bank+' '+r.no+' a/n '+r.an:'-';
+const rekTxt=r=>r&&r.no?esc(rekPlain(r)):'<span class="text-danger">belum diisi</span>';
+const pgjOf=no=>S.pgj.find(g=>g.no===no);
+const trfOf=(g,id)=>g.trf.find(t=>t.id===id);
+const trfTot=t=>t.docs.reduce((a,n)=>a+rpOf(n).jumlah,0);
+const trfSend=t=>trfTot(t)-(t.bearer==='penerima'?t.adm:0);   // diterima penerima
+const trfOut=t=>trfTot(t)+(t.bearer==='perusahaan'?t.adm:0);  // keluar bank (rencana)
+const bkNo=(t,n)=>'BK-'+t.slice(5,7)+t.slice(2,4)+'-'+String(n).padStart(4,'0');
+function mkDoc(no,tipe,co,t,jumlah,kep,by){return {no,tipe,co,tgl:t,jumlah,kep,by,rek:Object.assign({},tipe==='refill_pettycash'?REK.pemegang:REK.STM),sts:'wait',pgj:null,rej:''};}
+function mkPgj(co,nos,t,trf){const g={no:'PGJ-'+String(S.seqPgj++).padStart(4,'0'),co,tgl:t,sts:'apv',dec:null,
+  trf:(trf||nos.map(n=>({docs:[n],rek:Object.assign({},rpOf(n).rek),adm:0,bearer:'penerima'}))).map((x,i)=>Object.assign({id:'T'+(i+1),paid:null},x))};
+  g.trf.forEach(x=>x.docs.forEach(n=>{const d=rpOf(n);d.sts='pgj';d.pgj=g.no;d.rej='';}));S.pgj.push(g);return g;}
+// Jurnal payment per transfer. Pola dari mockup Request Payment (JURNAL PEMBAYARAN - SSC); Payment Hutang 2 buku (company + STM), COA sama dengan pencatatan.
+function payJur(g,t,bank,bankStm,charge){const D=t.docs.map(rpOf),tot=trfTot(t),pen=t.bearer==='penerima';
+  const admDr=pen?charge-t.adm:charge,out=tot+admDr;
+  const admL=v=>v>0?[{coa:ADM[0],nm:ADM[1],ket:'Administrasi Bank',d:v,c:0}]:v<0?[{coa:ADM[0],nm:ADM[1],ket:'Administrasi Bank (selisih bukti bayar)',d:0,c:-v}]:[];
+  const B=bankOf(g.co,bank)||['-','(pilih bank)'];
+  if(D[0].tipe==='refill_pettycash')return [{buku:'STM',jenis:'Refill Pettycash',lines:D.map(x=>{const r=rpcOf(x.no),K=r?kasOf(r.ms):KAS;return {coa:K[0],nm:K[1],ket:'Refill petty cash - '+x.no,d:x.jumlah,c:0};}).concat(admL(admDr),[{coa:B[0],nm:B[1],ket:'Transfer ke '+rekPlain(t.rek),d:0,c:out}])}];
+  const co=g.co,ic=IC[co],BS=bankOf('STM',bankStm)||['-','(pilih bank STM)'],adm=pen?t.adm:0;
+  return [{buku:co,jenis:'Payment Hutang Petty Cash',lines:D.map(x=>({coa:ic.h[0],nm:ic.h[1],ket:'Payment Hutang Petty Cash - '+x.no,d:x.jumlah,c:0})).concat(admL(admDr),[{coa:B[0],nm:B[1],ket:'Transfer ke '+rekPlain(t.rek),d:0,c:out}])},
+          {buku:'STM',jenis:'Payment Hutang Petty Cash',lines:[{coa:BS[0],nm:BS[1],ket:'Terima payment hutang '+co,d:tot-adm,c:0}].concat(adm?[{coa:ADM[0],nm:ADM[1],ket:'Administrasi Bank (dipotong dari transfer)',d:adm,c:0}]:[],D.map(x=>({coa:ic.p[0],nm:ic.p[1],ket:'Terima payment '+co+' - '+x.no,d:0,c:x.jumlah})))}];}
+function doPay(g,t,o){const bk=bkNo(o.tgl,S.seqBk++);const sets=payJur(g,t,o.bank,o.bankStm,o.charge);
+  const J=sets.map(set=>{const j={no:ajv(o.tgl),jenis:set.jenis,tgl:o.tgl,trx:bk,rpc:t.docs.join(', '),buku:set.buku,saat:'Submit Payment '+bk+' ('+g.no+' / Transfer '+t.id.slice(1)+')',lines:set.lines,sts:'pending'};S.jur.push(j);return j;});
+  t.paid={bk,tgl:o.tgl};
+  t.docs.map(rpOf).forEach(x=>{x.sts='dibayar';x.pay=bk;x.tglBayar=o.tgl;if(x.tipe==='petty_cash_hutang'){const h=S.php.find(h=>h.no===x.no);if(h)h.sts='done payment';}});
+  const p={no:bk,tgl:o.tgl,pgj:g.no,trf:t.id,co:g.co,tipe:rpOf(t.docs[0]).tipe,docs:t.docs.slice(),penerima:t.rek.an,bank:o.bank,bankStm:o.bankStm||'',
+    total:sets[0].lines.reduce((a,l)=>a+l.c,0)-sets[0].lines.filter(l=>l.coa===ADM[0]).reduce((a,l)=>a+l.c,0),ket:o.ket||'',jur:J.map(j=>j.no)};S.pay.push(p);return p;}
+S=seed();
+const U={page:'pcp',sel:new Set(),cf:null,rf:{co:[],sts:''},pcf:null,pcv:null,phc:null,phf:{co:'',sts:''},rq:new Set(),rqCo:'',atur:null,rv:null,rvRej:new Set(),pt:null,pf:null,jf:{jn:'',st:''}};
+
+/* ---------- dialog ---------- */
+let dlgCb=null;
+function modal(title,body,okText,onOk,opt){opt=opt||{};
+  $('dlgBox').className='modal'+(opt.swal?' swal':'')+(opt.lg?' lg':'');$('dlgT').innerHTML=title;$('dlgB').innerHTML=body;$('dlgErr').textContent='';
+  $('dlgOk').innerHTML=okText||'OK';$('dlgOk').className='btn '+(opt.okClass||'btn-success');$('dlgOk').style.display=opt.noOk?'none':'';
+  $('dlgNo').style.display=opt.noCancel?'none':'';$('dlgNo').innerHTML=opt.cancelText||'Batal';
+  dlgCb=onOk||null;$('dlg').classList.add('on');}
+function swal(type,title,text,onOk,confirm){
+  modal(title,`<div class="swal-ic ${type}"><i class="fa ${type==='success'?'fa-check':type==='error'?'fa-times':'fa-exclamation'}"></i></div><div class="swal-t">${esc(title)}</div><div class="swal-x">${text}</div>`,confirm||'OK',onOk,{swal:true,noCancel:!confirm,okClass:confirm?'btn-danger':'btn-primary',cancelText:'No, cancel!'});}
+function closeDlg(){$('dlg').classList.remove('on');dlgCb=null;}
+$('dlgNo').onclick=closeDlg;$('dlgX').onclick=closeDlg;
+$('dlgOk').onclick=()=>{const cb=dlgCb;if(!cb){closeDlg();return;}const err=cb();if(typeof err==='string'&&err){$('dlgErr').textContent=err;return;}if(err!==false&&dlgCb===cb)closeDlg();};
+
+/* ---------- navigasi ---------- */
+const NAV_OF={pcf:()=>'pcp',pcv:()=>'pcp',phc:()=>'php',cf:()=>U.cf&&U.cf.mode==='apv'?'apv':'rpc',atur:()=>'rq',rapvd:()=>'rapv',prq:()=>'pay',pf:()=>'pay'};
+function go(p,arg){U.page=p;if(p==='cf'&&arg)U.cf=arg;if(p==='pf'&&arg)U.pf=arg;if(p==='rapvd'&&arg){U.rv=arg;U.rvRej=new Set();}if(p==='pcv'&&arg)U.pcv=arg;if(p==='phc'&&arg)U.phc=arg;
+  document.querySelectorAll('.page').forEach(s=>s.classList.toggle('hidden',s.id!=='pg-'+p));
+  const nav=NAV_OF[p]?NAV_OF[p]():p;
+  document.querySelectorAll('.sidebar [data-go]').forEach(a=>a.classList.toggle('active',a.dataset.go===nav));
+  render();window.scrollTo&&window.scrollTo(0,0);}
+document.querySelectorAll('.sidebar [data-go]').forEach(a=>a.onclick=()=>go(a.dataset.go));
+$('navSum').onclick=()=>go('sum');
+function render(){$('c_pcp').textContent=S.pcp.filter(p=>p.sts==='draft').length||'';$('c_rpc').textContent=S.rpc.filter(r=>r.sts==='draft').length||'';
+  $('c_apv').textContent=S.rpc.filter(r=>r.sts==='waiting').length||'';$('c_php').textContent=S.php.filter(h=>h.sts==='draft').length||'';
+  $('c_rq').textContent=S.rp.filter(x=>x.sts==='wait').length||'';$('c_rapv').textContent=S.pgj.filter(g=>g.sts==='apv').length||'';
+  $('c_pay').textContent=S.pgj.filter(g=>g.sts==='final').reduce((a,g)=>a+g.trf.filter(t=>!t.paid).length,0)||'';$('c_jur').textContent=S.jur.filter(j=>j.sts==='pending').length||'';
+  ({ms:rMs,pcp:rPcp,pcf:rPcf,pcv:rPcv,phc:rPhc,rpc:rRpc,cf:rCf,apv:rApv,php:rPhp,rq:rRq,atur:rAtur,rapv:rRapv,rapvd:rRapvd,rrec:rRrec,pay:rPay,prq:rPrq,pf:rPf,jur:rJur,sum:()=>{}})[U.page]();}
+$('chgToggle').onchange=e=>document.body.classList.toggle('show-chg',e.target.checked);
+$('btnReset').onclick=()=>swal('warning','Reset data mockup?','Semua hasil uji coba akan dihapus.',()=>{S=seed();U.sel.clear();U.pcf=null;U.rq.clear();U.atur=null;U.pt=null;setTimeout(()=>go('pcp'),0);},'Ya, reset');
+
+const selHtml=(a,b)=>{const d=a-b;return d===0?'<span class="sel-ok"><i class="fa fa-check"></i> 0 (sesuai)</span>':'<span class="sel-no"><i class="fa fa-exclamation-triangle"></i> '+nf(d)+'</span>';};
+const selWarn=(d,who)=>d?`<div class="sel-warn" id="selWarn"><i class="fa fa-exclamation-triangle"></i> <b>Ada selisih saldo Rp ${nf(d)}</b> (${d<0?'uang fisik kurang':'uang fisik lebih'} dari saldo seharusnya). ${who==='apv'?'<b>Dept Head Finance wajib mengecek selisih ini</b> (nota belum dicatat, salah input, atau uang kurang/lebih) sebelum Approve. Approve tetap bisa.':'Pelaporan tetap bisa diajukan, tetapi selisih ini akan ditandai untuk dicek Dept Head Finance saat approval.'}</div>`:'';
+const tglS=s=>{if(!s)return '-';const [y,m,d]=s.split('-');return d+'/'+m+'/'+y;};
+const tglI=s=>{if(!s)return '-';const [y,m,d]=s.split('-');return d+' '+BLN[+m-1]+' '+y;};
+const LBL=(c,t)=>`<span class="label label-${c}">${t}</span>`;
+const lblPc=s=>({draft:LBL('default','Draft'),waiting:LBL('warning','Waiting Approval'),approved:LBL('success','Approved'),reject:LBL('danger','Reject')})[s]||s;
+const lblRpc=s=>({draft:LBL('default','Draft'),waiting:LBL('warning','Waiting'),approved:LBL('success','Approved'),reject:LBL('danger','Reject')})[s]||s;
+const lblPhp=s=>({draft:LBL('warning','Draft'),'waiting payment':LBL('info','Waiting Payment'),'done payment':LBL('success','Paid')})[s]||s;
+const parseA=v=>+String(v==null?'':v).replace(/[^0-9]/g,'')||0;
+// Jurnal pencatatan dengan tampilan sistem (Jurnal STM / Sisi VUCA + Sisi STM (Inter-Company); kolom Tanggal, COA, Nama Account, Company, Debit, Kredit)
+// Template jurnal mengikuti Jurnal All (jurnal_all/views/preview.php), PC-R-10: kotak info + per buku company tabel
+// Tanggal · Tipe · Company · No. COA · Nama COA · Keterangan · No. Reff · Debit · Kredit, TOTAL COMPANY / GRAND TOTAL, keterangan seimbang.
+// Label buku tetap seperti sistem Petty Cash: Jurnal STM / Sisi VUCA + Sisi STM (Inter-Company).
+function jvPC(sets,o){o=o||{};const f=sets[0]||{},multi=sets.length>1,pv=!f.no;
+  const sts=o.sts||(f.sts==='posted'?'Sudah posting':pv?'Preview · terbentuk saat '+(o.saat||'disimpan'):'Belum posting');
+  const meta=[['No. Transaksi',o.trx||f.trx||'-'],['No. Referensi',o.ref||f.rpc||'-'],['Company',[...new Set(sets.map(x=>x.buku))].join(' + ')],['Divisi','-'],['Tgl Jurnal',tglS(f.tgl||o.tgl)],['Status',sts],['Kategori Transaksi',o.jenis||f.jenis||'Petty Cash']]
+    .concat(sets.some(x=>x.no)?[['No. Jurnal',sets.map(x=>x.no).filter(Boolean).join(', ')]]:[]);
+  const bal=x=>Math.round(x.lines.reduce((a,l)=>a+l.d,0))===Math.round(x.lines.reduce((a,l)=>a+l.c,0));
+  return `<div class="jv-all chg"><dl class="ja-meta">${meta.map(([k,v])=>`<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>`+sets.map((x,i)=>{
+    const L=!multi?['Jurnal '+x.buku,'jl-stm']:i===0?['Sisi '+x.buku,'jl-co']:['Sisi STM (Inter-Company)','jl-ic'],T=tglS(x.tgl||f.tgl||o.tgl),tipe=x.jenis||o.jenis||f.jenis||'Petty Cash',D=x.lines.reduce((a,l)=>a+l.d,0),K=x.lines.reduce((a,l)=>a+l.c,0);
+    return `<span class="jlab ${L[1]}"><i class="fa fa-building"></i> ${L[0]}${x.no?' · '+x.no:''}</span><div style="overflow-x:auto"><table class="ja-lines jvT"><thead><tr><th>Tanggal</th><th>Tipe</th><th>Company</th><th>No. COA</th><th>Nama COA</th><th>Keterangan</th><th>No. Reff</th><th class="ja-money">Debit</th><th class="ja-money">Kredit</th></tr></thead>
+     <tbody>${x.lines.map(l=>`<tr><td>${T}</td><td>${esc(tipe)}</td><td>${esc(x.buku)}</td><td>${esc(l.coa)}</td><td>${esc(l.nm)}</td><td>${esc(l.ket||'')}</td><td>${esc(l.reff||x.trx||o.trx||f.trx||'-')}</td><td class="ja-money">${nf(l.d)}</td><td class="ja-money">${nf(l.c)}</td></tr>`).join('')}</tbody>
+     <tfoot><tr><th colspan="7">${multi?'TOTAL COMPANY':'GRAND TOTAL'}</th><th class="ja-money">${nf(D)}</th><th class="ja-money">${nf(K)}</th></tr></tfoot></table></div>
+     ${multi?`<p class="${bal(x)?'text-success':'text-danger'}" style="font-size:12px;margin:4px 0 8px">${bal(x)?'Debit dan kredit company ini seimbang.':'Debit dan kredit company ini tidak seimbang.'}</p>`:''}`;}).join('')
+    +`<p class="${sets.every(bal)?'text-success':'text-danger'}" style="margin:6px 0 0">${sets.every(bal)?(multi?'Total debit dan kredit seluruh company seimbang.':'Debit dan kredit seimbang.'):'Debit dan kredit tidak seimbang.'}</p></div>`
+    +(o.note?'<p class="text-muted" style="font-size:12px;margin:4px 0 6px">'+o.note+'</p>':'');}
+function jvSys(sets,o){return jvPC(sets,Object.assign({saat:'approve Pelaporan'},o||{}));}
+const jvTable=(sets,note)=>jvPC(sets,{note,saat:'Submit payment'});
+function showJv(no){const j=S.jur.find(x=>x.no===no);modal('Jurnal '+no,jvPC([{buku:j.buku,no:j.no,tgl:j.tgl,jenis:j.jenis,trx:j.trx,rpc:j.rpc,sts:j.sts,lines:j.lines}],{trx:j.trx,ref:j.rpc||j.ref||'-',note:'Dibuat saat: '+esc(j.saat)}),'',null,{lg:true,noOk:true,cancelText:'Close'});}
+document.addEventListener('click',e=>{const a=e.target.closest('[data-jv]');if(a)showJv(a.dataset.jv);});
+
+/* ---------- master ---------- */
+function rMs(){document.querySelector('#msT tbody').innerHTML=S.ms.map((m,i)=>`<tr data-row="${m.id}"><td>${i+1}</td><td>${esc(m.nama)}</td><td>${esc(m.ket)}</td><td class="chg">${m.coaPc?esc(m.coaPc+' - '+coaAllNm(m.coaPc)):'<span class="text-danger">Belum dipilih</span>'}</td><td style="white-space:nowrap"><button class="btn btn-info btn-xs" data-msv="${m.id}" title="View"><i class="fa fa-eye"></i></button> <button class="btn btn-warning btn-xs" data-mse="${m.id}" title="Edit"><i class="fa fa-pencil"></i></button></td></tr>`).join('');
+  document.querySelectorAll('#msT [data-mse]').forEach(b=>b.onclick=()=>msForm(ms(b.dataset.mse)));
+  document.querySelectorAll('#msT [data-msv]').forEach(b=>b.onclick=()=>msView(ms(b.dataset.msv)));}
+const coaOpts=(sel,ph)=>'<option value="">'+(ph||'-- Pilih COA --')+'</option>'+COA_ALL.map(c=>`<option value="${c[0]}"${c[0]===sel?' selected':''}>${c[0]} - ${esc(c[1])}</option>`).join('');
+function msView(m){modal('View Master Petty Cash',`<table class="table table-bordered" style="font-size:13px"><tbody><tr><td width="25%">Nama</td><td>${esc(m.nama)}</td></tr><tr><td>Keterangan</td><td>${esc(m.ket)}</td></tr><tr class="chg"><td>COA Petty Cash <span class="newtag">BARU</span></td><td>${m.coaPc?esc(m.coaPc+' - '+coaAllNm(m.coaPc)):'-'}</td></tr></tbody></table>
+  <h4><i class="fa fa-list"></i>&nbsp;Detail COA</h4><table class="table table-bordered table-striped" style="font-size:13px"><thead><tr><th>No</th><th>COA</th><th>Jenis Pengeluaran</th><th class="text-right">Nominal</th></tr></thead><tbody>${m.det.map((d,i)=>`<tr><td>${i+1}</td><td>${d[0]} - ${esc(coaAllNm(d[0]))}</td><td>${esc(d[2]||'')}</td><td class="money">${nf(d[1])}</td></tr>`).join('')}</tbody></table>
+  <div class="tamp-note"><b>Total Budget: Rp ${nf(budget(m))}</b> · Terpakai (belum di-refill) Rp ${nf(terpakai(m.id))} · Sisa Budget <b id="msSisa">Rp ${nf(sisa(m.id))}</b></div>`,'',null,{lg:true,noOk:true,cancelText:'Close'});}
+function msForm(m){const rows=m?m.det.map(d=>({coa:d[0],jp:d[2]||'',nom:d[1]})):[{coa:'',jp:'',nom:''}];
+  const draw=()=>{$('mfRows').innerHTML=rows.map((r,i)=>`<tr><td class="text-center">${i+1}</td><td><select class="form-control input-sm" data-mf="coa" data-i="${i}">${coaOpts(r.coa)}</select></td><td><input class="form-control input-sm" data-mf="jp" data-i="${i}" value="${esc(r.jp)}" placeholder="Jenis Pengeluaran"></td><td><input type="number" class="form-control input-sm text-right" data-mf="nom" data-i="${i}" value="${r.nom}" placeholder="0"></td><td class="text-center">${rows.length>1?`<button type="button" class="btn btn-danger btn-sm" data-mfrm="${i}"><i class="fa fa-trash"></i></button>`:''}</td></tr>`).join('');
+    $('mfTot').textContent='Rp '+nf(rows.reduce((a,r)=>a+(+r.nom||0),0));
+    document.querySelectorAll('#mfRows [data-mf]').forEach(el=>el.oninput=el.onchange=()=>{rows[+el.dataset.i][el.dataset.mf]=el.value;if(el.dataset.mf==='nom')$('mfTot').textContent='Rp '+nf(rows.reduce((a,r)=>a+(+r.nom||0),0));});
+    document.querySelectorAll('#mfRows [data-mfrm]').forEach(b=>b.onclick=()=>{rows.splice(+b.dataset.mfrm,1);draw();});};
+  modal((m?'Edit':'Tambah')+' Master Petty Cash',`<table class="table" style="font-size:13px;margin-bottom:6px"><tbody>
+     <tr><td width="22%" style="border:0">Nama <b class="text-danger">*</b></td><td style="border:0"><input class="form-control input-sm" id="mfNama" value="${esc(m?m.nama:'')}" placeholder="Nama"></td></tr>
+     <tr><td style="border:0">Keterangan <b class="text-danger">*</b></td><td style="border:0"><input class="form-control input-sm" id="mfKet" value="${esc(m?m.ket:'')}" placeholder="Keterangan"></td></tr>
+     <tr class="chg" id="mfCoaRow"><td style="border:0">COA Petty Cash <b class="text-danger">*</b> <span class="newtag">BARU</span></td><td style="border:0"><select class="form-control input-sm" id="mfCoa">${coaOpts(m?m.coaPc:'','-- Pilih COA Petty Cash --')}</select><small class="text-muted">Akun kas petty cash ini (mis. 1101-01-02 Kas Kecil). Dipakai di jurnal pencatatan (Kredit) dan jurnal refill (Debit). Pilihan = seluruh COA master.</small></td></tr></tbody></table>
+   <hr style="margin:6px 0 10px"><h4><i class="fa fa-list"></i>&nbsp;Detail COA</h4>
+   <table class="table table-bordered table-striped" style="font-size:12.5px"><thead><tr><th width="40" class="text-center">No</th><th width="250">COA</th><th>Jenis Pengeluaran</th><th width="160">Nominal</th><th width="60" class="text-center">Action</th></tr></thead><tbody id="mfRows"></tbody></table>
+   <button type="button" class="btn btn-info btn-sm" id="mfAdd"><i class="fa fa-plus"></i>&nbsp;Tambah Baris</button>
+   <div class="tamp-note" style="margin-top:12px;font-size:16px"><b><i class="fa fa-calculator"></i>&nbsp;Total Budget: <span id="mfTot">Rp 0</span></b></div>`,
+   '<i class="fa fa-save"></i>&nbsp;Simpan',()=>{const nama=$('mfNama').value.trim(),ket=$('mfKet').value.trim(),coa=$('mfCoa').value;
+     if(!nama||!ket)return 'Nama dan Keterangan wajib diisi.';
+     if(!coa)return 'COA Petty Cash wajib dipilih.';
+     if(rows.some(r=>!r.coa||!(+r.nom>0)))return 'Lengkapi Detail COA (COA dan nominal).';
+     const det=rows.map(r=>[r.coa,+r.nom,String(r.jp).trim()]);
+     if(m)Object.assign(m,{nama,ket,coaPc:coa,det});else S.ms.push({id:'PC-'+String(S.ms.length+1).padStart(2,'0'),nama,ket,coaPc:coa,det});
+     go('ms');swal('success','Tersimpan','Master '+esc(nama)+' tersimpan. COA Petty Cash: '+esc(coa+' - '+coaAllNm(coa))+'.');},{lg:true,cancelText:'<i class="fa fa-reply"></i>&nbsp;Batal'});
+  $('mfAdd').onclick=()=>{rows.push({coa:'',jp:'',nom:''});draw();};draw();}
+$('msAdd').onclick=()=>msForm(null);
+
+/* ---------- transaksi (pencatatan) — tampilan sistem: pencatatan/index.php, form.php, view.php ---------- */
+const canSel=p=>p.sts==='draft'&&!p.rpc;
+function rPcp(){const L=S.pcp.slice().sort((a,b)=>b.tgl.localeCompare(a.tgl)||b.no.localeCompare(a.no));
+  const sel=[...U.sel].map(pc);const co=sel.length?coOf(sel[0]):null;
+  document.querySelector('#pcT tbody').innerHTML=L.map((p,i)=>{const can=canSel(p),lock=can&&co&&coOf(p)!==co,ed=(p.sts==='draft'||p.sts==='reject')&&!p.rpc;
+    return `<tr class="${lock?'row-lock':''}" data-row="${p.no}"><td>${can?`<input type="checkbox" data-sel="${p.no}" ${U.sel.has(p.no)?'checked':''} ${lock?'disabled title="Hanya dapat memilih pencatatan dari company '+co+'"':''}>`:'<input type="checkbox" disabled>'}</td><td>${i+1}</td><td>${p.no}</td><td>${p.rpc?`<a data-rpv="${p.rpc}" class="text-primary"><b>${p.rpc}</b></a>`:'-'}</td><td>${tglS(p.tgl)}</td><td>${coOf(p)}</td><td>${esc(p.by)}</td><td>${esc(p.ket)||'-'}</td><td>${nf(gt(p))}</td><td>${lblPc(p.sts)}</td>
+     <td style="white-space:nowrap"><button class="btn btn-info btn-xs" data-pv="${p.no}" title="View"><i class="fa fa-eye"></i></button>${ed?` <button class="btn btn-warning btn-xs" data-pe="${p.no}" title="Edit"><i class="fa fa-pencil"></i></button> <button class="btn btn-danger btn-xs" data-pd="${p.no}" title="Delete"><i class="fa fa-trash"></i></button>`:''}</td></tr>`;}).join('');
+  document.querySelectorAll('#pcT [data-sel]').forEach(c=>c.onchange=()=>{c.checked?U.sel.add(c.dataset.sel):U.sel.delete(c.dataset.sel);rPcp();});
+  document.querySelectorAll('#pcT [data-pv]').forEach(b=>b.onclick=()=>go('pcv',b.dataset.pv));
+  document.querySelectorAll('#pcT [data-rpv]').forEach(a=>a.onclick=()=>go('cf',{no:a.dataset.rpv,mode:'view'}));
+  document.querySelectorAll('#pcT [data-pe]').forEach(b=>b.onclick=()=>openForm(pc(b.dataset.pe).ms,pc(b.dataset.pe)));
+  document.querySelectorAll('#pcT [data-pd]').forEach(b=>b.onclick=()=>swal('warning','Anda Yakin?','Data pencatatan akan dihapus secara permanen.',()=>{S.pcp=S.pcp.filter(p=>p.no!==b.dataset.pd);U.sel.delete(b.dataset.pd);go('pcp');swal('success','Berhasil','Pencatatan berhasil dihapus. Tidak ada jurnal yang perlu dihapus.');},'Ya, hapus'));
+  const avail=L.filter(p=>canSel(p)&&(!co||coOf(p)===co));$('pcAll').checked=avail.length>0&&avail.every(p=>U.sel.has(p.no));
+  $('pcBuat').disabled=!U.sel.size;$('pcBuat').innerHTML='<i class="fa fa-file-text-o"></i> Buat Pelaporan'+(U.sel.size?' <span class="badge" style="background:#fff;color:#3c8dbc;margin-left:4px">'+U.sel.size+'</span>':'');}
+$('pcAll').onchange=e=>{const L=S.pcp.filter(canSel);if(e.target.checked){const co=U.sel.size?coOf(pc([...U.sel][0])):(L[0]&&coOf(L.slice().sort((a,b)=>b.tgl.localeCompare(a.tgl))[0]));L.filter(p=>coOf(p)===co).forEach(p=>U.sel.add(p.no));}else U.sel.clear();rPcp();};
+$('pcBuat').onclick=()=>{const ids=[...U.sel];if(!ids.length){swal('warning','Peringatan','Silakan pilih minimal 1 pencatatan untuk membuat pelaporan.');return;}
+  const L=ids.map(pc);
+  if(new Set(L.map(coOf)).size>1){swal('error','Validasi Gagal','Pelaporan hanya dapat berisi pencatatan dari satu company yang sama.');return;}
+  if(new Set(L.map(p=>monday(p.tgl))).size>1){swal('error','Gagal','Pelaporan hanya dapat berisi pencatatan dari minggu yang sama');return;}
+  swal('warning','Buat Pelaporan?','Anda akan membuat pelaporan dari '+ids.length+' pencatatan terpilih.',()=>{
+    const no='RPC-2026-'+String(S.seqR++).padStart(4,'0');const st=monday(L[0].tgl);
+    S.rpc.push({no,co:coOf(L[0]),ms:L[0].ms,start:st,end:addD(st,4),ids:ids.slice().sort(),sts:'draft',saldo:null,seharusnya:null,alasan:''});
+    L.forEach(p=>p.rpc=no);U.sel.clear();go('cf',{no,mode:'view'});swal('success','Berhasil','Pelaporan '+no+' berhasil dibuat (draft). Ajukan dari menu Pelaporan Petty Cash.');},'Ya, Buat');};
+$('pcAdd').onclick=()=>modal('<i class="fa fa-money"></i> Pilih Master Petty Cash','<p class="text-muted" style="font-size:13px;margin-top:0"><i class="fa fa-info-circle"></i> Pilih petty cash yang akan digunakan untuk pencatatan pengeluaran:</p>'+S.ms.map(m=>`<a class="pc-card" data-ms="${m.id}"><b>${esc(m.nama)}</b><small>${esc(m.ket||'Tidak ada keterangan')}</small><small style="color:#2e7d32;font-weight:600">Budget: Rp ${nf(budget(m))}</small></a>`).join(''),'',null,{noOk:true});
+document.addEventListener('click',e=>{const a=e.target.closest('#dlgB [data-ms]');if(a){closeDlg();openForm(a.dataset.ms);}});
+const itemsTbl=(p,ev)=>`<table class="table table-bordered detail-item-table" style="font-size:12.5px"><thead><tr><th width="30" class="text-center">#</th><th>COA</th><th>Pengeluaran</th><th>Spesifikasi</th><th class="text-center" width="55">Qty</th><th class="text-right" width="100">Nominal</th><th class="text-right" width="100">Total</th>${ev?'<th>Evidence</th>':''}</tr></thead><tbody>${p.items.map((it,k)=>`<tr><td class="text-center">${k+1}</td><td>${it.coa} - ${esc(coaNm(it.coa))}</td><td>${esc(it.peng)}</td><td>${esc(it.spek||'')}</td><td class="text-center">${it.qty}</td><td class="text-right">${nf(it.nom)}</td><td class="text-right">${nf(it.qty*it.nom)}</td>${ev?`<td class="ev">${String(it.ev||'').split(', ').filter(Boolean).map(n=>'<a><i class="fa fa-file"></i> '+esc(n)+'</a>').join('<br>')||'-'}</td>`:''}</tr>`).join('')}</tbody><tfoot><tr><th colspan="6" class="text-right">Total</th><th class="text-right">${nf(gt(p))}</th>${ev?'<th></th>':''}</tr></tfoot></table>`;
+const sboxes=(m,terp)=>`<div class="row"><div class="col-sm-4"><div class="small-box bg-aqua"><div class="inner"><h3 id="sbBud">${nf(budget(m))}</h3><p>Budget</p></div><div class="icon"><i class="fa fa-money"></i></div></div></div><div class="col-sm-4"><div class="small-box bg-yellow"><div class="inner"><h3>${nf(terp)}</h3><p>Budget Terpakai</p></div><div class="icon"><i class="fa fa-credit-card"></i></div></div></div><div class="col-sm-4"><div class="small-box bg-green"><div class="inner"><h3>${nf(budget(m)-terp)}</h3><p>Sisa Budget</p></div><div class="icon"><i class="fa fa-balance-scale"></i></div></div></div></div>`;
+// --- form pencatatan (halaman penuh seperti create/edit di sistem). Input nominal tidak me-render ulang tabel, jadi bisa diketik langsung. ---
+const blankRow=()=>({coa:'',peng:'',spek:'',qty:'',nom:'',ev:[]});
+const rowTot=r=>(parseInt(r.qty,10)||0)*parseA(r.nom);
+function openForm(id,edit){U.pcf={ms:id,edit:edit?edit.no:null,co:edit?edit.co:'',by:edit?edit.by:'',ket:edit?edit.ket:'',
+  rows:edit?edit.items.map(i=>({coa:i.coa,peng:i.peng,spek:i.spek||'',qty:String(i.qty),nom:nf(i.nom),ev:String(i.ev||'').split(', ').filter(Boolean)})):[blankRow()]};closeDlg();go('pcf');}
+const pcfOwn=()=>U.pcf.edit?gt(pc(U.pcf.edit)):0;
+function rPcf(){const f=U.pcf;if(!f){go('pcp');return;}const m=ms(f.ms),own=pcfOwn(),terp=terpakai(f.ms)-own;
+  $('pcfBody').innerHTML=sboxes(m,terp)+`<div class="box box-primary"><div class="box-header with-border"><h3 class="box-title"><i class="fa fa-pencil-square-o"></i>&nbsp;${f.edit?'Edit':'Tambah'} Pencatatan Petty Cash</h3></div><div class="box-body">
+   <div class="row"><div class="col-md-6 form-group"><label>No Pencatatan</label><input class="form-control" value="${f.edit||'Auto-generated'}" readonly></div>
+    <div class="col-md-6 form-group"><label>Tanggal <b class="text-red">*</b></label><input class="form-control" id="pcfTgl" value="${f.edit?pc(f.edit).tgl:TODAY}" readonly></div></div>
+   <div class="row"><div class="col-md-6 form-group"><label>Company <b class="text-red">*</b></label><select class="form-control" id="pcfCo"><option value="">-- Pilih Company --</option>${['STM','VUCA','SUSTAIN'].map(c=>`<option value="${c}" ${f.co===c?'selected':''}>${c}</option>`).join('')}</select></div>
+    <div class="col-md-6 form-group"><label>Request By <b class="text-red">*</b></label><input class="form-control" id="pcfBy" value="${esc(f.by)}" placeholder="Nama pemohon" maxlength="100"></div></div>
+   <div class="form-group"><label>Keterangan</label><textarea class="form-control" id="pcfKet" rows="3" placeholder="Keterangan (opsional)">${esc(f.ket)}</textarea></div>
+   <hr><h4><i class="fa fa-list"></i>&nbsp;Detail Item Pengeluaran</h4>
+   <div style="overflow-x:auto"><table class="table table-bordered table-striped" id="pcfT"><thead><tr class="bg-primary"><th width="40" class="text-center">No</th><th width="200">COA</th><th width="150">Pengeluaran</th><th width="150">Spesifikasi</th><th width="80" class="text-center">Jumlah</th><th width="130" class="text-center">Nominal</th><th width="130" class="text-center">Total</th><th width="180">Evidence <span class="text-red">*</span></th><th width="60" class="text-center">Aksi</th></tr></thead>
+    <tbody id="pcfRows">${f.rows.map((r,i)=>`<tr data-i="${i}"><td class="text-center">${i+1}</td>
+     <td><select class="form-control input-sm" data-f="coa" data-i="${i}"><option value="">-- Pilih COA --</option>${m.det.map(d=>`<option value="${d[0]}" data-peng="${esc(d[2]||'')}" ${d[0]===r.coa?'selected':''}>${d[0]} - ${esc(coaNm(d[0]))}</option>`).join('')}</select></td>
+     <td><input class="form-control input-sm" data-f="peng" data-i="${i}" value="${esc(r.peng)}" placeholder="Pengeluaran" maxlength="255"></td>
+     <td><input class="form-control input-sm" data-f="spek" data-i="${i}" value="${esc(r.spek)}" placeholder="Spesifikasi" maxlength="255"></td>
+     <td><input type="number" class="form-control input-sm text-center" data-f="qty" data-i="${i}" value="${esc(r.qty)}" min="1" max="9999"></td>
+     <td><input type="text" inputmode="numeric" class="form-control input-sm text-right" data-f="nom" data-i="${i}" value="${esc(r.nom)}" placeholder="0"></td>
+     <td><input class="form-control input-sm text-right" id="pcfTot${i}" value="0" readonly></td>
+     <td>${r.ev.map((n,k)=>`<div><small><i class="fa fa-file"></i> ${esc(n)} <a class="text-red" data-evrm="${i}|${k}" title="Hapus"><i class="fa fa-times"></i></a></small></div>`).join('')}<button type="button" class="btn btn-xs btn-default" data-up="${i}"><i class="fa fa-upload"></i> Upload</button></td>
+     <td class="text-center"><button type="button" class="btn btn-danger btn-sm" data-rm="${i}" title="Hapus Baris"><i class="fa fa-trash"></i></button></td></tr>`).join('')}</tbody>
+    <tfoot><tr><th colspan="6" class="text-right">Grand Total</th><th class="text-right" style="font-size:16px"><span id="pcfGrand">0</span></th><th colspan="2"></th></tr>
+     <tr style="background:#fff3cd"><th colspan="6" class="text-right">Budget</th><th class="text-right">${nf(budget(m))}</th><th colspan="2"></th></tr>
+     <tr style="background:#d4edda"><th colspan="6" class="text-right">Sisa Budget</th><th class="text-right" id="pcfSisa">0</th><th colspan="2"></th></tr></tfoot></table></div>
+   <button type="button" class="btn btn-info btn-sm" id="pcfAdd"><i class="fa fa-plus"></i>&nbsp;Tambah Baris</button>
+   <hr><div class="callout callout-danger" id="pcfWarn" style="display:none"><h4><i class="fa fa-exclamation-triangle"></i>&nbsp;Peringatan</h4><p>Grand Total melebihi Sisa Budget! Pengeluaran Anda melebihi sisa anggaran yang tersedia. Anda masih dapat menyimpan pencatatan ini.</p></div>
+   <hr><h4><i class="fa fa-book"></i>&nbsp;Simulasi Jurnal</h4>
+   <p class="text-muted" style="font-size:12px;margin-bottom:10px"><i class="fa fa-info-circle"></i> Preview jurnal pencatatan ini. <span class="chg">To-be: <b>Simpan tidak membuat jurnal</b>; jurnal dibuat saat Pelaporan di-approve, dengan tanggal pencatatan ini (sekarang dibuat saat Simpan). Kredit memakai COA Petty Cash dari master.<span class="newtag">BARU</span></span></p>
+   <div id="pcfJv"></div>
+  </div><div class="box-footer"><button type="button" class="btn btn-success" id="pcfSave"><i class="fa fa-save"></i>&nbsp;Simpan</button> <button type="button" class="btn btn-warning" id="pcfBatal"><i class="fa fa-reply"></i>&nbsp;Batal</button></div></div>`;
+  $('pcfCo').onchange=e=>{f.co=e.target.value;pcfCalc();};$('pcfBy').oninput=e=>{f.by=e.target.value;};$('pcfKet').oninput=e=>{f.ket=e.target.value;};
+  document.querySelectorAll('#pcfRows [data-f]').forEach(el=>{const i=+el.dataset.i,k=el.dataset.f,r=f.rows[i];
+    if(k==='coa')el.onchange=()=>{r.coa=el.value;const o=el.options[el.selectedIndex];r.peng=o&&o.dataset.peng?o.dataset.peng:r.peng;const pe=document.querySelector('#pcfRows [data-f="peng"][data-i="'+i+'"]');if(pe)pe.value=r.peng;pcfCalc();};
+    else if(k==='nom'){el.oninput=()=>{r.nom=el.value;pcfCalc();};el.onblur=()=>{const v=parseA(el.value);r.nom=v?nf(v):'';el.value=r.nom;pcfCalc();};}
+    else el.oninput=el.onchange=()=>{r[k]=el.value;if(k==='qty')pcfCalc();};});
+  document.querySelectorAll('#pcfRows [data-up]').forEach(b=>b.onclick=()=>{const r=f.rows[+b.dataset.up];if(r.ev.length>=5){swal('error','Error','Maksimal 5 file evidence per baris item.');return;}r.ev.push('nota-'+(+b.dataset.up+1)+(r.ev.length?'-'+(r.ev.length+1):'')+'.jpg');rPcf();});
+  document.querySelectorAll('#pcfRows [data-evrm]').forEach(a=>a.onclick=()=>{const [i,k]=a.dataset.evrm.split('|').map(Number);f.rows[i].ev.splice(k,1);rPcf();});
+  document.querySelectorAll('#pcfRows [data-rm]').forEach(b=>b.onclick=()=>{if(f.rows.length===1){swal('warning','Peringatan','Minimal harus ada 1 baris detail item.');return;}f.rows.splice(+b.dataset.rm,1);rPcf();});
+  $('pcfAdd').onclick=()=>{f.rows.push(blankRow());rPcf();};
+  $('pcfBatal').onclick=()=>{U.pcf=null;go('pcp');};
+  $('pcfSave').onclick=()=>{const e=[];if(!f.co)e.push('Company wajib dipilih.');if(!f.by.trim())e.push('Request By wajib diisi.');if(!f.rows.length)e.push('Detail item harus diisi minimal 1 baris.');
+    f.rows.forEach((r,i)=>{const n=i+1,q=parseInt(r.qty,10)||0,v=parseA(r.nom);if(q<=0)e.push('Baris '+n+': Jumlah harus lebih besar dari 0');else if(q>9999)e.push('Baris '+n+': Jumlah maks 9.999');
+      if(v<=0)e.push('Baris '+n+': Nominal harus lebih besar dari 0');else if(v>999999999)e.push('Baris '+n+': Nominal maks 999.999.999');if(!r.ev.length)e.push('Baris '+n+': Evidence wajib diupload');});
+    if(e.length){swal('error','Validasi Gagal',e.join('<br>'));return;}
+    const items=f.rows.map(r=>({coa:r.coa,peng:r.peng.trim(),spek:r.spek.trim(),qty:parseInt(r.qty,10),nom:parseA(r.nom),ev:r.ev.join(', ')}));
+    let no=f.edit;if(no)Object.assign(pc(no),{co:f.co,by:f.by.trim(),ket:f.ket.trim(),items});
+    else{no='PCP-2026-'+String(S.seqP++).padStart(4,'0');const p=P(no,f.ms,f.co,TODAY,f.by.trim(),f.ket.trim(),[]);p.items=items;S.pcp.push(p);}
+    const wasEdit=!!f.edit;U.pcf=null;go('pcp');swal('success','Berhasil','Pencatatan '+no+' berhasil disimpan.'+(wasEdit?' Tidak ada jurnal yang dihapus / dibuat ulang.':' Belum ada jurnal (dibuat saat Pelaporan di-approve).'));};
+  pcfCalc();}
+function pcfCalc(){const f=U.pcf;const G=f.rows.reduce((a,r)=>a+rowTot(r),0),sb=sisa(f.ms)+pcfOwn();
+  f.rows.forEach((r,i)=>{const el=$('pcfTot'+i);if(el)el.value=nf(rowTot(r));});
+  $('pcfGrand').textContent=nf(G);$('pcfSisa').textContent=nf(sb-G);$('pcfWarn').style.display=G>sb?'':'none';
+  const tmp={no:f.edit||'(baru)',co:f.co,ms:f.ms,tgl:f.edit?pc(f.edit).tgl:TODAY,items:f.rows.filter(r=>r.coa&&rowTot(r)).map(r=>({coa:r.coa,peng:r.peng,qty:parseInt(r.qty,10)||0,nom:parseA(r.nom)}))};
+  $('pcfJv').innerHTML=!f.co?'<p class="text-muted text-center" style="padding:10px"><em>Tidak ada data (pilih Company)</em></p>':!tmp.items.length?'<p class="text-muted text-center" style="padding:10px"><em>Tidak ada data (isi COA, Jumlah, Nominal)</em></p>':jvSys(jurLines(tmp).map(x=>Object.assign({tgl:tmp.tgl},x)));}
+// --- view pencatatan (halaman, seperti view.php) ---
+function rPcv(){const p=pc(U.pcv),m=ms(p.ms),jr=S.jur.filter(j=>j.trx===p.no);
+  $('pcvBody').innerHTML=sboxes(m,terpakai(p.ms))+`<div class="box box-primary"><div class="box-header with-border"><h3 class="box-title"><i class="fa fa-file-text-o"></i>&nbsp;Detail Pencatatan Petty Cash</h3></div><div class="box-body">
+   <div class="row dv"><div class="col-md-4"><label>No Pencatatan</label><div>${p.no}</div></div><div class="col-md-4"><label>Tanggal</label><div>${tglS(p.tgl)}</div></div><div class="col-md-4"><label>Company</label><div>${coOf(p)}</div></div>
+    <div class="col-md-4"><label>Request By</label><div>${esc(p.by)}</div></div><div class="col-md-4"><label>Keterangan</label><div>${esc(p.ket)||'-'}</div></div><div class="col-md-4"><label>Status</label><div>${lblPc(p.sts)}${p.rpc?' · '+p.rpc:''}</div></div>
+    <div class="col-md-4"><label>Journal Status</label><div id="pcvJs">${jr.length?(jr[0].sts==='posted'?LBL('success','Posted'):LBL('warning','Pending'))+(p.legacyJur?' <small class="text-muted">dibuat saat simpan (lama)</small>':''):'<span class="chg">Belum ada — dibuat saat Pelaporan di-approve<span class="newtag">BARU</span></span>'}</div></div></div>
+   <hr><h4><i class="fa fa-list"></i>&nbsp;Detail Item Pengeluaran</h4>${itemsTbl(p,true)}
+   <table class="table" style="max-width:420px;margin-left:auto;font-size:13px"><tbody><tr style="background:#fff3cd"><th class="text-right">Budget</th><th class="text-right">${nf(budget(m))}</th></tr><tr style="background:#d4edda"><th class="text-right">Sisa Budget</th><th class="text-right">${nf(sisa(p.ms))}</th></tr></tbody></table>
+   <h4><i class="fa fa-book"></i>&nbsp;Preview Jurnal</h4>
+   ${jr.length?jvSys(jr):'<div class="chg">'+jvSys(jurLines(p).map(x=>Object.assign({tgl:p.tgl},x)))+'<p class="text-muted" style="font-size:12px">To-be: jurnal ini baru dibentuk saat Pelaporan di-approve, tanggal '+tglS(p.tgl)+'.<span class="newtag">BARU</span></p></div>'}
+  </div><div class="box-footer"><button type="button" class="btn btn-warning" id="pcvBack"><i class="fa fa-reply"></i>&nbsp;Kembali</button></div></div>`;
+  $('pcvBack').onclick=()=>go('pcp');}
+
+/* ---------- pelaporan (pelaporan/index.php, confirm.php, view.php) ---------- */
+function refillTxt(r){const x=rpOf(r.no);if(!x)return '<span class="text-muted">-</span>';
+  if(x.sts==='dibayar')return 'Dibayar '+tgl(x.tglBayar)+' ('+x.pay+')';
+  if(x.sts==='wait')return 'Di Request Payment'+(x.rej?' (ditolak: '+esc(x.rej)+')':'');
+  const g=pgjOf(x.pgj);return g.sts==='apv'?'Approval RP '+g.no:'Menunggu Payment ('+g.no+')';}
+function rRpc(){[...$('rpcCo').options].forEach(o=>o.selected=U.rf.co.includes(o.value));$('rpcSts').value=U.rf.sts;
+  const L=S.rpc.filter(r=>(!U.rf.co.length||U.rf.co.includes(r.co))&&(!U.rf.sts||r.sts===U.rf.sts)).sort((a,b)=>b.no.localeCompare(a.no));
+  document.querySelector('#rpcT tbody').innerHTML=L.map((r,i)=>`<tr data-row="${r.no}"><td>${i+1}</td><td>${r.no}</td><td>${tglI(r.start)} - ${tglI(r.end)}</td><td>${r.co}</td><td>${r.ids.length}</td><td>${nf(rpcTotal(r))}</td><td class="chg">${r.saldo==null?'<span class="text-muted">'+(r.legacy?'(sebelum fitur)':'-')+'</span>':nf(r.saldo)+'<br><small>'+selHtml(r.saldo,r.seharusnya)+'</small>'}</td><td>${lblRpc(r.sts)}${r.sts==='reject'&&r.alasan?'<div class="pel-reason"><strong>Alasan penolakan</strong>'+esc(r.alasan)+'</div>':''}</td>
+   <td style="white-space:nowrap">${r.sts==='draft'?`<button class="btn btn-primary btn-xs" data-cf="${r.no}" title="Ajukan Pelaporan"><i class="fa fa-send"></i> Ajukan</button> `:''}<button class="btn btn-info btn-xs" data-vw="${r.no}" title="Lihat detail pelaporan"><i class="fa fa-eye"></i> Detail</button> <button class="btn btn-default btn-xs" data-pr="${r.no}" title="Cetak pelaporan"><i class="fa fa-print"></i> Print</button></td></tr>`).join('')||'<tr><td colspan="9" class="dt-empty">No data available in table</td></tr>';
+  document.querySelectorAll('#rpcT [data-cf]').forEach(b=>b.onclick=()=>go('cf',{no:b.dataset.cf,mode:'cf'}));
+  document.querySelectorAll('#rpcT [data-vw]').forEach(b=>b.onclick=()=>go('cf',{no:b.dataset.vw,mode:'view'}));
+  document.querySelectorAll('#rpcT [data-pr]').forEach(b=>b.onclick=()=>printRpc(b.dataset.pr));}
+$('rpcGo').onclick=()=>{U.rf.co=[...$('rpcCo').selectedOptions].map(o=>o.value);U.rf.sts=$('rpcSts').value;rRpc();};
+$('rpcReset').onclick=()=>{U.rf={co:[],sts:''};rRpc();};
+function printRpc(no){const r=rpcOf(no),m=ms(r.ms);
+  modal('Print '+no,`<div class="print-doc" id="prDoc"><h3>LAPORAN PETTY CASH</h3><p class="text-center" style="margin:0 0 10px">${r.co} · ${r.no} · Periode ${tglS(r.start)} — ${tglS(r.end)}</p>
+   <table class="table table-bordered"><thead><tr><th>No</th><th>No Pencatatan</th><th>Tanggal</th><th>Request By</th><th>Keterangan</th><th class="text-right">Nominal</th></tr></thead><tbody>${r.ids.map((n,i)=>{const p=pc(n);return `<tr><td>${i+1}</td><td>${p.no}</td><td>${tglS(p.tgl)}</td><td>${esc(p.by)}</td><td>${esc(p.ket)}</td><td class="money">${nf(gt(p))}</td></tr>`;}).join('')}</tbody><tfoot><tr><th colspan="5" class="text-right">Grand Total</th><th class="money">${nf(rpcTotal(r))}</th></tr></tfoot></table>
+   <table class="table table-bordered chg" style="max-width:420px"><tbody><tr><td>Total Budget</td><td class="money">${nf(budget(m))}</td></tr><tr><td>Saldo seharusnya</td><td class="money">${r.seharusnya==null?'-':nf(r.seharusnya)}</td></tr><tr><td>Saldo Petty Cash (hitung fisik)</td><td class="money">${r.saldo==null?'-':nf(r.saldo)}</td></tr><tr><td><b>Selisih</b></td><td class="money">${r.saldo==null?'-':nf(r.saldo-r.seharusnya)}</td></tr></tbody></table>
+   <div class="ttd"><div>Dibuat oleh<span></span>(Pemegang Petty Cash)</div><div>Disetujui oleh<span></span>(Approver)</div></div></div>`,'',null,{lg:true,noOk:true,cancelText:'Close'});}
+function kontrolHtml(r,editable){const m=ms(r.ms);const G=rpcTotal(r);
+  const sh=editable?sisa(r.ms):r.seharusnya;const lain=budget(m)-G-sh;
+  return `<div class="kontrol chg" id="kontrol"><h4><i class="fa fa-balance-scale"></i> Kontrol Saldo Petty Cash <span class="newtag">BARU</span></h4>
+   <table class="table"><tbody>
+    <tr><td>Total Budget (plafon) ${esc(m.nama)} <small class="text-muted">(1 kas untuk semua company)</small></td><td class="money">${nf(budget(m))}</td></tr>
+    <tr><td>− Grand Total pelaporan ini</td><td class="money">${nf(G)}</td></tr>
+    <tr><td>− Pengeluaran lain yang belum di-refill <small class="text-muted">(pencatatan lain / pelaporan belum dibayar, semua company)</small></td><td class="money">${nf(lain)}</td></tr>
+    <tr class="tot"><td>= Saldo seharusnya <small class="text-muted">(Sisa Budget)</small></td><td class="money" id="kSeh">${nf(sh)}</td></tr>
+    <tr><td><b>Saldo Petty Cash</b> <small class="text-muted">(hitung fisik uang di kas${editable?', wajib':''})</small></td><td class="money">${editable?`<input type="number" class="form-control input-sm" id="cfSaldo" style="width:160px;display:inline-block;text-align:right" value="${r.saldo==null?'':r.saldo}" placeholder="0">`:nf(r.saldo)}</td></tr>
+    <tr class="tot"><td>Selisih (Saldo Petty Cash − Saldo seharusnya)</td><td class="money" id="kSel">${editable?'-':selHtml(r.saldo,sh)}</td></tr>
+   </tbody></table>
+   <div id="kWarn">${editable||r.saldo==null?'':selWarn(r.saldo-sh,U.cf.mode)}</div>
+   <p class="text-muted" style="font-size:12px;margin:6px 0 0">Selisih ≠ 0 berarti ada nota yang belum dicatat, salah input, atau uang kurang/lebih. Bila ada selisih: <b>peringatan</b> ditampilkan, Ajukan dan Approve tetap bisa, Dept Head Finance mengecek saat approval.</p></div>`;}
+function detailHtml(r,mode){return r.ids.map((n,i)=>{const p=pc(n);const jr=S.jur.filter(j=>j.trx===p.no);
+  const jv=jr.length?jvSys(jr)+'<p class="text-muted" style="font-size:12px;margin:0 0 6px">Jurnal di Jurnal All (status '+jr[0].sts+')'+(p.legacyJur?', dibuat saat simpan (lama).':'.')+'</p>'
+    :'<div class="chg">'+jvSys(jurLines(p).map(x=>Object.assign({tgl:p.tgl},x)))+'<p class="text-muted" style="font-size:12px;margin:0 0 6px">To-be: jurnal dibentuk saat Pelaporan di-approve, tanggal '+tglS(p.tgl)+' (tanggal pencatatan).<span class="newtag">BARU</span></p></div>';
+  return `<div class="pc-panel"><div class="ph"><div><div class="pt"><i class="fa fa-file-text-o"></i>&nbsp;${i+1}. ${p.no}</div><div class="pm"><i class="fa fa-calendar-o"></i> ${tglS(p.tgl)} &bull; <i class="fa fa-user"></i> ${esc(p.by)}${p.ket?' &bull; <i class="fa fa-comment-o"></i> '+esc(p.ket):''}</div></div><b>Rp ${nf(gt(p))}</b></div><div class="pb">${itemsTbl(p,mode==='apv'||mode==='view')}${mode==='apv'&&!jr.length?'':'<div class="jurnal-section"><h5><i class="fa fa-book"></i>&nbsp;Preview Jurnal</h5>'+jv+'</div>'}</div></div>`;}).join('');}
+function apvPreview(r){const sets=[];r.ids.forEach(n=>{const p=pc(n);jurLines(p).forEach((x,k,a)=>sets.push({p,x,k,n:a.length}));});
+  const D=sets.reduce((a,o)=>a+o.x.lines.reduce((b,l)=>b+l.d,0),0),m=ms(r.ms),K=kasOf(r.ms),ic=r.co!=='STM';
+  return `<div class="box box-solid chg" id="apvJv" style="border-top:3px solid #00a65a"><div class="box-header with-border"><h3 class="box-title"><i class="fa fa-book"></i> Preview Jurnal <small>(dibentuk saat Approve)</small> <span class="newtag">BARU</span></h3></div><div class="box-body">
+   <p style="font-size:13px;margin-top:0">${r.ids.length} pencatatan → <b>${sets.length} jurnal</b>, masing-masing bertanggal pencatatannya, masuk Jurnal All (belum posting). COA Petty Cash dari master <b>${esc(m.nama)}</b>: <b>${esc(K[0]+' '+K[1])}</b>.</p>
+   ${r.ids.map(n=>{const p=pc(n);return `<div style="font-weight:600;font-size:13px;margin-top:10px">${p.no} · ${tglS(p.tgl)} · ${esc(p.ket)}</div>`+jvSys(jurLines(p).map(x=>Object.assign({tgl:p.tgl},x)));}).join('')}
+   <table class="table" style="max-width:520px;font-size:13px;margin:8px 0 0"><tbody><tr><td>Total debit seluruh jurnal</td><td class="money"><b>${nf(D)}</b></td></tr></tbody></table>
+   <div class="tamp-note" style="margin:10px 0 0">Saat Approve juga dibuat: Request Payment refill <b>Rp ${nf(rpcTotal(r))}</b> (refill_pettycash, company STM, masuk menu Request Payment)${ic?' dan Payment Hutang '+r.co+' (draft)':''}. Jurnal refill dibentuk saat Payment: Dr ${esc(K[0]+' '+K[1])} / Cr Bank yang dipilih (buku STM).</div>
+  </div></div>`;}
+function rCf(){const {no,mode}=U.cf;const r=rpcOf(no);const ed=mode==='cf'&&r.sts==='draft',ap=mode==='apv'&&r.sts==='waiting',sb=sisa(r.ms);
+  $('cfTitle').textContent=ap?'Approval Pelaporan':ed?'Konfirmasi Pelaporan':'Detail Pelaporan';
+  $('cfBody').innerHTML=`<div class="sum-card"><div class="card-row">
+    <div><div class="label-text">No Pelaporan</div><div class="value-text text-sm">${r.no}</div></div>
+    <div><div class="label-text">Periode</div><div class="value-text text-sm">${tglS(r.start)} — ${tglS(r.end)}</div></div>
+    <div><div class="label-text">Company</div><div class="value-text text-sm">${r.co}</div></div>
+    <div><div class="label-text">Grand Total</div><div class="value-text">Rp ${nf(rpcTotal(r))}</div></div>
+    <div><div class="label-text">Pencatatan</div><div class="value-text text-sm">${r.ids.length} item</div></div>
+    <div><div class="label-text">Sisa Budget</div><div class="value-text text-sm">Rp ${nf(sb)}</div></div></div></div>
+   ${r.legacy?'<div class="tamp-note">Pelaporan lama, dibuat sebelum ada field Saldo Petty Cash.</div>':r.sts==='draft'&&!ed?'':kontrolHtml(r,ed)}
+   ${r.sts==='reject'?'<div class="alert alert-danger"><b>Alasan penolakan</b><br>'+esc(r.alasan)+'</div>':''}
+   <div class="box box-solid"><div class="box-header with-border"><h3 class="box-title"><i class="fa fa-list-alt"></i>&nbsp;Detail Pencatatan</h3></div><div class="box-body" id="cfDet">${detailHtml(r,ap?'apv':mode)}</div></div>
+   ${ap?apvPreview(r):''}
+   <div style="text-align:center;margin:10px 0 20px">
+    ${ed?'<button type="button" class="btn btn-success" id="cfAjukan" style="padding:10px 25px"><i class="fa fa-paper-plane"></i>&nbsp;Ajukan</button>&nbsp;&nbsp;':''}
+    ${ap?'<button type="button" class="btn btn-success" id="apOk" style="padding:10px 25px"><i class="fa fa-check"></i>&nbsp;Approve</button>&nbsp;&nbsp;<button type="button" class="btn btn-danger" id="apNo" style="padding:10px 25px"><i class="fa fa-times"></i>&nbsp;Reject</button>&nbsp;&nbsp;':''}
+    <button type="button" class="btn btn-default" id="cfBack" style="padding:10px 25px"><i class="fa fa-arrow-left"></i>&nbsp;Kembali</button></div>`;
+  $('cfBack').onclick=()=>go(mode==='apv'?'apv':'rpc');
+  if(ed){const upd=()=>{const v=$('cfSaldo').value;$('kSel').innerHTML=v===''?'-':selHtml(+v,sisa(r.ms));$('kWarn').innerHTML=v===''?'':selWarn(+v-sisa(r.ms),'cf');};$('cfSaldo').oninput=upd;upd();
+    $('cfAjukan').onclick=()=>{const v=$('cfSaldo').value;if(v===''||+v<0){swal('error','Saldo Petty Cash wajib diisi','Isi hasil hitung fisik uang di kas sebelum Ajukan.');return;}
+      const sh=sisa(r.ms),sel=+v-sh;
+      swal('warning','Ajukan Pelaporan?','<p>Status akan berubah menjadi <strong>"Waiting Approval"</strong> dan pencatatan terkait tidak dapat diedit.</p><p class="chg">Saldo Petty Cash Rp '+nf(+v)+', saldo seharusnya Rp '+nf(sh)+(sel?' → <b class="text-danger">selisih '+nf(sel)+'</b>':' → sesuai')+'.</p>'+(sel?selWarn(sel,'cf'):''),()=>{r.saldo=+v;r.seharusnya=sh;r.sts='waiting';r.alasan='';r.ids.forEach(n=>pc(n).sts='waiting');go('rpc');swal('success','Berhasil!','Pelaporan berhasil diajukan.');},'Ya, Ajukan!');};}
+  if(ap){$('apOk').onclick=()=>approve(r);$('apNo').onclick=()=>reject(r);}}
+
+/* ---------- approval (approval/index.php + approval.js) ---------- */
+function rApv(){const L=S.rpc.filter(r=>r.sts==='waiting');
+  document.querySelector('#apvT tbody').innerHTML=L.map((r,i)=>`<tr data-row="${r.no}" class="${r.saldo!==r.seharusnya?'row-sel':''}"><td>${i+1}</td><td>${r.no}</td><td>${tglS(r.start)} - ${tglS(r.end)}</td><td>${r.co}</td><td class="text-center">${r.ids.length}</td><td class="text-right">${nf(rpcTotal(r))}</td><td class="text-right chg">${nf(r.saldo)}</td><td class="text-right chg">${selHtml(r.saldo,r.seharusnya)}${r.saldo!==r.seharusnya?'<br><small class="text-warning"><b>Perlu dicek</b></small>':''}</td><td class="text-center"><button class="btn btn-success btn-xs" data-ap="${r.no}" title="Approval"><i class="fa fa-check"></i> Approval</button></td></tr>`).join('')||'<tr><td colspan="9" class="dt-empty">No data available in table</td></tr>';
+  document.querySelectorAll('#apvT [data-ap]').forEach(b=>b.onclick=()=>go('cf',{no:b.dataset.ap,mode:'apv'}));}
+function approve(r){const sel=r.saldo-r.seharusnya;const ic=r.co!=='STM';
+  swal('warning','Approve Pelaporan?','Apakah Anda yakin ingin menyetujui pelaporan ini?<div class="chg" style="margin-top:8px;font-size:13px">'+(sel?'<b class="text-danger">Ada selisih saldo '+nf(sel)+'.</b> Pastikan selisih sudah dicek.<br>':'')+'Jurnal '+r.ids.length+' pencatatan dibuat (tanggal masing-masing pencatatan) dan Request Payment refill Rp '+nf(rpcTotal(r))+'.'+(ic?' Payment Hutang '+r.co+' dibuat (draft).':'')+'</div>',()=>{
+    r.sts='approved';const J=[];r.ids.forEach(n=>{const p=pc(n);p.sts='approved';J.push(...mkJurnal(p,'Approve '+r.no+' ('+tgl(TODAY)+')'));});
+    S.rp.push(mkDoc(r.no,'refill_pettycash','STM',TODAY,rpcTotal(r),'Refill petty cash '+r.co+' periode '+tglS(r.start)+' — '+tglS(r.end),'Erna'));
+    let ph='';if(ic){ph='PHP-2026-'+String(S.seqPhp++).padStart(4,'0');S.php.push({no:ph,rpc:r.no,co:r.co,sts:'draft'});}
+    go('apv');swal('success','Berhasil','Pelaporan berhasil diapprove. '+J.length+' jurnal pencatatan masuk Jurnal All (pending): '+J.map(j=>j.no+' ('+tglS(j.tgl)+')').join(', ')+'. Request Payment refill '+r.no+' Rp '+nf(rpcTotal(r))+' masuk menu Request Payment (company STM).'+(ph?' Payment Hutang '+ph+' (draft) di menu Petty Cash VUCA/Sustain.':''));},'Ya, Approve');}
+function reject(r){modal('Reject Pelaporan','<p class="text-left" style="font-size:13px">Silakan masukkan alasan penolakan (minimal 10 karakter, maksimal 500 karakter):</p><textarea class="form-control" id="rjAl" rows="3" maxlength="500"></textarea>','Reject',()=>{const a=$('rjAl').value.trim();if(!a)return 'Alasan reject wajib diisi.';if(a.length<10)return 'Alasan reject minimal 10 karakter.';
+  r.sts='reject';r.alasan=a;r.ids.forEach(n=>{const p=pc(n);p.sts='draft';p.rpc=null;});go('apv');swal('success','Berhasil','Pelaporan berhasil direject. Pencatatan kembali ke draft. Tidak ada jurnal yang perlu dihapus.');},{okClass:'btn-danger'});}
+
+/* ---------- petty cash vuca/sustain (index.php + confirm_payment.php) ---------- */
+function rPhp(){$('phpCo').value=U.phf.co;$('phpSts').value=U.phf.sts;
+  const L=S.php.filter(h=>(!U.phf.co||h.co===U.phf.co)&&(!U.phf.sts||h.sts===U.phf.sts)).sort((a,b)=>b.rpc.localeCompare(a.rpc));
+  document.querySelector('#phpT tbody').innerHTML=L.map((h,i)=>{const r=rpcOf(h.rpc);return `<tr data-row="${h.no}"><td>${i+1}</td><td>${h.rpc}</td><td>${h.no}</td><td>${tglS(r.start)} - ${tglS(r.end)}</td><td>${h.co}</td><td class="text-right">${r.ids.length}</td><td class="text-right">${nf(rpcTotal(r))}</td><td>${lblPhp(h.sts)}</td><td style="white-space:nowrap">${h.sts==='draft'?`<button class="btn btn-xs btn-success" data-ph="${h.no}" title="Payment Hutang"><i class="fa fa-money"></i> Payment Hutang</button> `:''}<button class="btn btn-xs btn-info" data-phv="${h.no}" title="View"><i class="fa fa-eye"></i></button> <button class="btn btn-xs btn-default" data-php="${h.no}" title="Print"><i class="fa fa-print"></i></button></td></tr>`;}).join('')||'<tr><td colspan="9" class="dt-empty">No data available in table</td></tr>';
+  document.querySelectorAll('#phpT [data-ph]').forEach(b=>b.onclick=()=>go('phc',{no:b.dataset.ph,mode:'pay'}));
+  document.querySelectorAll('#phpT [data-phv]').forEach(b=>b.onclick=()=>go('phc',{no:b.dataset.phv,mode:'view'}));
+  document.querySelectorAll('#phpT [data-php]').forEach(b=>b.onclick=()=>printRpc(S.php.find(h=>h.no===b.dataset.php).rpc));}
+$('phpGo').onclick=()=>{U.phf={co:$('phpCo').value,sts:$('phpSts').value};rPhp();};
+$('phpReset').onclick=()=>{U.phf={co:'',sts:''};rPhp();};
+function rPhc(){const h=S.php.find(x=>x.no===U.phc.no),r=rpcOf(h.rpc),ed=U.phc.mode==='pay'&&h.sts==='draft';
+  $('phcBody').innerHTML=`<div class="sum-card"><div class="card-row">
+    <div><div class="label-text">No Payment Hutang</div><div class="value-text text-sm">${h.no}</div></div>
+    <div><div class="label-text">No Pelaporan</div><div class="value-text text-sm">${h.rpc}</div></div>
+    <div><div class="label-text">Periode</div><div class="value-text text-sm">${tglS(r.start)} — ${tglS(r.end)}</div></div>
+    <div><div class="label-text">Company</div><div class="value-text text-sm">${h.co}</div></div>
+    <div><div class="label-text">Grand Total</div><div class="value-text">Rp ${nf(rpcTotal(r))}</div></div>
+    <div><div class="label-text">Pencatatan</div><div class="value-text text-sm">${r.ids.length} item</div></div></div></div>
+   <div class="box box-solid"><div class="box-header with-border"><h3 class="box-title"><i class="fa fa-list-alt"></i>&nbsp;Detail Pencatatan</h3></div><div class="box-body">${detailHtml(r,'view')}</div></div>
+   <div style="text-align:center;margin:10px 0 20px">${ed?'<button type="button" class="btn btn-success" id="phcGo" style="padding:12px 25px"><i class="fa fa-paper-plane"></i>&nbsp;Proses Payment Hutang</button>&nbsp;&nbsp;':''}<button type="button" class="btn btn-default" id="phcBack" style="padding:12px 25px"><i class="fa fa-arrow-left"></i>&nbsp;Kembali</button></div>`;
+  $('phcBack').onclick=()=>go('php');
+  if(ed)$('phcGo').onclick=()=>swal('warning','Proses Payment Hutang?','<p>Data akan dikirim ke <strong>Request Payment</strong> dan status berubah menjadi <strong>"Waiting Payment"</strong>.</p><p class="chg" style="font-size:13px">To-be: dokumen kategori Petty Cash Hutang (company '+h.co+', rekening tujuan STM) diatur di Request Payment → PGJ → Approval → Payment.</p>',()=>{
+    S.rp.push(mkDoc(h.no,'petty_cash_hutang',h.co,TODAY,rpcTotal(r),'Payment Hutang Petty Cash '+h.co+' - '+h.rpc,'Finance '+h.co));h.sts='waiting payment';go('php');swal('success','Berhasil!',h.no+' masuk Request Payment.');},'Ya, Proses');}
+
+/* ---------- request payment ---------- */
+function rRq(){$('rqCo').value=U.rqCo;const L=S.rp.filter(x=>x.sts==='wait'&&(!U.rqCo||x.co===U.rqCo));
+  const sel=[...U.rq].map(rpOf);const co=sel.length?sel[0].co:null;
+  document.querySelector('#rqT tbody').innerHTML=L.map((x,i)=>{const lock=co&&x.co!==co;return `<tr class="${lock?'row-lock':''}" data-row="${x.no}"><td><input type="checkbox" data-rq="${x.no}" ${U.rq.has(x.no)?'checked':''} ${lock?'disabled':''}></td><td>${i+1}</td><td><b>${x.no}</b><br><small class="text-muted">${KAT[x.tipe]}</small>${x.rej?'<br><small class="text-danger"><i class="fa fa-history"></i> ditolak: '+esc(x.rej)+'</small>':''}</td><td>${esc(x.by)}</td><td>${tgl(x.tgl)}</td><td>${x.co}</td><td>${esc(x.kep)}</td><td><small>${rekTxt(x.rek)}</small></td><td class="money">${nf(x.jumlah)}</td></tr>`;}).join('')||'<tr><td colspan="9" class="dt-empty">Tidak ada dokumen menunggu diajukan.</td></tr>';
+  document.querySelectorAll('#rqT [data-rq]').forEach(c=>c.onchange=()=>{c.checked?U.rq.add(c.dataset.rq):U.rq.delete(c.dataset.rq);rRq();});
+  $('rqInfo').textContent=U.rq.size?U.rq.size+' dokumen dipilih ('+co+') — siap diatur dan diajukan':'Centang dokumen 1 company.';
+  $('rqAtur').disabled=!U.rq.size;}
+$('rqCo').onchange=e=>{U.rqCo=e.target.value;rRq();};
+$('rqAtur').onclick=()=>{if(!U.rq.size)return;const D=[...U.rq].map(rpOf);
+  U.atur={co:D[0].co,trf:D.map(d=>({docs:[d.no],rek:Object.assign({},d.rek),adm:0,bearer:'penerima'})),pick:new Set()};go('atur');};
+
+/* ---------- atur pembayaran ---------- */
+const BANK_OPT=['BCA','Mandiri','BRI','BNI'];
+function rAtur(){const A=U.atur;if(!A){go('rq');return;}
+  const nDoc=A.trf.reduce((a,t)=>a+t.docs.length,0);
+  $('aturBody').innerHTML=`<div class="box chg"><div class="box-body">
+   <a class="btn btn-link" id="aturBack" style="padding-left:0">&larr; Kembali ke Request Payment</a>
+   <div class="detail-head"><div><h3 style="margin:0">Atur Pembayaran <span class="newtag">BARU</span></h3><div class="text-muted">Company: <b>${A.co}</b> — pengajuan baru, belum diajukan</div></div>
+    <div class="sumx"><div>JUMLAH DOKUMEN<b>${nDoc}</b></div><div>JUMLAH TRANSFER<b id="aturNTrf">${A.trf.length}</b></div><div>TOTAL KELUAR BANK<b>${nf(A.trf.reduce((a,t)=>a+trfOut(t),0))}</b></div></div></div>
+   <p class="text-muted" style="font-size:13px">Default <b>1 dokumen = 1 transfer</b>. Centang beberapa dokumen lalu <b>Gabungkan jadi 1 transfer</b>; admin cukup 1x. Gabung dulu, baru isi rekening tujuan: transfer 1 dokumen terisi dari rekening di dokumen (bisa diedit); transfer gabungan dikosongkan dan diisi ulang.</p>
+   <button type="button" class="btn btn-default btn-sm" id="aturMerge"><i class="fa fa-link"></i> Gabungkan jadi 1 transfer</button> <span class="text-muted" style="font-size:12px">${A.pick.size} dokumen dicentang</span>
+   ${A.trf.map((t,i)=>`<div class="trf-blk" data-trf="${i}"><div class="trf-h"><b>Transfer ${i+1}</b> · ${t.docs.length} dokumen${t.docs.length>1?` <a data-split="${i}"><i class="fa fa-chain-broken"></i> Pisah lagi</a>`:''}</div>
+    <table class="table table-bordered" style="font-size:12.5px;margin-bottom:8px"><thead><tr><th width="30"></th><th>No. Dokumen / Kategori</th><th>Request By</th><th>Keperluan</th><th class="text-right">Dibayarkan</th></tr></thead><tbody>${t.docs.map(n=>{const d=rpOf(n);return `<tr><td><input type="checkbox" data-ap="${n}" ${A.pick.has(n)?'checked':''}></td><td>${n}<br><small class="text-muted">${KAT[d.tipe]}</small></td><td>${esc(d.by)}</td><td>${esc(d.kep)}</td><td class="money">${nf(d.jumlah)}</td></tr>`;}).join('')}</tbody></table>
+    <div class="row">
+     <div class="col-md-2"><label style="font-size:12px">Bank tujuan</label><select class="form-control input-sm" id="aRek${i}bank"><option value="">-</option>${BANK_OPT.map(b=>`<option ${t.rek.bank===b?'selected':''}>${b}</option>`).join('')}</select></div>
+     <div class="col-md-3"><label style="font-size:12px">No. Rekening</label><input class="form-control input-sm" id="aRek${i}no" value="${esc(t.rek.no)}"></div>
+     <div class="col-md-3"><label style="font-size:12px">Nama Penerima</label><input class="form-control input-sm" id="aRek${i}an" value="${esc(t.rek.an)}"></div>
+     <div class="col-md-2"><label style="font-size:12px">Admin</label><select class="form-control input-sm" id="aAdm${i}">${[0,2500,6500].map(v=>`<option value="${v}" ${t.adm===v?'selected':''}>${v?nf(v):'Tanpa admin'}</option>`).join('')}</select></div>
+     <div class="col-md-2"><label style="font-size:12px">Ditanggung</label><select class="form-control input-sm" id="aBr${i}"><option value="penerima" ${t.bearer==='penerima'?'selected':''}>Penerima</option><option value="perusahaan" ${t.bearer==='perusahaan'?'selected':''}>Perusahaan</option></select></div></div>
+    <div class="text-right" style="font-size:13px;margin-top:6px">Total dibayarkan <b>${nf(trfTot(t))}</b> · Jumlah transfer <b>${nf(trfSend(t))}</b> · Keluar bank <b>${nf(trfOut(t))}</b></div></div>`).join('')}
+   <div class="detail-foot"><span class="text-muted">Setelah diajukan, pengajuan masuk Approval Request Payment sebagai 1 batch (PGJ).</span><span><button type="button" class="btn btn-default" id="aturCancel">Batal</button> <button type="button" class="btn btn-primary" id="aturOk"><i class="fa fa-paper-plane"></i> Ajukan untuk Approval</button></span></div>
+  </div></div>`;
+  A.trf.forEach((t,i)=>{['bank','no','an'].forEach(k=>{const el=$('aRek'+i+k);el.oninput=el.onchange=()=>{t.rek[k]=el.value.trim();};});
+    $('aAdm'+i).onchange=e=>{t.adm=+e.target.value;rAtur();};$('aBr'+i).onchange=e=>{t.bearer=e.target.value;rAtur();};});
+  document.querySelectorAll('#aturBody [data-ap]').forEach(c=>c.onchange=()=>{c.checked?A.pick.add(c.dataset.ap):A.pick.delete(c.dataset.ap);rAtur();});
+  document.querySelectorAll('#aturBody [data-split]').forEach(a=>a.onclick=()=>{const k=+a.dataset.split,t=A.trf[k];
+    A.trf.splice(k,1,...t.docs.map(n=>({docs:[n],rek:Object.assign({},rpOf(n).rek),adm:0,bearer:'penerima'})));rAtur();});
+  $('aturMerge').onclick=()=>{if(A.pick.size<2){swal('error','Pilih minimal 2 dokumen','Centang dokumen yang akan digabung jadi 1 transfer.');return;}
+    const docs=[];let at=-1;A.trf.forEach((t,k)=>t.docs.forEach(n=>{if(A.pick.has(n)){docs.push(n);if(at<0)at=k;}}));
+    A.trf.forEach(t=>t.docs=t.docs.filter(n=>!A.pick.has(n)));
+    const nt={docs,rek:{bank:'',no:'',an:''},adm:0,bearer:'penerima'};A.trf.splice(at,0,nt);A.trf=A.trf.filter(t=>t.docs.length);A.pick.clear();rAtur();};
+  $('aturBack').onclick=$('aturCancel').onclick=()=>{U.atur=null;go('rq');};
+  $('aturOk').onclick=()=>{const bad=A.trf.findIndex(t=>!t.rek.bank||!/^[0-9.]+$/.test(t.rek.no||'')||!t.rek.an);
+    if(bad>=0){swal('error','Rekening tujuan belum lengkap','Transfer '+(bad+1)+': isi Bank, No. Rekening (angka), dan Nama Penerima.');return;}
+    const g=mkPgj(A.co,null,TODAY,A.trf.map(t=>({docs:t.docs.slice(),rek:Object.assign({},t.rek),adm:t.adm,bearer:t.bearer})));
+    U.atur=null;U.rq.clear();go('rq');swal('success','Diajukan',g.no+' ('+g.co+', '+g.trf.length+' transfer) masuk Approval Request Payment.');};}
+
+/* ---------- approval request payment ---------- */
+const trfRow=(t,i,extra)=>`<tr><td>Transfer ${i+1}</td><td>${esc(t.rek.an)}<br><small>${rekTxt(t.rek)}</small></td><td>${t.docs.join('<br>')}</td><td class="money">${nf(trfTot(t))}</td><td class="text-center">${t.adm?nf(t.adm)+'<br><small>'+t.bearer+'</small>':'-'}</td><td class="money">${nf(trfSend(t))}</td><td class="money">${nf(trfOut(t))}</td>${extra||''}</tr>`;
+function rRapv(){const L=S.pgj.filter(g=>g.sts==='apv');
+  document.querySelector('#rapvT tbody').innerHTML=L.map(g=>`<tr data-row="${g.no}"><td>${g.no}</td><td>${g.co}</td><td>${tgl(g.tgl)}</td><td>${g.trf.reduce((a,t)=>a+t.docs.length,0)}</td><td>${g.trf.length}</td><td class="money">${nf(g.trf.reduce((a,t)=>a+trfTot(t),0))}</td><td><button class="btn btn-primary btn-xs" data-rv="${g.no}"><i class="fa fa-search"></i> Approve</button></td></tr>`).join('')||'<tr><td colspan="7" class="dt-empty">Tidak ada pengajuan menunggu approval.</td></tr>';
+  document.querySelectorAll('#rapvT [data-rv]').forEach(b=>b.onclick=()=>go('rapvd',b.dataset.rv));}
+function rRapvd(){const g=pgjOf(U.rv),R=U.rvRej;const keep=g.trf.map(t=>Object.assign({},t,{docs:t.docs.filter(n=>!R.has(n))})).filter(t=>t.docs.length);
+  const docs=g.trf.flatMap((t,i)=>t.docs.map(n=>({n,i})));
+  $('rvBody').innerHTML=`<div class="box"><div class="box-body">
+   <a class="btn btn-link" id="rvBack" style="padding-left:0">&larr; Kembali ke daftar pengajuan</a>
+   <div class="detail-head"><div><h3 style="margin:0">Pengajuan ${g.no}</h3><div class="text-muted">Company: ${g.co} — diajukan ${tgl(g.tgl)}</div></div>
+    <div class="sumx"><div>JUMLAH ITEM<b>${docs.length}</b></div><div>JUMLAH TRANSFER<b>${keep.length}</b></div><div>TOTAL DIBAYARKAN<b>${nf(keep.reduce((a,t)=>a+trfTot(t),0))}</b></div></div></div>
+   <h4 style="font-size:15px">Rincian Transfer <small>1 baris = 1 kali transfer, mengikuti keputusan di bawah</small></h4>
+   <div style="overflow-x:auto"><table class="table table-bordered" id="rvTrfT" style="font-size:12.5px"><thead><tr><th>Transfer</th><th>Penerima / Rekening Tujuan</th><th>Dokumen</th><th class="text-right">Total Dibayarkan</th><th class="text-center">Admin</th><th class="text-right">Jumlah Transfer</th><th class="text-right">Total Keluar Bank</th></tr></thead><tbody>${keep.map((t,i)=>trfRow(t,i)).join('')||'<tr><td colspan="7" class="dt-empty">Semua dokumen akan ditolak.</td></tr>'}</tbody></table></div>
+   <h4 style="font-size:15px">Dokumen</h4>
+   <div style="overflow-x:auto"><table class="table table-bordered" id="rvDocT" style="font-size:12.5px"><thead><tr><th>No. Dokumen / Kategori</th><th>Transfer</th><th>Request By</th><th>Keperluan</th><th class="text-right">Dibayarkan</th><th>Aksi</th></tr></thead><tbody>${docs.map(({n,i})=>{const d=rpOf(n),rj=R.has(n);return `<tr class="${rj?'rej-row':''}" data-row="${n}"><td>${n}<br><small class="text-muted">${KAT[d.tipe]}</small></td><td>Transfer ${i+1}</td><td>${esc(d.by)}</td><td>${esc(d.kep)}</td><td class="money">${nf(d.jumlah)}</td><td>${rj?`<button class="btn btn-default btn-xs" data-rj="${n}">Batal tolak</button> <span class="text-danger"><b>Akan ditolak</b></span>`:`<button class="btn btn-danger btn-xs" data-rj="${n}"><i class="fa fa-times"></i> Reject</button>`}</td></tr>`;}).join('')}</tbody></table></div>
+   <div class="detail-foot"><span class="text-muted">Dokumen yang ditolak kembali ke Request Payment dengan alasan reject. Admin tetap 1x per transfer untuk dokumen yang tersisa.</span><button type="button" class="btn btn-primary" id="rvSave"><i class="fa fa-save"></i> Simpan Keputusan</button></div>
+  </div></div>`;
+  $('rvBack').onclick=()=>go('rapv');
+  document.querySelectorAll('#rvDocT [data-rj]').forEach(b=>b.onclick=()=>{const n=b.dataset.rj;R.has(n)?R.delete(n):R.add(n);rRapvd();});
+  $('rvSave').onclick=()=>{const fin=al=>{g.trf.forEach(t=>t.docs.filter(n=>R.has(n)).forEach(n=>{const d=rpOf(n);d.sts='wait';d.pgj=null;d.rej=al;}));
+      g.trf=keep.map((t,i)=>Object.assign(t,{id:'T'+(i+1)}));g.sts=g.trf.length?'final':'reject';g.dec=TODAY;
+      go('rapv');swal('success','Keputusan disimpan',g.no+': '+g.trf.length+' transfer disetujui'+(R.size?', '+R.size+' dokumen ditolak kembali ke Request Payment':'')+'. '+(g.trf.length?'Siap dibayar di Payment List.':''));};
+    if(!R.size){swal('warning','Simpan keputusan '+g.no+'?','Semua dokumen disetujui ('+keep.length+' transfer).',()=>fin(''),'Ya, simpan');return;}
+    modal('Alasan reject','<label>Alasan reject '+R.size+' dokumen <b class="text-danger">*</b></label><textarea class="form-control" id="rvAl" rows="3"></textarea>','Simpan',()=>{const a=$('rvAl').value.trim();if(!a)return 'Alasan reject wajib diisi.';fin(a);},{okClass:'btn-danger'});};}
+
+/* ---------- record request payment ---------- */
+function rRrec(){const L=S.pgj.filter(g=>g.sts!=='apv').sort((a,b)=>b.no.localeCompare(a.no));
+  document.querySelector('#rrecT tbody').innerHTML=L.map(g=>{const p=g.trf.filter(t=>t.paid).length;return `<tr data-row="${g.no}"><td>${g.no}</td><td>${g.co}</td><td>${tgl(g.tgl)}</td><td>${tgl(g.dec)}</td><td>${g.trf.length}</td><td class="money">${nf(g.trf.reduce((a,t)=>a+trfTot(t),0))}</td><td>${g.sts==='reject'?'<span class="badge bg-red">Ditolak</span>':p===g.trf.length?'<span class="badge bg-green">Sudah dibayar</span>':'<span class="badge bg-yellow">Belum dibayar '+(g.trf.length-p)+' dari '+g.trf.length+'</span>'}</td><td><button class="btn btn-info btn-xs" data-rr="${g.no}"><i class="fa fa-eye"></i> View</button></td></tr>`;}).join('')||'<tr><td colspan="8" class="dt-empty">Tidak ada data.</td></tr>';
+  document.querySelectorAll('#rrecT [data-rr]').forEach(b=>b.onclick=()=>{const g=pgjOf(b.dataset.rr);
+    modal('Pengajuan '+g.no+' · '+g.co,`<table class="table table-bordered" style="font-size:12.5px"><thead><tr><th>Transfer</th><th>Penerima / Rekening Tujuan</th><th>Dokumen</th><th class="text-right">Total Dibayarkan</th><th class="text-center">Admin</th><th class="text-right">Jumlah Transfer</th><th class="text-right">Total Keluar Bank</th><th>Status Bayar</th></tr></thead><tbody>${g.trf.map((t,i)=>trfRow(t,i,'<td>'+(t.paid?'<span class="badge bg-green">'+t.paid.bk+'</span><br><small>'+tgl(t.paid.tgl)+'</small>':'<span class="badge bg-yellow">Belum</span>')+'</td>')).join('')}</tbody></table>`,'',null,{lg:true,noOk:true,cancelText:'Close'});});}
+
+/* ---------- payment ---------- */
+function rPay(){document.querySelector('#payT tbody').innerHTML=S.pay.slice().sort((a,b)=>b.no.localeCompare(a.no)).map(p=>`<tr data-row="${p.no}"><td>${p.no}</td><td>${p.pgj} / Transfer ${p.trf.slice(1)}</td><td>${p.docs.join(', ')}</td><td>${tgl(p.tgl)}</td><td>${esc(p.penerima)}</td><td class="money">${nf(p.total)}</td><td><small>${esc(p.ket||KAT[p.tipe])}</small></td><td>${p.jur.map(n=>`<a data-jv="${n}">${n}</a>`).join('<br>')}</td></tr>`).join('')||'<tr><td colspan="8" class="dt-empty">Belum ada payment.</td></tr>';}
+const openTrf=()=>S.pgj.filter(g=>g.sts==='final').flatMap(g=>g.trf.filter(t=>!t.paid).map(t=>({g,t})));
+$('payNew').onclick=()=>modal('Pilih Jenis Payment',`<a class="pc-card" data-tp="nonpr"><b>Pembayaran Non PR</b><small>Request Payment (termasuk Refill Pettycash dan Petty Cash Hutang) · ${openTrf().length} transfer menunggu</small></a><p class="text-muted" style="font-size:12px;margin:0">Jenis lain di sistem (PR, dsb.) tidak ditampilkan di mockup ini.</p>`,'',null,{noOk:true});
+document.addEventListener('click',e=>{const a=e.target.closest('#dlgB [data-tp]');if(a){closeDlg();U.pt=null;go('prq');}});
+function rPrq(){const L=openTrf();
+  document.querySelector('#prqT tbody').innerHTML=L.map(({g,t},i)=>{const k=g.no+'|'+t.id;return `<tr data-row="${k}"><td>${i+1}</td><td>${g.no} / Transfer ${t.id.slice(1)}</td><td>${tgl(g.dec)}</td><td>${g.co}</td><td>${esc(t.rek.an)}<br><small>${rekTxt(t.rek)}</small></td><td>${t.docs.join('<br>')}<br><small class="text-muted">${KAT[rpOf(t.docs[0]).tipe]}</small></td><td class="money">${t.adm?nf(t.adm)+'<br><small>'+t.bearer+'</small>':'-'}</td><td class="money">${nf(trfSend(t))}</td><td class="text-center"><input type="radio" name="pt" data-pt="${k}" ${U.pt===k?'checked':''}></td></tr>`;}).join('')||'<tr><td colspan="9" class="dt-empty">Tidak ada transfer menunggu payment.</td></tr>';
+  document.querySelectorAll('#prqT [data-pt]').forEach(c=>c.onchange=()=>{U.pt=c.dataset.pt;$('prqGo').disabled=false;});
+  $('prqGo').disabled=!U.pt;}
+$('prqBack').onclick=()=>go('pay');
+$('prqGo').onclick=()=>{if(!U.pt)return;const [gn,tid]=U.pt.split('|'),g=pgjOf(gn),t=trfOf(g,tid);
+  const def=(BANKCO.STM.find(b=>t.rek.no&&b[2].indexOf(t.rek.no)>=0)||[''])[0];
+  go('pf',{g:gn,t:tid,tgl:TODAY,bank:'',bankStm:def,charge:t.adm,ket:'',files:[]});};
+function rPf(){const f=U.pf,g=pgjOf(f.g),t=trfOf(g,f.t),D=t.docs.map(rpOf),tp=D[0].tipe,ic=tp==='petty_cash_hutang';
+  const bk=bkNo(f.tgl||TODAY,S.seqBk),sets=payJur(g,t,f.bank,f.bankStm,f.charge),out=sets[0].lines.filter(l=>l.c&&l.coa!==ADM[0]).reduce((a,l)=>a+l.c,0);
+  $('pfBody').innerHTML=`<div class="box box-primary"><div class="box-body">
+   <div class="alert alert-info" style="padding:8px 12px;margin-bottom:10px">${g.no} / Transfer ${t.id.slice(1)} · ${g.co} · ${KAT[tp]} · disetujui ${tgl(g.dec)}</div>
+   <table class="form-tbl" style="width:100%"><tbody>
+    <tr><td width="18%">Tgl Bayar</td><td width="32%"><input type="date" class="form-control input-sm" id="pfTgl" value="${f.tgl}"></td><td width="18%">Pilih Bank <b class="text-danger">*</b><br><small class="text-muted">rekening ${g.co} yang membayar</small></td><td><select class="form-control input-sm" id="pfBank"><option value="">- Bank -</option>${BANKCO[g.co].map(b=>`<option value="${b[0]}" ${b[0]===f.bank?'selected':''}>${b[2]} - ${b[0]} ${esc(b[1])}</option>`).join('')}</select></td></tr>
+    <tr><td>Keterangan Pembayaran</td><td><textarea class="form-control input-sm" id="pfKet" rows="2">${esc(f.ket)}</textarea></td><td>Transfer ke</td><td><div class="ro-box">${rekTxt(t.rek)}</div></td></tr>
+    ${ic?`<tr class="chg"><td colspan="2"></td><td>Bank STM penerima <b class="text-danger">*</b> <span class="newtag">BARU</span></td><td><select class="form-control input-sm" id="pfBankStm"><option value="">- Bank STM -</option>${BANKCO.STM.map(b=>`<option value="${b[0]}" ${b[0]===f.bankStm?'selected':''}>${b[2]} - ${b[0]} ${esc(b[1])}</option>`).join('')}</select><small class="text-muted">Untuk jurnal sisi STM. Default sesuai rekening tujuan.</small></td></tr>`:''}
+    <tr><td colspan="2"></td><td>Bank Charge</td><td><input type="number" class="form-control input-sm text-right" id="pfCharge" value="${f.charge}"><small class="text-muted">Default = admin dari Request Payment (${t.adm?nf(t.adm)+', ditanggung '+t.bearer:'tanpa admin'}). Bisa diedit sesuai bukti bayar.</small></td></tr>
+    <tr><td colspan="2"></td><td>Payment Bank</td><td><div class="ro-box" id="pfOut">${nf(out)}</div></td></tr>
+   </tbody></table>
+   <table class="table table-bordered table-striped" style="font-size:12.5px;margin-top:10px"><thead><tr class="bg-blue"><th>Request By</th><th>Nomor Dokumen</th><th>Keperluan</th><th class="text-right">Dibayarkan</th></tr></thead><tbody>${D.map(d=>`<tr><td>${esc(d.by)}</td><td>${d.no}</td><td>${esc(d.kep)}</td><td class="money">${nf(d.jumlah)}</td></tr>`).join('')}</tbody><tfoot><tr><th colspan="3" class="text-right">Total Payment</th><th class="money">${nf(trfTot(t))}</th></tr></tfoot></table>
+   <div style="margin:6px 0 10px"><b style="font-size:13px">Upload Bukti Bayar <span class="text-danger">*</span></b> <button type="button" class="btn btn-default btn-xs" id="pfUp"><i class="fa fa-upload"></i> Pilih file</button> <span id="pfFiles" style="font-size:12px">${f.files.map(n=>'<i class="fa fa-paperclip"></i> '+esc(n)).join(' ')}</span></div>
+   <h4 style="margin-top:14px">Jurnal</h4>
+   <div class="chg" id="pfNoTrx" style="font-size:13px;margin:-4px 0 8px">No Transaksi (No Payment): <b>${bk}</b> · <b>1 nomor</b> untuk seluruh baris jurnal payment ini${ic?' (buku '+g.co+' dan buku STM)':''}${t.docs.length>1?' ('+t.docs.length+' dokumen)':''}.<span class="newtag">BARU</span></div>
+   <div id="pfJv">${jvTable(sets.map(x=>Object.assign({tgl:f.tgl},x,{lines:x.lines.filter(l=>l.d||l.c)})))}</div>
+   ${ic?`<div class="tamp-note chg" id="pfIc"><span class="newtag">BARU</span> Bank dipilih saat Payment (PC-R-07): bank ${g.co} yang membayar dan bank STM yang menerima (sekarang ditulis tetap 1101-02-09 / 1101-02-01). COA hutang/piutang mengikuti jurnal pencatatan: Dr <b>${IC[g.co].h[0]} Hutang ke STM</b> (bukan lagi 2203-01-01 Hutang Hubungan Istimewa), Cr <b>${IC[g.co].p[0]} ${IC[g.co].p[1]}</b>.</div>`:''}
+   <div id="pfMsg" style="margin:8px 0;font-size:13px"></div>
+   <button type="button" class="btn btn-success btn-sm" id="pfSubmit"><i class="fa fa-save"></i> Submit</button> <button type="button" class="btn btn-danger btn-sm" id="pfBack"><i class="fa fa-reply"></i> Back</button>
+  </div></div>`;
+  $('pfTgl').onchange=e=>{f.tgl=e.target.value;rPf();};$('pfBank').onchange=e=>{f.bank=e.target.value;rPf();};
+  if($('pfBankStm'))$('pfBankStm').onchange=e=>{f.bankStm=e.target.value;rPf();};
+  $('pfCharge').onchange=e=>{f.charge=+e.target.value||0;rPf();};$('pfKet').oninput=e=>{f.ket=e.target.value;};
+  $('pfUp').onclick=()=>{f.files.push('bukti-bayar-'+(f.files.length+1)+'.pdf');rPf();};
+  $('pfBack').onclick=()=>go('prq');
+  $('pfSubmit').onclick=()=>{const m=[];if(!f.bank)m.push('Pilih Bank.');if(ic&&!f.bankStm)m.push('Pilih Bank STM penerima.');if(!f.tgl)m.push('Tanggal bayar wajib diisi.');
+    if(!f.files.length)m.push('Bukti bayar belum diupload.');if(f.charge!==t.adm&&!f.ket.trim())m.push('Keterangan Pembayaran wajib diisi karena Bank Charge beda dengan admin pengajuan.');
+    if(m.length){swal('error','Belum bisa Submit',m.join('<br>'));return;}
+    const p=doPay(g,t,f);U.pt=null;go('pay');swal('success','Payment tersimpan',p.no+': '+p.jur.length+' jurnal ('+KAT[p.tipe]+') masuk Jurnal All (pending).'+(tp==='refill_pettycash'?' Sisa Budget petty cash kembali.':' Status Payment Hutang: Done Payment.'));};}
+
+/* ---------- jurnal all ---------- */
+function rJur(){$('jurJn').value=U.jf.jn;$('jurSt').value=U.jf.st;
+  const L=S.jur.filter(j=>(!U.jf.jn||j.jenis===U.jf.jn)&&(!U.jf.st||j.sts===U.jf.st)).sort((a,b)=>b.no.localeCompare(a.no));
+  document.querySelector('#jurT tbody').innerHTML=L.map(j=>`<tr data-row="${j.no}"><td>${tgl(j.tgl)}</td><td>${j.no}</td><td>${j.jenis}</td><td>${j.trx}</td><td>${j.rpc||'-'}</td><td>${j.buku}</td><td><small>${esc(j.saat)}</small></td><td class="money">${nf(j.lines.reduce((a,l)=>a+l.d,0))}</td><td>${j.sts==='pending'?'<span class="badge bg-yellow">Pending</span>':'<span class="badge bg-green">Posted</span>'}</td><td style="white-space:nowrap"><button class="btn btn-default btn-xs" data-jv="${j.no}"><i class="fa fa-search"></i></button>${j.sts==='pending'?` <button class="btn btn-primary btn-xs" data-post="${j.no}"><i class="fa fa-upload"></i> Posting</button>`:''}</td></tr>`).join('')||'<tr><td colspan="10" class="dt-empty">Tidak ada jurnal.</td></tr>';
+  document.querySelectorAll('#jurT [data-post]').forEach(b=>b.onclick=()=>{const j=S.jur.find(x=>x.no===b.dataset.post);j.sts='posted';rJur();render();});}
+$('jurJn').onchange=e=>{U.jf.jn=e.target.value;rJur();};$('jurSt').onchange=e=>{U.jf.st=e.target.value;rJur();};
+
+go('pcp');
+
+/* ================= TUTORIAL (driver.js) ================= */
+function tourDef(){return {
+ ms:[{element:'#msT',popover:{title:'Master Petty Cash',description:'Kolom baru COA Petty Cash: akun kas petty cash-nya. Edit untuk memilihnya di bawah Keterangan.'}},{element:'#msAdd',popover:{title:'Tambah',description:'Nama, Keterangan, COA Petty Cash (baru), Detail COA biaya + nominal → Total Budget.'}}],
+ apv:[{element:'#apvT',popover:{title:'Approval',description:'Proses → halaman detail dengan kontrol saldo dan Preview Jurnal yang dibentuk saat Approve.'}}],
+ pcp:[{element:'#pcAdd',popover:{title:'Tambah Pencatatan',description:'Pilih master petty cash, isi item dan upload evidence per item. To-be: simpan tidak membuat jurnal.'}},
+  {element:'#pcT',popover:{title:'Daftar pencatatan',description:'Centang pencatatan draft (1 company, minggu yang sama) lalu Buat Pelaporan. Kolom Jurnal kosong sampai Pelaporan di-approve.'}},
+  {element:'#pcBuat',popover:{title:'Buat Pelaporan',description:'Membuat RPC draft dan membuka halaman konfirmasi.'}}],
+ rpc:[{element:'#rpcT',popover:{title:'Pelaporan',description:'Kolom baru Saldo Petty Cash dengan selisihnya, dan status refill. Tombol print mencetak laporan beserta kontrol saldo.'}}],
+ cf:[{element:'#kontrol',popover:{title:'Kontrol Saldo Petty Cash',description:'Saldo seharusnya = Total Budget − pengeluaran yang belum di-refill, dibandingkan dengan hitung fisik uang.'}},
+  {element:'#cfDet',popover:{title:'Detail & jurnal',description:'Preview jurnal per pencatatan dengan tanggal pencatatan; dibuat saat approve.'}}],
+ php:[{element:'#phpT',popover:{title:'Payment Hutang',description:'VUCA/SUSTAIN membayar hutang petty cash ke STM.'}}],
+ rq:[{element:'#rqT',popover:{title:'Request Payment',description:'Refill (company STM) dan Payment Hutang (VUCA/SUSTAIN) menunggu diajukan. Centang dokumen 1 company.'}},{element:'#rqAtur',popover:{title:'Atur Pembayaran & Ajukan',description:'Atur transfer (gabung dokumen, rekening tujuan, admin) lalu ajukan sebagai 1 PGJ.'}}],
+ rapv:[{element:'#rapvT',popover:{title:'Approval Request Payment',description:'Approve per PGJ; dokumen bisa di-reject satu per satu (kembali ke Request Payment).'}}],
+ rrec:[{element:'#rrecT',popover:{title:'Record Request Payment',description:'PGJ yang sudah diputuskan dan status pembayaran per transfer.'}}],
+ pay:[{element:'#payNew',popover:{title:'Payment',description:'Pilih Pembayaran Non PR → pilih 1 transfer → Form Payment.'}},{element:'#payT',popover:{title:'Payment List',description:'1 baris = 1 payment = 1 nomor BK.'}}],
+ jur:[{element:'#jurT',popover:{title:'Jurnal All',description:'Jurnal pencatatan (setelah approve), refill, dan payment hutang. Posting satu per satu.'}}]};}
+function tourPage(){return U.page;}
+const TOUR_CFG={wait:180,
+ msg:t=>swal('warning','Tutorial',t),
+ cleanup:()=>{closeDlg();if(U.page==='pcf'){U.pcf=null;go('pcp');}},
+ page:()=>tourDef()[tourPage()]||[],
+ flows:()=>{
+  const G=p=>()=>{closeDlg();go(p);};
+  const CF=()=>{closeDlg();const r=S.rpc.find(x=>x.sts==='draft')||S.rpc.find(x=>x.sts==='waiting');go('cf',{no:r.no,mode:r.sts==='draft'?'cf':'view'});};
+  const AP=()=>{closeDlg();const r=S.rpc.find(x=>x.sts==='waiting');if(r)go('cf',{no:r.no,mode:'apv'});};
+  const FORM=()=>{closeDlg();openForm('PC-01');};
+  const PF=()=>{closeDlg();const x=openTrf()[0];if(!x){go('pay');return;}go('pf',{g:x.g.no,t:x.t.id,tgl:TODAY,bank:'',bankStm:'1101-02-09',charge:x.t.adm,ket:'',files:[]});};
+  const PRQ=()=>{closeDlg();U.pt=null;go('prq');};
+  return [
+  {title:'Pencatatan sampai Approval',desc:'Master → Transaksi → Pelaporan → Approval',steps:[
+   {pg:'Master Data → Master Petty Cash',go:()=>{closeDlg();go('ms');msForm(ms('PC-01'));},el:'#mfCoaRow',t:'0. COA Petty Cash',d:'Baru: di Master Petty Cash, di bawah Keterangan, pilih <b>COA Petty Cash</b> (akun kas petty cash). Dipakai di jurnal pencatatan dan refill.'},
+   {pg:'Expense Petty Cash → Transaksi Petty Cash',go:G('pcp'),el:'#pcAdd',t:'1. Tambah Pencatatan',d:'Pilih master petty cash, lalu isi form.'},
+   {pg:'Form Pencatatan',go:FORM,el:'#sbBud',t:'2. Budget',d:'Budget, Budget Terpakai, Sisa Budget. Ada peringatan bila Grand Total melebihi Sisa Budget.'},
+   {el:'#pcfT',t:'3. Item & evidence',d:'Company dan Request By wajib. COA, Pengeluaran, Spesifikasi, Jumlah × Nominal. Evidence wajib per item.'},
+   {el:'#pcfSave',t:'4. Simpan',d:'Tersimpan draft. <b>To-be: belum ada jurnal.</b> Tutorial tidak menyimpan data.'},
+   {pg:'Transaksi Petty Cash',go:G('pcp'),el:'#pcT',t:'5. Pilih pencatatan',d:'Centang pencatatan draft 1 company dan 1 minggu, lalu <b>Buat Pelaporan</b>. Pelaporan draft diajukan dari menu Pelaporan (tombol Ajukan).'},
+   {pg:'Konfirmasi Pelaporan',go:CF,el:'#kontrol',t:'6. Saldo Petty Cash',d:'Pemegang petty cash menghitung uang fisik dan mengisinya; selisih tampil langsung.'},
+   {el:'#cfDet',t:'7. Preview jurnal',d:'Jurnal per pencatatan dengan <b>tanggal pencatatan</b>, belum tersimpan.'},
+   {pg:'Approval Pelaporan',go:G('apv'),el:'#apvT',t:'8. Approval',d:'Daftar menampilkan Saldo Petty Cash dan selisihnya.'},
+   {pg:'Approval Pelaporan · detail',go:AP,el:'#kontrol',t:'9. Kontrol sebelum approve',d:'Angka saat Ajukan; tidak bisa diubah approver.'},
+   {el:'#apvJv',t:'10. Preview jurnal',d:'Semua jurnal yang akan dibentuk saat Approve, per pencatatan dengan tanggal pencatatannya, memakai COA Petty Cash dari master.'},
+   {el:'#apOk',t:'11. Approve',d:'Jurnal pencatatan masuk Jurnal All (pending), Request Payment refill masuk menu Request Payment; untuk VUCA/SUSTAIN juga Payment Hutang (draft).'}]},
+  {title:'Request Payment sampai Payment',desc:'Request Payment → Approval → Record → Payment → Jurnal All',steps:[
+   {pg:'Expense Petty Cash → Petty Cash VUCA/Sustain',go:G('php'),el:'#phpT',t:'1. Payment Hutang',d:'VUCA/SUSTAIN: klik <b>Payment Hutang</b> → dokumen masuk Request Payment. Refill masuk Request Payment otomatis saat Pelaporan di-approve.'},
+   {pg:'Finance → Request Payment',go:G('rq'),el:'#rqT',t:'2. Request Payment',d:'Refill (company STM, ke pemegang petty cash) dan Payment Hutang (company VUCA/SUSTAIN, ke rekening STM). Centang dokumen 1 company.'},
+   {el:'#rqAtur',t:'3. Atur Pembayaran & Ajukan',d:'Default 1 dokumen = 1 transfer; bisa digabung. Isi rekening tujuan, admin, ditanggung siapa, lalu ajukan sebagai 1 PGJ.'},
+   {pg:'Finance → Approval Request Payment',go:G('rapv'),el:'#rapvT',t:'4. Approval',d:'Approve per PGJ; dokumen bisa di-reject satu per satu.'},
+   {pg:'Finance → Record Request Payment',go:G('rrec'),el:'#rrecT',t:'5. Record',d:'PGJ yang sudah diputuskan; status bayar per transfer.'},
+   {pg:'Finance → Payment List',go:G('pay'),el:'#payNew',t:'6. Payment',d:'Pilih <b>Pembayaran Non PR</b>.'},
+   {pg:'List Request Payment',go:PRQ,el:'#prqT',t:'7. Pilih transfer',d:'1 baris = 1 transfer. Pilih satu lalu <b>Proses</b>.'},
+   {pg:'Form Payment',go:PF,el:'#pfBank',t:'8. Pilih Bank',d:'Bank dipilih saat Payment, juga untuk Payment Hutang (plus bank STM penerima).'},
+   {el:'#pfJv',t:'9. Jurnal',d:'1 nomor BK untuk seluruh baris jurnal. Payment Hutang: buku company Dr Hutang ke STM / Cr Bank; buku STM Dr Bank / Cr Piutang.'},
+   {pg:'Accounting → Jurnal All · Petty Cash',go:G('jur'),el:'#jurT',t:'10. Jurnal All',d:'Semua jurnal pending diposting dari sini.'}]}];}};
+
+/* ===== TUTORIAL v2 (driver.js 1.3.1) =====
+   Tombol "Tutorial" di baris atas konten (bukan mengambang di bawah, supaya tidak menutupi Simpan / action lain).
+   Menu: "Halaman ini" (bagian-bagian halaman yang sedang dibuka) dan "Alur proses": langkah demi langkah lintas halaman;
+   sebelum langkah tampil, halaman / form yang dibutuhkan dibuka otomatis. Tutorial tidak menyimpan data. */
+const TOUR_ID=id=>document.getElementById(id);
+let TOUR_ON=null;
+function tourVisible(sel){const el=document.querySelector(sel);return !!(el&&el.getClientRects().length);}
+function tourNorm(st){let lp='';return st.map(s=>{const o=s.element?{el:s.element,t:s.popover.title,d:s.popover.description}:Object.assign({},s);if(o.pg)lp=o.pg;else o.pg=lp;return o;});}
+function tourRun(title,steps){
+  tourMenuClose();
+  if(!(window.driver&&window.driver.js)){TOUR_CFG.msg('Tutorial belum termuat (driver.js). Buka dengan koneksi internet, atau pastikan folder lib ikut diekstrak.');return;}
+  if(TOUR_ON){try{TOUR_ON.destroy();}catch(e){}}
+  steps=tourNorm(steps);const n=steps.length;if(!n){TOUR_CFG.msg('Belum ada tutorial untuk halaman ini.');return;}
+  const run=(i,cb)=>{let j=i;while(j>0&&!steps[j].go)j--;const s=steps[j];
+    if(s&&s.go){try{s.go();}catch(e){console.warn('tutorial',e);}setTimeout(cb,s.wait!=null?s.wait:TOUR_CFG.wait);}else cb();};
+  const drv=window.driver.js.driver({showProgress:true,progressText:'{{current}} dari {{total}}',nextBtnText:'Lanjut &rarr;',prevBtnText:'&larr; Kembali',doneBtnText:'Selesai',
+    allowKeyboardControl:false,overlayOpacity:.45,stagePadding:6,popoverClass:'tour-pop',
+    steps:steps.map(s=>({element:s.el,popover:{title:s.t,description:'<div class="tour-fl">'+title+'</div>'+(s.pg?'<span class="tour-pg">'+s.pg+'</span><br>':'')+s.d,side:s.side,align:s.align}})),
+    onNextClick:()=>{const i=drv.getActiveIndex();if(i>=n-1){drv.destroy();return;}const go=steps[i+1].go;if(go)run(i+1,()=>drv.moveNext());else drv.moveNext();},
+    onPrevClick:()=>{const i=drv.getActiveIndex();if(!i)return;run(i-1,()=>drv.movePrevious());},
+    onDestroyed:()=>{TOUR_ON=null;try{TOUR_CFG.cleanup();}catch(e){}}});
+  TOUR_ON=drv;run(0,()=>drv.drive());}
+function tourPageRun(){const st=tourNorm(TOUR_CFG.page()||[]).filter(s=>s.go||tourVisible(s.el));tourRun('Halaman ini',st);}
+function tourMenuClose(){const m=TOUR_ID('tourMenu');if(m)m.hidden=true;const b=TOUR_ID('tourBtn');if(b)b.setAttribute('aria-expanded','false');}
+function tourMenuOpen(){const m=TOUR_ID('tourMenu');const F=TOUR_CFG.flows();
+  m.innerHTML='<h4>Halaman ini</h4><button type="button" data-tour="page"><b>Tutorial halaman ini</b><small>Penjelasan bagian-bagian halaman yang sedang dibuka.</small></button>'
+    +'<h4>Alur proses (pindah halaman otomatis)</h4>'+F.map((f,i)=>'<button type="button" data-tour="'+i+'"><b>'+f.title+'</b><small>'+f.desc+' · '+f.steps.length+' langkah</small></button>').join('');
+  m.hidden=false;TOUR_ID('tourBtn').setAttribute('aria-expanded','true');}
+document.addEventListener('click',e=>{
+  if(e.target.closest('#tourBtn')){const m=TOUR_ID('tourMenu');if(m.hidden)tourMenuOpen();else tourMenuClose();return;}
+  const it=e.target.closest('#tourMenu [data-tour]');
+  if(it){const k=it.dataset.tour;tourMenuClose();if(k==='page')tourPageRun();else{const f=TOUR_CFG.flows()[+k];tourRun(f.title,f.steps);}return;}
+  if(!e.target.closest('#tourMenu'))tourMenuClose();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')tourMenuClose();});
+</script>
+</body>
+</html>
