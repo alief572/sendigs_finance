@@ -66,6 +66,12 @@ payment → jurnal, invoicing/piutang, upload/unduh, cetak PDF dan ekspor Excel.
 Kembali ke SHA lama (`git reset --hard <sha-lama>` mengembalikan `vendor/` yang dilacak), arahkan web dan cron ke
 runtime lama, restart, lalu cek transaksi dan jurnal yang masuk selama jendela rilis.
 
+## Temuan setelah push (2026-11-28)
+
+Commit `b87e69ef` **tidak boleh dirilis sendirian**: kunci `failover` di
+`database.php` memicu deprecation sebelum header dikirim, sehingga sesi dan login gagal. Diperbaiki di
+`system/database/DB_driver.php` pada commit sesudahnya. Rilis harus memakai ujung branch.
+
 ## Masih terbuka
 
 - Belum ada staging atau uji dengan data nyata, dan tidak ada uji web.

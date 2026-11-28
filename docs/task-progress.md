@@ -915,3 +915,5 @@ Batch1 telah selesai (bukan lagi RED/implementasi aktif):394skenario+2shutdownPA
 - Selesai: seluruh fase di docs/implementation-plan.md bagian yang sama. Keputusan: dibangun ulang dari `origin/main` 0a4c1800 agar riwayat development tidak ikut ke main; push hanya ke `upgrade/php-8.5`.
 - Hasil, file inti, keterbatasan, runbook, dan rollback: docs/php85-release.md.
 - Berikutnya (user): siapkan server PHP 8.5.12, UAT, lalu putuskan merge ke `main`.
+- 2026-11-28: uji di localhost:8085 menemukan bug yang lolos verifikasi sebelumnya (b87e69ef): `Creation of dynamic property CI_DB_mysqli_driver::$failover` tercetak sebelum header sehingga sesi gagal. Diperbaiki dengan `#[AllowDynamicProperties]` di `system/database/DB_driver.php`; fixture `tools/php85/database.php` dilengkapi kunci konfigurasi asli (smoke gagal tanpa perbaikan, lulus dengan perbaikan). Di-commit dan di-push ke `upgrade/php-8.5`. Login dan alur transaksi belum diuji.
+- localhost:8085: compose di `scratch/php85-8085/docker-compose.yml` (checkout utama), override lokal di `application/config/development/` worktree (diabaikan Git).
